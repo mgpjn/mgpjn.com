@@ -7,11 +7,14 @@ import {
 } from 'lucide-react';
 import { getProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 
 export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const { idOrSlug } = useParams();
-  const { addToCart, isB2BPartner } = useCart();
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+  const isWholesaleAllowed = user && ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role);
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
@@ -63,11 +66,12 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const wholesaleMinQty = product.wholesale_min_qty || 5;
   const mrp = Number(product.mrp || (retailPrice * 1.35));
 
-  const isWholesaleSelected = pricingMode === 'wholesale' || quantity >= wholesaleMinQty;
+  const isWholesaleSelected = isWholesaleAllowed && (pricingMode === 'wholesale' || quantity >= wholesaleMinQty);
   const currentUnitPrice = isWholesaleSelected ? wholesalePrice : retailPrice;
   const currentTotal = currentUnitPrice * quantity;
 
   const handleSelectMode = (mode) => {
+    if (!isWholesaleAllowed) return;
     setPricingMode(mode);
     if (mode === 'wholesale' && quantity < wholesaleMinQty) {
       setQuantity(wholesaleMinQty);
@@ -157,70 +161,94 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
             </div>
           </div>
 
-          {/* Dual Pricing Selector: Retail Rate vs Wholesale Rate */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-700 block uppercase tracking-wider">
-              Choose Purchase Mode:
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Option 1: Normal Retail Rate */}
-              <div
-                onClick={() => handleSelectMode('retail')}
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  pricingMode === 'retail' && quantity < wholesaleMinQty
-                    ? 'border-brand-blue-800 bg-brand-blue-50/40 shadow-sm'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center space-x-1.5">
-                    <Tag className="w-3.5 h-3.5 text-brand-blue-800" />
-                    <span>Retail Rate</span>
-                  </span>
-                  <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                    Single Pack
-                  </span>
-                </div>
-                <div className="mt-2 flex items-baseline space-x-2">
-                  <span className="text-2xl font-black text-slate-900">₹{retailPrice.toFixed(2)}</span>
-                  {mrp > retailPrice && (
-                    <span className="text-xs text-slate-400 line-through">MRP ₹{mrp.toFixed(2)}</span>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1">For normal patient &amp; retail consumption</p>
+          {/* Pricing Display */}
+          {isWholesaleAllowed ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 block uppercase tracking-wider">
+                  Choose Purchase Mode:
+                </label>
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  B2B Trade Pricing Unlocked
+                </span>
               </div>
 
-              {/* Option 2: Wholesale / Bulk Rate */}
-              <div
-                onClick={() => handleSelectMode('wholesale')}
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  isWholesaleSelected
-                    ? 'border-emerald-600 bg-emerald-50/50 shadow-sm'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-emerald-800 flex items-center space-x-1.5">
-                    <Package className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Wholesale / Bulk Rate</span>
-                  </span>
-                  <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-sm">
-                    {wholesaleMinQty}+ Units
-                  </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Option 1: Normal Retail Rate */}
+                <div
+                  onClick={() => handleSelectMode('retail')}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                    pricingMode === 'retail' && quantity < wholesaleMinQty
+                      ? 'border-brand-blue-800 bg-brand-blue-50/40 shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-slate-800 flex items-center space-x-1.5">
+                      <Tag className="w-3.5 h-3.5 text-brand-blue-800" />
+                      <span>Retail Rate</span>
+                    </span>
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                      Single Pack
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline space-x-2">
+                    <span className="text-2xl font-black text-slate-900">₹{retailPrice.toFixed(2)}</span>
+                    {mrp > retailPrice && (
+                      <span className="text-xs text-slate-400 line-through">MRP ₹{mrp.toFixed(2)}</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">For normal patient &amp; retail consumption</p>
                 </div>
-                <div className="mt-2 flex items-baseline space-x-2">
-                  <span className="text-2xl font-black text-emerald-800">₹{wholesalePrice.toFixed(2)}</span>
-                  <span className="text-xs text-emerald-600 font-bold">
-                    (Save {Math.round((1 - wholesalePrice / mrp) * 100)}% on MRP)
-                  </span>
+
+                {/* Option 2: Wholesale / Bulk Rate */}
+                <div
+                  onClick={() => handleSelectMode('wholesale')}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                    isWholesaleSelected
+                      ? 'border-emerald-600 bg-emerald-50/50 shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-extrabold text-emerald-800 flex items-center space-x-1.5">
+                      <Package className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Wholesale / Bulk Rate</span>
+                    </span>
+                    <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-sm">
+                      {wholesaleMinQty}+ Units
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline space-x-2">
+                    <span className="text-2xl font-black text-emerald-800">₹{wholesalePrice.toFixed(2)}</span>
+                    <span className="text-xs text-emerald-600 font-bold">
+                      (Save {Math.round((1 - wholesalePrice / mrp) * 100)}% on MRP)
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700 font-medium mt-1">
+                    B2B Trade Rate for stockists, chemists &amp; bulk buyers
+                  </p>
                 </div>
-                <p className="text-[10px] text-emerald-700 font-medium mt-1">
-                  B2B Trade Rate for stockists, chemists &amp; bulk buyers
-                </p>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70">
+              <div className="flex items-baseline space-x-3">
+                <span className="text-3xl font-black text-slate-900">₹{retailPrice.toFixed(2)}</span>
+                {mrp > retailPrice && (
+                  <span className="text-sm text-slate-400 line-through">MRP ₹{mrp.toFixed(2)}</span>
+                )}
+                {mrp > retailPrice && (
+                  <span className="text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
+                    Save {Math.round(((mrp - retailPrice) / mrp) * 100)}% OFF
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5 font-medium">
+                Inclusive of all GST taxes • Safe &amp; verified medicine dispatch
+              </p>
+            </div>
+          )}
 
           {/* Rx Warning */}
           {product.is_prescription_required && (

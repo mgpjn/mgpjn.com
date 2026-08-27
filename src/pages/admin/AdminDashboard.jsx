@@ -8,18 +8,22 @@ import {
   CheckCircle2, XCircle, ArrowUpRight, Printer, Tag, Bell,
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
-  User, UserCheck2, UserPlus2
+  User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   getAdminStats,
   getAdminUsersByRole, storeAdminHierarchyUser, updateAdminHierarchyUser, impersonateAdminUser,
+  resetAdminUserPassword, toggleAdminUserStatus, transferAdminUser, approveAdminUser, rejectAdminUser,
   getAdminMargins, updateAdminMargins,
   getAdminTransfers, createAdminTransfer,
   getAdminProductMargins,
   getAdminCategories, storeAdminCategory, updateAdminCategory, deleteAdminCategory,
   getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct,
+  getAdminProductStatePrices, saveAdminProductStatePrices,
   getAdminOrders, updateAdminOrderStatus,
+  getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
   getAdminPrescriptions, updateAdminPrescriptionStatus,
   getAdminPayouts, processAdminPayout,
   getAdminBanners, storeAdminBanner, deleteAdminBanner,
@@ -209,6 +213,37 @@ export default function AdminDashboard() {
     delivery_charge: '50',
   });
 
+  // State Filter & State Counts
+  const [stateFilter, setStateFilter] = useState('all');
+  const [stateCounts, setStateCounts] = useState({});
+
+  // Super Admin Password Reset Modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordTargetUser, setPasswordTargetUser] = useState(null);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+
+  // Super Admin Move / Transfer Modal
+  const [showTransferUserModal, setShowTransferUserModal] = useState(false);
+  const [transferTargetUser, setTransferTargetUser] = useState(null);
+  const [transferUserForm, setTransferUserForm] = useState({
+    new_sponsor_code: '',
+    new_state: 'GUJRAT',
+    new_city: 'Surat',
+    new_pincode: '394230',
+  });
+
+  // State-Wise Wholesale Pricing Modal
+  const [showStatePriceModal, setShowStatePriceModal] = useState(false);
+  const [statePriceProduct, setStatePriceProduct] = useState(null);
+  const [statePriceRows, setStatePriceRows] = useState([]);
+
+  // Medicine Purchase Orders (PO)
+  const [purchaseOrdersList, setPurchaseOrdersList] = useState({ data: [] });
+  const [selectedPO, setSelectedPO] = useState(null);
+  const [showPOModal, setShowPOModal] = useState(false);
+  const [poApprovalQuantities, setPoApprovalQuantities] = useState({});
+  const [poAdminNotes, setPoAdminNotes] = useState('');
+
   const menuItems = [
     { key: 'dashboard', label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { key: 'super-distributors', label: 'Super Distributors', path: '/admin/super-distributors', icon: Users, roleType: 'super_distributor' },
@@ -220,6 +255,7 @@ export default function AdminDashboard() {
     { key: 'customer-layer-2', label: 'Customer 2 (Stage 2 - 3%)', path: '/admin/customer-layer-2', icon: UserCheck2, roleType: 'customer_layer_2' },
     { key: 'customer-layer-3', label: 'Customer 3 (Stage 3 - 2%)', path: '/admin/customer-layer-3', icon: UserPlus2, roleType: 'customer_layer_3' },
     { key: 'user_customer', label: 'All Customers (Directory)', path: '/admin/user_customer', icon: Users2, roleType: 'customer' },
+    { key: 'purchase-orders', label: 'Medicine PO Approvals', path: '/admin/purchase-orders', icon: FileCheck },
     { key: 'margins', label: 'Margin Management', path: '/admin/margins', icon: Calculator },
     { key: 'transfers', label: 'Transfer Management', path: '/admin/transfers', icon: ArrowLeftRight },
     { key: 'product-margins', label: 'Product Margin List', path: '/admin/product-margins', icon: FileSpreadsheet },
@@ -256,11 +292,15 @@ export default function AdminDashboard() {
       } else if (NETWORK_ROLE_SECTIONS.includes(currentSection)) {
         const item = menuItems.find(m => m.key === currentSection);
         const role = item?.roleType || (currentSection === 'all-customers' ? 'customer' : 'super_distributor');
-        const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, sort: sortOrder });
+        const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, state: stateFilter, sort: sortOrder });
         if (res.data.success) {
           setRoleUsers(res.data.users);
           setRoleStats(res.data.stats);
+          if (res.data.state_counts) setStateCounts(res.data.state_counts);
         }
+      } else if (currentSection === 'purchase-orders') {
+        const res = await getPurchaseOrders({ status: statusFilter, state: stateFilter });
+        if (res.data.success) setPurchaseOrdersList(res.data.purchase_orders);
       } else if (currentSection === 'margins') {
         const res = await getAdminMargins();
         if (res.data.success) setMargins(res.data.margins);
@@ -308,7 +348,184 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [currentSection, statusFilter, sortOrder]);
+  }, [currentSection, statusFilter, sortOrder, stateFilter]);
+
+  // Super Admin: Password Reset
+  const handleOpenPasswordModal = (targetUser) => {
+    setPasswordTargetUser(targetUser);
+    setNewPasswordInput('');
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordResetSubmit = async (e) => {
+    e.preventDefault();
+    if (!passwordTargetUser || !newPasswordInput) return;
+    try {
+      const res = await resetAdminUserPassword(passwordTargetUser.id, { password: newPasswordInput });
+      if (res.data.success) {
+        alert(`Success: ${res.data.message}`);
+        setShowPasswordModal(false);
+      }
+    } catch (err) {
+      alert(`Failed to reset password: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Toggle Status (Active / Inactive)
+  const handleToggleUserStatus = async (userId, targetStatus) => {
+    try {
+      const res = await toggleAdminUserStatus(userId, { status: targetStatus });
+      if (res.data.success) {
+        alert(res.data.message);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Error updating status: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Move / Transfer User
+  const handleOpenTransferModal = (targetUser) => {
+    setTransferTargetUser(targetUser);
+    setTransferUserForm({
+      new_sponsor_code: targetUser.sponsor?.referral_code || '',
+      new_state: targetUser.state || 'GUJRAT',
+      new_city: targetUser.city || 'Surat',
+      new_pincode: targetUser.pincode || '394230',
+    });
+    setShowTransferUserModal(true);
+  };
+
+  const handleTransferUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!transferTargetUser) return;
+    try {
+      const res = await transferAdminUser(transferTargetUser.id, transferUserForm);
+      if (res.data.success) {
+        alert(`Success: ${res.data.message}`);
+        setShowTransferUserModal(false);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Transfer failed: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Approve Pending Sub-Retailer / Downline Registration
+  const handleApproveUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to verify and APPROVE registration for ${userName}?`)) return;
+    try {
+      const res = await approveAdminUser(userId);
+      if (res.data.success) {
+        alert(`Success: ${res.data.message}`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Approval error: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Reject Registration
+  const handleRejectUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to REJECT registration for ${userName}?`)) return;
+    try {
+      const res = await rejectAdminUser(userId, { reason: 'Rejected by Super Admin after review' });
+      if (res.data.success) {
+        alert(`Success: ${res.data.message}`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Rejection error: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: State-Wise Wholesale Pricing Modal
+  const handleOpenStatePriceModal = async (prod) => {
+    setStatePriceProduct(prod);
+    try {
+      const res = await getAdminProductStatePrices(prod.id);
+      if (res.data.success) {
+        const existing = res.data.state_prices || [];
+        const baseWholesale = Number(prod.wholesale_price || (prod.price * 0.6));
+        const rows = INDIAN_STATES.map(st => {
+          const found = existing.find(p => p.state?.toUpperCase() === st.toUpperCase());
+          return {
+            state: st,
+            wholesale_price: found ? found.wholesale_price : baseWholesale,
+            retail_price: found ? found.retail_price : prod.price,
+            mrp: found ? found.mrp : prod.mrp,
+          };
+        });
+        setStatePriceRows(rows);
+        setShowStatePriceModal(true);
+      }
+    } catch (err) {
+      console.error('Error fetching state prices:', err);
+    }
+  };
+
+  const handleSaveStatePricesSubmit = async (e) => {
+    e.preventDefault();
+    if (!statePriceProduct) return;
+    try {
+      const res = await saveAdminProductStatePrices(statePriceProduct.id, { prices: statePriceRows });
+      if (res.data.success) {
+        alert(`State wholesale rates saved successfully for ${statePriceProduct.name}!`);
+        setShowStatePriceModal(false);
+      }
+    } catch (err) {
+      alert(`Error saving state prices: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Medicine Purchase Order (PO) Review & Approval
+  const handleOpenPOModal = (po) => {
+    setSelectedPO(po);
+    const qtys = {};
+    po.items?.forEach(item => {
+      qtys[item.id] = item.approved_quantity > 0 ? item.approved_quantity : item.requested_quantity;
+    });
+    setPoApprovalQuantities(qtys);
+    setPoAdminNotes(po.admin_notes || '');
+    setShowPOModal(true);
+  };
+
+  const handleApprovePOSubmit = async () => {
+    if (!selectedPO) return;
+    const itemsPayload = selectedPO.items?.map(item => ({
+      id: item.id,
+      approved_quantity: Number(poApprovalQuantities[item.id] !== undefined ? poApprovalQuantities[item.id] : item.requested_quantity)
+    }));
+
+    try {
+      const res = await approvePurchaseOrder(selectedPO.id, {
+        items: itemsPayload,
+        admin_notes: poAdminNotes
+      });
+      if (res.data.success) {
+        alert(`Purchase Order #${selectedPO.po_number} APPROVED!\nGST Tax Invoice Generated.`);
+        setShowPOModal(false);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Error approving PO: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const handleRejectPOSubmit = async () => {
+    if (!selectedPO) return;
+    if (!window.confirm(`Reject Purchase Order #${selectedPO.po_number}?`)) return;
+    try {
+      const res = await rejectPurchaseOrder(selectedPO.id, { admin_notes: poAdminNotes });
+      if (res.data.success) {
+        alert(`Purchase Order #${selectedPO.po_number} marked as Rejected.`);
+        setShowPOModal(false);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Error rejecting PO: ${err.response?.data?.message || err.message}`);
+    }
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -808,8 +1025,23 @@ export default function AdminDashboard() {
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
-                    <option value="pending">Pending</option>
+                    <option value="pending">Pending Approval</option>
                     <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div className="w-48">
+                  <select
+                    value={stateFilter}
+                    onChange={(e) => setStateFilter(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                  >
+                    <option value="all">🇮🇳 All States</option>
+                    {INDIAN_STATES.map((st) => (
+                      <option key={st} value={st}>
+                        {st} {stateCounts[st] ? `(${stateCounts[st]})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -835,7 +1067,10 @@ export default function AdminDashboard() {
 
                 <button
                   type="button"
-                  onClick={handleResetSearch}
+                  onClick={() => {
+                    handleResetSearch();
+                    setStateFilter('all');
+                  }}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all"
                 >
                   Reset
@@ -962,6 +1197,45 @@ export default function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="p-3.5 text-right space-x-1.5">
+                                  {u.status === 'pending' && (
+                                    <>
+                                      <button
+                                        onClick={() => handleApproveUser(u.id, u.name)}
+                                        title="Approve Customer ID"
+                                        className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200"
+                                      >
+                                        <CheckCheck className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectUser(u.id, u.name)}
+                                        title="Reject Customer ID"
+                                        className="p-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                  <button
+                                    onClick={() => handleOpenPasswordModal(u)}
+                                    title="Reset Password"
+                                    className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg"
+                                  >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenTransferModal(u)}
+                                    title="Move / Transfer Downline"
+                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                  >
+                                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleUserStatus(u.id, u.status === 'active' ? 'inactive' : 'active')}
+                                    title={u.status === 'active' ? 'Deactivate ID' : 'Activate ID'}
+                                    className={`p-1.5 rounded-lg ${u.status === 'active' ? 'text-rose-500 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                  >
+                                    {u.status === 'active' ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </button>
                                   <button
                                     onClick={() => handleImpersonate(u.id)}
                                     title="Login as user"
@@ -1053,6 +1327,45 @@ export default function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="p-3.5 text-right space-x-1.5">
+                                  {u.status === 'pending' && (
+                                    <>
+                                      <button
+                                        onClick={() => handleApproveUser(u.id, u.name)}
+                                        title="Verify & Approve Sub-Retailer Hub"
+                                        className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200"
+                                      >
+                                        <CheckCheck className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectUser(u.id, u.name)}
+                                        title="Reject Sub-Retailer Application"
+                                        className="p-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                  <button
+                                    onClick={() => handleOpenPasswordModal(u)}
+                                    title="Reset Password"
+                                    className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg"
+                                  >
+                                    <KeyRound className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenTransferModal(u)}
+                                    title="Move / Transfer ID"
+                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                  >
+                                    <ArrowLeftRight className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleUserStatus(u.id, u.status === 'active' ? 'inactive' : 'active')}
+                                    title={u.status === 'active' ? 'Deactivate ID' : 'Activate ID'}
+                                    className={`p-1.5 rounded-lg ${u.status === 'active' ? 'text-rose-500 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                  >
+                                    {u.status === 'active' ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </button>
                                   <button
                                     onClick={() => handleImpersonate(u.id)}
                                     title="Login as user"
@@ -1144,6 +1457,45 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="p-3.5 text-right space-x-1.5">
+                                {u.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleApproveUser(u.id, u.name)}
+                                      title="Verify & Approve Partner ID"
+                                      className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200"
+                                    >
+                                      <CheckCheck className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectUser(u.id, u.name)}
+                                      title="Reject Partner Registration"
+                                      className="p-1.5 text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => handleOpenPasswordModal(u)}
+                                  title="Reset Password"
+                                  className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenTransferModal(u)}
+                                  title="Move / Transfer ID"
+                                  className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                >
+                                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleToggleUserStatus(u.id, u.status === 'active' ? 'inactive' : 'active')}
+                                  title={u.status === 'active' ? 'Deactivate ID' : 'Activate ID'}
+                                  className={`p-1.5 rounded-lg ${u.status === 'active' ? 'text-rose-500 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                >
+                                  {u.status === 'active' ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                </button>
                                 <button
                                   onClick={() => handleImpersonate(u.id)}
                                   title="Login as user"
@@ -1315,6 +1667,13 @@ export default function AdminDashboard() {
                             className="text-brand-blue-700 hover:text-brand-blue-900"
                           >
                             <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenStatePriceModal(p)}
+                            title="State-Wise Wholesale Pricing"
+                            className="text-emerald-600 hover:text-emerald-800 p-1 hover:bg-emerald-50 rounded"
+                          >
+                            <SlidersHorizontal className="w-4 h-4" />
                           </button>
                           <button
                             onClick={async () => {
@@ -1600,6 +1959,196 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* MEDICINE PURCHASE ORDER (PO) APPROVALS                   */}
+          {/* ======================================================== */}
+          {currentSection === 'purchase-orders' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">Medicine Purchase Order (PO) Approvals</h2>
+                  <p className="text-xs text-slate-500">
+                    Review and verify wholesale medicine orders from State Distributors &amp; Retailers. Super Admin approves/adjusts requested batch quantities before issuing the official GST Tax Invoice.
+                  </p>
+                </div>
+              </div>
+
+              {/* Top 4 PO Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-[#ff5722]">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Total POs Submitted</span>
+                  <div className="text-2xl font-black text-slate-900">{purchaseOrdersList?.data?.length || 0}</div>
+                  <span className="text-[11px] text-slate-400 font-semibold">Bulk medicine requests</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Pending Approval</span>
+                  <div className="text-2xl font-black text-amber-500">
+                    {purchaseOrdersList?.data?.filter(po => po.status === 'pending').length || 0}
+                  </div>
+                  <span className="text-[11px] text-amber-600 font-semibold">Requires Super Admin verification</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-emerald-500">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Approved &amp; Invoiced</span>
+                  <div className="text-2xl font-black text-emerald-600">
+                    {purchaseOrdersList?.data?.filter(po => po.status === 'approved').length || 0}
+                  </div>
+                  <span className="text-[11px] text-emerald-700 font-semibold">GST Invoices generated</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-blue-500">
+                  <span className="text-xs font-bold text-slate-500 block mb-1">Total Order Value</span>
+                  <div className="text-2xl font-black text-slate-900">
+                    ₹{purchaseOrdersList?.data?.reduce((acc, po) => acc + (parseFloat(po.total_amount) || 0), 0).toFixed(2) || '0.00'}
+                  </div>
+                  <span className="text-[11px] text-blue-600 font-semibold">Wholesale volume</span>
+                </div>
+              </div>
+
+              {/* Filter Bar */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center gap-3">
+                <div className="w-48">
+                  <select
+                    value={stateFilter}
+                    onChange={(e) => setStateFilter(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                  >
+                    <option value="all">🇮🇳 All States</option>
+                    {INDIAN_STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="w-36">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setStateFilter('all');
+                    fetchData();
+                  }}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all ml-auto"
+                >
+                  Reset Filters
+                </button>
+              </div>
+
+              {/* POs Data Table */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500 border-b border-slate-100">
+                      <tr>
+                        <th className="p-3.5">PO NUMBER</th>
+                        <th className="p-3.5">REQUESTER &amp; STORE</th>
+                        <th className="p-3.5">STATE HUB</th>
+                        <th className="p-3.5">MEDICINES REQUESTED</th>
+                        <th className="p-3.5">ESTIMATED AMOUNT</th>
+                        <th className="p-3.5">STATUS</th>
+                        <th className="p-3.5 text-right">ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {purchaseOrdersList?.data?.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="p-8 text-center text-slate-400">
+                            No Purchase Orders submitted yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        purchaseOrdersList?.data?.map((po) => (
+                          <tr key={po.id} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="p-3.5 font-bold font-mono text-[#ff5722]">
+                              {po.po_number}
+                              <span className="text-[10px] text-slate-400 block font-sans font-normal">
+                                {new Date(po.created_at).toLocaleDateString('en-GB')}
+                              </span>
+                            </td>
+                            <td className="p-3.5">
+                              <span className="font-bold text-slate-900 block">{po.user?.name}</span>
+                              {po.user?.business_name && (
+                                <span className="text-[10px] text-slate-500 block font-semibold">{po.user.business_name}</span>
+                              )}
+                              <span className="inline-block bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-0.5">
+                                {po.user?.role}
+                              </span>
+                            </td>
+                            <td className="p-3.5 font-bold text-emerald-800">
+                              📍 {po.state || 'GUJRAT'}
+                            </td>
+                            <td className="p-3.5">
+                              <span className="font-bold text-slate-800 block">
+                                {po.items?.length || 0} Medicine Items
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                Total {po.items?.reduce((acc, it) => acc + (it.requested_quantity || 0), 0)} Units requested
+                              </span>
+                            </td>
+                            <td className="p-3.5 font-black text-slate-900">
+                              ₹{Number(po.total_amount || 0).toFixed(2)}
+                            </td>
+                            <td className="p-3.5">
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
+                                po.status === 'approved' ? 'bg-emerald-50 text-emerald-700' :
+                                po.status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                              }`}>
+                                {po.status}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-right space-x-2">
+                              {po.status === 'pending' ? (
+                                <button
+                                  onClick={() => handleOpenPOModal(po)}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs inline-flex items-center space-x-1 shadow-sm"
+                                >
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                  <span>Review &amp; Approve</span>
+                                </button>
+                              ) : (
+                                <div className="inline-flex items-center space-x-1.5">
+                                  <button
+                                    onClick={() => handleOpenPOModal(po)}
+                                    className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg"
+                                    title="View PO breakdown"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                  {po.order_id && (
+                                    <button
+                                      onClick={() => setSelectedInvoiceOrderId(po.order_id)}
+                                      className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 border border-brand-orange-200 px-2.5 py-1 rounded-lg font-bold text-xs inline-flex items-center space-x-1"
+                                    >
+                                      <Printer className="w-3 h-3" />
+                                      <span>GST Invoice</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -2659,6 +3208,379 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: RESET PASSWORD                                    */}
+      {/* ======================================================== */}
+      {showPasswordModal && passwordTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Reset Member Password</h3>
+                <p className="text-[11px] text-slate-500 font-medium">User: {passwordTargetUser.name} ({passwordTargetUser.referral_code})</p>
+              </div>
+              <button onClick={() => setShowPasswordModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordResetSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">New Password *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter new password (min 6 characters)"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-mono text-sm focus:outline-none focus:bg-white"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 space-y-1">
+                <p className="font-bold">⚠️ Note for Super Admin:</p>
+                <p>This will immediately update the login password for {passwordTargetUser.email}.</p>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button type="button" onClick={() => setShowPasswordModal(false)} className="px-4 py-2 bg-slate-100 rounded-xl font-bold">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-xl font-bold shadow-md">
+                  Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: MOVE / TRANSFER USER DOWNLINE                     */}
+      {/* ======================================================== */}
+      {showTransferUserModal && transferTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Move / Transfer Member ID</h3>
+                <p className="text-[11px] text-slate-500 font-medium">Reassign {transferTargetUser.name} ({transferTargetUser.role})</p>
+              </div>
+              <button onClick={() => setShowTransferUserModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleTransferUserSubmit} className="space-y-3.5 text-xs">
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-[11px] text-blue-900">
+                <p className="font-bold">Current Team Info:</p>
+                <p>State: <span className="font-bold">{transferTargetUser.state || 'GUJRAT'}</span> | City: {transferTargetUser.city || 'Surat'} | Upline: {transferTargetUser.sponsor?.name || 'Direct'}</p>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">New Sponsor Referral Code</label>
+                <input
+                  type="text"
+                  placeholder="e.g. SUPER100, ADM1001"
+                  value={transferUserForm.new_sponsor_code}
+                  onChange={(e) => setTransferUserForm({ ...transferUserForm, new_sponsor_code: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-mono uppercase font-bold"
+                />
+                <span className="text-[10px] text-slate-400 block mt-0.5">Leave blank to keep current sponsor</span>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Assign State (Team Hub) *</label>
+                <select
+                  required
+                  value={transferUserForm.new_state}
+                  onChange={(e) => setTransferUserForm({ ...transferUserForm, new_state: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold text-slate-800"
+                >
+                  {INDIAN_STATES.map(st => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">City</label>
+                  <input
+                    type="text"
+                    value={transferUserForm.new_city}
+                    onChange={(e) => setTransferUserForm({ ...transferUserForm, new_city: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Pincode</label>
+                  <input
+                    type="text"
+                    value={transferUserForm.new_pincode}
+                    onChange={(e) => setTransferUserForm({ ...transferUserForm, new_pincode: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button type="button" onClick={() => setShowTransferUserModal(false)} className="px-4 py-2 bg-slate-100 rounded-xl font-bold">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-xl font-bold shadow-md">
+                  Execute Move
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: STATE-WISE WHOLESALE PRICING                      */}
+      {/* ======================================================== */}
+      {showStatePriceModal && statePriceProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h3 className="text-base font-black text-slate-900">State-Wise Wholesale Pricing</h3>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Product: <span className="font-bold text-slate-900">{statePriceProduct.name}</span> • Default Wholesale: ₹{statePriceProduct.wholesale_price || '0.00'} • MRP: ₹{statePriceProduct.mrp}
+                </p>
+              </div>
+              <button onClick={() => setShowStatePriceModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStatePricesSubmit} className="space-y-4 text-xs">
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-900 flex items-center justify-between">
+                <div>
+                  <span className="font-bold block text-xs">⚡ State-Specific B2B Pricing Active</span>
+                  <span className="text-[11px] text-emerald-700">Orders &amp; Purchase Orders placed from each state will automatically apply that state's wholesale rate.</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl max-h-96 overflow-y-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] sticky top-0">
+                    <tr>
+                      <th className="p-3">State Name</th>
+                      <th className="p-3">Wholesale Rate (₹)</th>
+                      <th className="p-3">Retail Price (₹)</th>
+                      <th className="p-3">MRP (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {statePriceRows.map((row, idx) => (
+                      <tr key={row.state} className="hover:bg-slate-50">
+                        <td className="p-3 font-bold text-slate-800 flex items-center space-x-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                          <span>{row.state}</span>
+                        </td>
+                        <td className="p-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            value={row.wholesale_price}
+                            onChange={(e) => {
+                              const newRows = [...statePriceRows];
+                              newRows[idx].wholesale_price = parseFloat(e.target.value) || 0;
+                              setStatePriceRows(newRows);
+                            }}
+                            className="w-28 px-2.5 py-1.5 bg-slate-50 border rounded-lg font-black text-emerald-700 focus:bg-white"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={row.retail_price}
+                            onChange={(e) => {
+                              const newRows = [...statePriceRows];
+                              newRows[idx].retail_price = parseFloat(e.target.value) || 0;
+                              setStatePriceRows(newRows);
+                            }}
+                            className="w-28 px-2.5 py-1.5 bg-slate-50 border rounded-lg font-semibold focus:bg-white"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={row.mrp}
+                            onChange={(e) => {
+                              const newRows = [...statePriceRows];
+                              newRows[idx].mrp = parseFloat(e.target.value) || 0;
+                              setStatePriceRows(newRows);
+                            }}
+                            className="w-28 px-2.5 py-1.5 bg-slate-50 border rounded-lg font-semibold focus:bg-white"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pt-2 flex justify-end space-x-2">
+                <button type="button" onClick={() => setShowStatePriceModal(false)} className="px-4 py-2 bg-slate-100 rounded-xl font-bold">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md">
+                  Save All State Prices
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: MEDICINE PURCHASE ORDER (PO) REVIEW & APPROVAL    */}
+      {/* ======================================================== */}
+      {showPOModal && selectedPO && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Purchase Order Review: #{selectedPO.po_number}</h3>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Partner: <span className="font-bold text-slate-900">{selectedPO.user?.name}</span> ({selectedPO.user?.role}) • State: <span className="font-bold text-emerald-700">{selectedPO.state || 'GUJRAT'}</span>
+                </p>
+              </div>
+              <button onClick={() => setShowPOModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="font-extrabold text-blue-900 block text-xs">Medicine Batch Order Verification</span>
+                  <span className="text-[11px] text-blue-700">Adjust the approved medicine quantities below. Super Admin approval will instantly generate the final GST Tax Invoice.</span>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${
+                  selectedPO.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+                  selectedPO.status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                }`}>
+                  {selectedPO.status}
+                </span>
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px]">
+                    <tr>
+                      <th className="p-3">Medicine &amp; Pack</th>
+                      <th className="p-3 text-center">Requested Qty</th>
+                      <th className="p-3 text-center">Approved Qty</th>
+                      <th className="p-3 text-right">State Wholesale Rate</th>
+                      <th className="p-3 text-right">Total (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {selectedPO.items?.map((item) => {
+                      const appQty = poApprovalQuantities[item.id] !== undefined ? poApprovalQuantities[item.id] : (item.approved_quantity > 0 ? item.approved_quantity : item.requested_quantity);
+                      const itemTot = (item.unit_price * appQty).toFixed(2);
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50">
+                          <td className="p-3">
+                            <span className="font-bold text-slate-900 block">{item.product?.name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{item.product?.composition || item.product?.dosage_form}</span>
+                          </td>
+                          <td className="p-3 text-center font-bold text-slate-600">
+                            {item.requested_quantity}
+                          </td>
+                          <td className="p-3 text-center">
+                            {selectedPO.status === 'pending' ? (
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.requested_quantity}
+                                value={appQty}
+                                onChange={(e) => setPoApprovalQuantities({ ...poApprovalQuantities, [item.id]: parseInt(e.target.value) || 0 })}
+                                className="w-20 px-2 py-1 bg-slate-50 border rounded-lg text-center font-black text-emerald-700"
+                              />
+                            ) : (
+                              <span className="font-black text-emerald-700">{item.approved_quantity}</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-semibold text-slate-700">
+                            ₹{Number(item.unit_price).toFixed(2)}
+                          </td>
+                          <td className="p-3 text-right font-black text-slate-900">
+                            ₹{itemTot}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Super Admin Dispatch / Verification Notes</label>
+                <textarea
+                  rows={2}
+                  disabled={selectedPO.status !== 'pending'}
+                  placeholder="e.g., Batch verified, dispatched from Surat hub via cold chain transport"
+                  value={poAdminNotes}
+                  onChange={(e) => setPoAdminNotes(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
+                />
+              </div>
+
+              <div className="pt-3 border-t flex items-center justify-between">
+                <div>
+                  {selectedPO.order_id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPOModal(false);
+                        setSelectedInvoiceOrderId(selectedPO.order_id);
+                      }}
+                      className="bg-brand-orange-50 text-brand-orange-600 border border-brand-orange-200 px-4 py-2 rounded-xl font-bold flex items-center space-x-1.5"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Print Official GST Tax Invoice</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button type="button" onClick={() => setShowPOModal(false)} className="px-4 py-2 bg-slate-100 rounded-xl font-bold">
+                    Close
+                  </button>
+                  {selectedPO.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleRejectPOSubmit}
+                        className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 rounded-xl font-bold"
+                      >
+                        Reject PO
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleApprovePOSubmit}
+                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md flex items-center space-x-1.5"
+                      >
+                        <CheckCheck className="w-4 h-4" />
+                        <span>Approve PO &amp; Issue Tax Invoice</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

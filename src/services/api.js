@@ -107,4 +107,22 @@ export const updateHierarchyUser = (id, data) => api.put(`/hierarchy/users/${id}
 export const getHierarchyStats = () => api.get('/hierarchy/stats');
 export const getHierarchyOrders = (params) => api.get('/hierarchy/orders', { params });
 
+// Super Admin User Controls & Approvals
+export const resetAdminUserPassword = (id, data) => api.post(`/admin/users/${id}/reset-password`, data);
+export const toggleAdminUserStatus = (id, data) => api.post(`/admin/users/${id}/toggle-status`, data);
+export const transferAdminUser = (id, data) => api.post(`/admin/users/${id}/transfer`, data);
+export const approveAdminUser = (id) => api.post(`/admin/users/${id}/approve`);
+export const rejectAdminUser = (id, data) => api.post(`/admin/users/${id}/reject`, data);
+
+// Product State-Wise Pricing
+export const getAdminProductStatePrices = (id) => api.get(`/admin/products/${id}/state-prices`);
+export const saveAdminProductStatePrices = (id, data) => api.post(`/admin/products/${id}/state-prices`, data);
+
+// Medicine Purchase Orders (PO)
+export const getPurchaseOrders = (params) => api.get('/purchase-orders', { params });
+export const createPurchaseOrder = (data) => api.post('/purchase-orders', data);
+export const getPurchaseOrder = (id) => api.get(`/purchase-orders/${id}`);
+export const approvePurchaseOrder = (id, data) => api.post(`/purchase-orders/${id}/approve`, data);
+export const rejectPurchaseOrder = (id, data) => api.post(`/purchase-orders/${id}/reject`, data);
+
 export default api;

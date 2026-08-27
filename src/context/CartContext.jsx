@@ -58,7 +58,8 @@ export const CartProvider = ({ children }) => {
   };
 
   const user = getUser();
-  const isB2BPartner = user && ['super_distributor', 'distributor', 'sub_distributor', 'retailer', 'sub_retailer', 'admin', 'super_admin'].includes(user.role);
+  // Wholesale pricing is strictly reserved for Retailers (Cadets) and above
+  const isB2BWholesaleEligible = user && ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role);
 
   // Process item prices with Dual Pricing logic (Retail vs Wholesale)
   const processedItems = cartItems.map((item) => {
@@ -66,8 +67,8 @@ export const CartProvider = ({ children }) => {
     const wholesaleRate = Number(item.wholesale_price || (retailRate * 0.55));
     const minWholesaleQty = item.wholesale_min_qty || 5;
 
-    // Wholesale rate is applied if user is B2B partner OR ordering >= min wholesale qty
-    const isWholesale = isB2BPartner || item.quantity >= minWholesaleQty;
+    // Wholesale rate is applied ONLY for Retailer and above roles
+    const isWholesale = isB2BWholesaleEligible;
     const effectiveUnitPrice = isWholesale ? wholesaleRate : retailRate;
     const itemTotal = effectiveUnitPrice * item.quantity;
     const itemMrp = Number(item.mrp || (retailRate * 1.35));

@@ -2,21 +2,33 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, UserPlus, Shield, Star, Briefcase, Building, Store,
   UserCheck, Search, Filter, RefreshCw, Edit, Lock, Unlock,
-  ShoppingBag, CheckCircle, AlertCircle, Phone, Mail, MapPin, ChevronRight, X
+  ShoppingBag, CheckCircle, AlertCircle, Phone, Mail, MapPin, ChevronRight, X,
+  Plus, FileText, Printer, Trash2
 } from 'lucide-react';
 import {
   getHierarchyUsers, getAllowedRoles, createHierarchyUser,
-  updateHierarchyUser, getHierarchyStats, getHierarchyOrders
+  updateHierarchyUser, getHierarchyStats, getHierarchyOrders,
+  getPurchaseOrders, createPurchaseOrder, getProducts
 } from '../../services/api';
 import RoleBadge, { ROLE_CONFIG } from '../../components/RoleBadge';
+import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
 
 export default function HierarchyDashboard() {
-  const [activeTab, setActiveTab] = useState('members'); // 'members', 'orders', 'tree'
+  const [activeTab, setActiveTab] = useState('members'); // 'members', 'orders', 'purchase-orders'
   const [stats, setStats] = useState(null);
   const [usersData, setUsersData] = useState({ data: [], total: 0 });
   const [allowedRoles, setAllowedRoles] = useState([]);
   const [ordersData, setOrdersData] = useState({ data: [], total: 0 });
+  const [purchaseOrdersData, setPurchaseOrdersData] = useState({ data: [] });
   const [loading, setLoading] = useState(true);
+
+  // PO States
+  const [isPoModalOpen, setIsPoModalOpen] = useState(false);
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [poFormItems, setPoFormItems] = useState([{ product_id: '', requested_quantity: 10 }]);
+  const [poNotes, setPoNotes] = useState('');
+  const [poSubmitting, setPoSubmitting] = useState(false);
+  const [selectedInvoiceOrderId, setSelectedInvoiceOrderId] = useState(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -82,12 +94,65 @@ export default function HierarchyDashboard() {
     }
   };
 
+  const loadPurchaseOrders = async () => {
+    try {
+      const res = await getPurchaseOrders();
+      if (res.data.success) {
+        setPurchaseOrdersData(res.data.purchase_orders || { data: res.data.purchase_orders || [] });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleOpenPoModal = async () => {
+    try {
+      if (availableProducts.length === 0) {
+        const prodRes = await getProducts({ per_page: 100 });
+        if (prodRes.data.success) {
+          setAvailableProducts(prodRes.data.data?.data || prodRes.data.data || []);
+        }
+      }
+      setPoFormItems([{ product_id: '', requested_quantity: 10 }]);
+      setPoNotes('');
+      setIsPoModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreatePO = async (e) => {
+    e.preventDefault();
+    setPoSubmitting(true);
+    try {
+      const validItems = poFormItems.filter(it => it.product_id && it.requested_quantity > 0);
+      if (validItems.length === 0) {
+        alert('Please select at least one medicine item with quantity.');
+        setPoSubmitting(false);
+        return;
+      }
+      await createPurchaseOrder({
+        items: validItems,
+        notes: poNotes
+      });
+      alert('Purchase Order submitted successfully! Waiting for Super Admin approval.');
+      setIsPoModalOpen(false);
+      loadPurchaseOrders();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to submit Purchase Order');
+    } finally {
+      setPoSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, [search, selectedRole, selectedStatus]);
 
   useEffect(() => {
     if (activeTab === 'orders') loadOrders();
+    if (activeTab === 'purchase-orders') loadPurchaseOrders();
   }, [activeTab]);
 
   const handleOpenAddModal = () => {
@@ -320,6 +385,16 @@ export default function HierarchyDashboard() {
         >
           Downline Network Orders
         </button>
+        <button
+          onClick={() => setActiveTab('purchase-orders')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'purchase-orders'
+              ? 'bg-brand-blue-800 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Medicine Purchase Orders (PO)
+        </button>
       </div>
 
       {activeTab === 'members' && (
@@ -506,6 +581,94 @@ export default function HierarchyDashboard() {
                 ) : (
                   <tr>
                     <td colSpan="6" className="text-center py-8 text-slate-400">No downline orders placed yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* PURCHASE ORDERS TAB */}
+      {activeTab === 'purchase-orders' && (
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-900">Medicine Purchase Orders (PO)</h3>
+              <p className="text-xs text-slate-500">
+                Submit bulk medicine stock requests to Super Admin with state wholesale rates. Approved POs generate official GST Tax Invoices.
+              </p>
+            </div>
+            <button
+              onClick={handleOpenPoModal}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Create Medicine PO</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
+                  <th className="py-3 px-4">PO Number</th>
+                  <th className="py-3 px-4">Medicines</th>
+                  <th className="py-3 px-4">State Wholesale Total</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Submission Date</th>
+                  <th className="py-3 px-4 text-right">Invoice &amp; Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {purchaseOrdersData?.data && purchaseOrdersData.data.length > 0 ? (
+                  purchaseOrdersData.data.map((po) => (
+                    <tr key={po.id} className="hover:bg-slate-50/60">
+                      <td className="py-3 px-4 font-mono font-bold text-brand-orange-500">
+                        {po.po_number}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-slate-800 block">
+                          {po.items?.length || 0} Products Requested
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {po.items?.map(it => `${it.product?.name} (${po.status === 'approved' ? it.approved_quantity : it.requested_quantity})`).join(', ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-black text-slate-900">
+                        ₹{Number(po.total_amount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] capitalize ${
+                          po.status === 'approved' ? 'bg-emerald-50 text-emerald-700' :
+                          po.status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {po.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500">
+                        {new Date(po.created_at).toLocaleDateString('en-GB')}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {po.order_id ? (
+                          <button
+                            onClick={() => setSelectedInvoiceOrderId(po.order_id)}
+                            className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 border border-brand-orange-200 px-3 py-1.5 rounded-xl font-bold text-xs inline-flex items-center space-x-1 cursor-pointer"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>Tax Invoice</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Pending Approval</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-8 text-slate-400">
+                      No Purchase Orders submitted yet. Click "+ Create Medicine PO" to request inventory.
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -742,6 +905,130 @@ export default function HierarchyDashboard() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* CREATE PURCHASE ORDER MODAL */}
+      {isPoModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-5 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-black text-slate-900 text-base">Submit Medicine Purchase Order (PO)</h3>
+              </div>
+              <button onClick={() => setIsPoModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePO} className="space-y-4 text-xs">
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl text-[11px] text-blue-900">
+                <span className="font-bold block">📦 Bulk Medicine Ordering System</span>
+                <span>Select medicines and requested quantities. Super Admin will verify stock availability and approve batch quantities with state wholesale pricing.</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700">Requested Medicines</label>
+                  <button
+                    type="button"
+                    onClick={() => setPoFormItems([...poFormItems, { product_id: '', requested_quantity: 10 }])}
+                    className="text-emerald-600 hover:text-emerald-700 font-bold flex items-center space-x-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Medicine</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto p-1">
+                  {poFormItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center space-x-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+                      <select
+                        required
+                        value={item.product_id}
+                        onChange={(e) => {
+                          const updated = [...poFormItems];
+                          updated[idx].product_id = e.target.value;
+                          setPoFormItems(updated);
+                        }}
+                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800"
+                      >
+                        <option value="">Select Medicine</option>
+                        {availableProducts.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.box_packing || p.strip_packing || 'Standard Pack'})
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="flex items-center space-x-1 w-32">
+                        <input
+                          type="number"
+                          min="1"
+                          required
+                          placeholder="Qty"
+                          value={item.requested_quantity}
+                          onChange={(e) => {
+                            const updated = [...poFormItems];
+                            updated[idx].requested_quantity = parseInt(e.target.value) || 0;
+                            setPoFormItems(updated);
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-center font-bold text-slate-900"
+                        />
+                      </div>
+
+                      {poFormItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setPoFormItems(poFormItems.filter((_, i) => i !== idx))}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Dispatch / Order Notes (Optional)</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Urgent stock replenishment for pharmacy hub"
+                  value={poNotes}
+                  onChange={(e) => setPoNotes(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPoModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl text-slate-600 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={poSubmitting}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md"
+                >
+                  {poSubmitting ? 'Submitting PO...' : 'Submit PO to Super Admin'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* GST Invoice Modal */}
+      {selectedInvoiceOrderId && (
+        <GstInvoiceModal
+          orderId={selectedInvoiceOrderId}
+          onClose={() => setSelectedInvoiceOrderId(null)}
+        />
       )}
     </div>
   );
