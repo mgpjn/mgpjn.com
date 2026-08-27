@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+dist-ssr/
+
+# Editor & OS files
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Temporary / testing screens
+local_verify_screens/
+live_screenshots/
+scratch_screens/
+scratch_inspect.js
+scratch_results.json
+deep_crawler.js
+test_login.js
+test_db_connection.js

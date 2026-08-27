@@ -1,0 +1,5054 @@
+{
+  "dashboard": {
+    "title": "Super Admin Dashboard",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Add Product\n\nCreate new product",
+        "href": "https://mgpjn.com/admin/products/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [],
+    "rows": [],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nSuper Admin Dashboard\n0\nA\n\nTotal Products\n\n59\n\n59 active\n\nCategories\n\n66\n\n10 main, 56 sub\n\nLow Stock\n\n59\n\nProducts need restock\n\nTotal Users\n\n2\n\n2 SD, 1 D, 2 R\n\nTODAY\n\n0\n\nSHIPPED\n\n1\n\nTRACKING\n\n1\n\nDELIVERED\n\n2\n\nCANCELLED\n\n1\n\nRecent Products\nView All →\n\nVITMIZINC Softgelatin Capsules\n\nCapsules\n\n₹127.00\n\nStock: 0\n\nNEURVIS-N Injection\n\nInjections\n\n₹75.00\n\nStock: 0\n\nDYNOTOR -AQ Injection\n\nInjections\n\n₹24.00\n\nStock: 0\n\nPENTOGUN 40mg Injection\n\nInjections\n\n₹53.00\n\nStock: 0\n\nVICOPROT PLUS Protein Supplement 200 gm\n\nFitness & Health\n\n₹325.00\n\nStock: 0\n\nLow Stock Alert\nView All →\n\nCLOFEPARA-SP Tablets\n\nTablets\n\n0 left\n\nMin: 10\n\nCARIOMOX-625 Tablets\n\nTablets\n\n0 left\n\nMin: 10\n\nGazperi-DSR Capsule\n\nCapsules\n\n0 left\n\nMin: 10\n\nRBETOR-DSR Capsule\n\nCapsules\n\n0 left\n\nMin: 10\n\nPENTOGUN-DSR Capsules\n\nCapsules\n\n0 left\n\nMin: 10\n\nQuick Actions\n\nAdd Product\n\nCreate new product\n\nManage Categories\n\nView all categories\n\nView Products\n\nBrowse inventory\n\nManage Users\n\nView network\n\nSystem Overview\n\nDatabase Status\n\nActive\n\nTotal Records\n\n127\n\nSystem Version\n\nv1.0.0"
+  },
+  "dashboard_create_form": {
+    "title": "Create Product",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Product Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "e.g., Pantop-D SR Capsule",
+        "required": true,
+        "label": "Product Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "subtitle",
+        "type": "text",
+        "placeholder": "e.g., Domperidone (30mg)+ Pantoprazole (40mg)",
+        "required": false,
+        "label": "Subtitle / Composition",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "category_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Category *",
+        "options": [
+          "Select Category",
+          "Ayurvedic",
+          "Capsules",
+          "Fitness & Health",
+          "Injections",
+          "Ointments & Creams",
+          "Personal Care",
+          "Syrups",
+          "Tablets"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "sub_category_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Sub Category *",
+        "options": [
+          "First select a category"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "batch_no",
+        "type": "text",
+        "placeholder": "BT2026001",
+        "required": true,
+        "label": "SHN No *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "manufacturer",
+        "type": "text",
+        "placeholder": "Company name",
+        "required": false,
+        "label": "Brand Name",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "description",
+        "type": "textarea",
+        "placeholder": "Product description",
+        "required": false,
+        "label": "Description",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "images[]",
+        "type": "file",
+        "placeholder": "",
+        "required": false,
+        "label": "Upload Images (Multiple)",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mrp",
+        "type": "number",
+        "placeholder": "100.00",
+        "required": true,
+        "label": "MRP (Maximum Retail Price) *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "base_price",
+        "type": "number",
+        "placeholder": "45.00",
+        "required": true,
+        "label": "Base Price (₹) *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "stock_quantity",
+        "type": "number",
+        "placeholder": "100",
+        "required": true,
+        "label": "Stock Quantity *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "box_packing",
+        "type": "text",
+        "placeholder": "e.g., 1 Box (10 Strips)",
+        "required": true,
+        "label": "Packing *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "box_unit",
+        "type": "select-one",
+        "required": false,
+        "label": "Unit",
+        "options": [
+          "Tablet",
+          "Capsule",
+          "Strip",
+          "Blister",
+          "Box",
+          "Carton",
+          "Master Carton",
+          "Vial",
+          "Ampoule",
+          "Pre-filled Syringe",
+          "Piece",
+          "mL (Millilitre)",
+          "Bottle",
+          "Jar",
+          "Sachet",
+          "Pouch",
+          "Packet",
+          "Gram (g)",
+          "Tube",
+          "Kit",
+          "Set",
+          "Pack",
+          "Piece (Pcs)",
+          "Dozen"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "strip_packing",
+        "type": "text",
+        "placeholder": "e.g., 1 Strip (10 Tablets)",
+        "required": true,
+        "label": "Packing *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "strip_unit",
+        "type": "select-one",
+        "required": false,
+        "label": "Unit",
+        "options": [
+          "Tablet",
+          "Capsule",
+          "Strip",
+          "Blister",
+          "Box",
+          "Carton",
+          "Master Carton",
+          "Vial",
+          "Ampoule",
+          "Pre-filled Syringe",
+          "Piece",
+          "mL (Millilitre)",
+          "Bottle",
+          "Jar",
+          "Sachet",
+          "Pouch",
+          "Packet",
+          "Gram (g)",
+          "Tube",
+          "Kit",
+          "Set",
+          "Pack",
+          "Piece (Pcs)",
+          "Dozen"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "expiry_date",
+        "type": "date",
+        "placeholder": "",
+        "required": true,
+        "label": "Expiry Date *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Product\n0\nA\nBack to Products\nAdd New Product\n\nAdd pharmaceutical product to inventory\n\n>\nProduct Information\nProduct Name *\nSubtitle / Composition\nCategory *\nSelect Category\nAyurvedic\nCapsules\nFitness & Health\nInjections\nOintments & Creams\nPersonal Care\nSyrups\nTablets\nSub Category *\nFirst select a category\nSHN No *\nBrand Name\nDescription\nProduct Images\nUpload Images (Multiple)\n\nYou can select multiple images. Supported formats: JPG, PNG, GIF (Max 2MB each)\n\nPricing & Stock\nMRP (Maximum Retail Price) *\n\nBase MRP for commission calculation\n\nBase Price (₹) *\n\nAdmin purchase/base price\n\nStock Quantity *\n\nAvailable stock units\n\nNote: Commission margins will be set when assigning products to Super Distributors. SD, Distributor, and Retailor prices will be calculated based on margins set during product assignment.\n\nBox Packaging for Wholesaler\nPacking *\nUnit\nTablet\nCapsule\nStrip\nBlister\nBox\nCarton\nMaster Carton\nVial\nAmpoule\nPre-filled Syringe\nPiece\nmL (Millilitre)\nBottle\nJar\nSachet\nPouch\nPacket\nGram (g)\nTube\nKit\nSet\nPack\nPiece (Pcs)\nDozen\nStrip Packaging for Customer\nPacking *\nUnit\nTablet\nCapsule\nStrip\nBlister\nBox\nCarton\nMaster Carton\nVial\nAmpoule\nPre-filled Syringe\nPiece\nmL (Millilitre)\nBottle\nJar\nSachet\nPouch\nPacket\nGram (g)\nTube\nKit\nSet\nPack\nPiece (Pcs)\nDozen\nAdditional Details\nExpiry Date *\nStatus *\nActive\nInactive\nCancel\nCreate Product"
+  },
+  "super_distributors": {
+    "title": "Super Distributors Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Add Super Distributor",
+        "href": "https://mgpjn.com/admin/super-distributors/create",
+        "type": null
+      },
+      {
+        "text": "Search",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "Assign to Distributor",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Assigned Products",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Assign New Products",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Assign Selected Products",
+        "href": null,
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "search",
+        "placeholder": "Search by name, email, member ID...",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "options": [
+          "All Status",
+          "Active",
+          "Inactive",
+          "Pending"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "sort",
+        "options": [
+          "Newest First",
+          "Oldest First",
+          "Name A-Z"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "placeholder": "Search products...",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "placeholder": "Search products by name, SKU, category...",
+        "options": []
+      }
+    ],
+    "ths": [
+      "MEMBER ID",
+      "NAME",
+      "CONTACT",
+      "NETWORK",
+      "TOTAL SALES",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "SD87106694",
+        "M\n\nMgpsd\n\nmgpjn02@gmail.com",
+        "9667682703",
+        "1 DI\n1 Total",
+        "₹0",
+        "Active",
+        ""
+      ],
+      [
+        "SD97896406",
+        "R\n\nRavinder singh\n\nrschauhan6207@gmail.com",
+        "8009134449",
+        "0 DI\n0 Total",
+        "₹0",
+        "Active",
+        ""
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": null,
+        "method": "GET",
+        "inputs": [
+          {
+            "name": "search",
+            "type": "text",
+            "placeholder": "Search by name, email, member ID...",
+            "label": "",
+            "options": []
+          },
+          {
+            "name": "status",
+            "type": "select-one",
+            "label": "",
+            "options": [
+              "All Status",
+              "Active",
+              "Inactive",
+              "Pending"
+            ]
+          },
+          {
+            "name": "sort",
+            "type": "select-one",
+            "label": "",
+            "options": [
+              "Newest First",
+              "Oldest First",
+              "Name A-Z"
+            ]
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/3",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/7",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nSuper Distributors Management\n0\nA\nSuper Distributors\n\nManage all super distributors in the network\n\n Add Super Distributor\n\nTotal Super Distributors\n\n2\n\nActive\n\n2\n\nPending Approval\n\n0\n\nInactive\n\n0\n\nAll Status\nActive\nInactive\nPending\nNewest First\nOldest First\nName A-Z\n Search\nReset\nMEMBER ID\tNAME\tCONTACT\tNETWORK\tTOTAL SALES\tSTATUS\tACTIONS\nSD87106694\t\nM\n\nMgpsd\n\nmgpjn02@gmail.com\n\n\t9667682703\t\n1 DI\n1 Total\n\t₹0\tActive\t\n \n \n \n \n\nSD97896406\t\nR\n\nRavinder singh\n\nrschauhan6207@gmail.com\n\n\t8009134449\t\n0 DI\n0 Total\n\t₹0\tActive\t\n \n \n \n "
+  },
+  "super_distributors_create_form": {
+    "title": "Create Super Distributor",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Full Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "Enter full name",
+        "required": true,
+        "label": "Full Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "email",
+        "type": "email",
+        "placeholder": "email@example.com",
+        "required": true,
+        "label": "Email Address *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mobile",
+        "type": "tel",
+        "placeholder": "+91 98765 43210",
+        "required": true,
+        "label": "Mobile Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "business_name",
+        "type": "text",
+        "placeholder": "Business/Company name",
+        "required": false,
+        "label": "Business Name",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "address",
+        "type": "textarea",
+        "placeholder": "Complete address",
+        "required": false,
+        "label": "Address",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "state",
+        "type": "select-one",
+        "required": true,
+        "label": "State *",
+        "options": [
+          "Select State",
+          "ANDAMAN & NICOBAR",
+          "ANDHRA PRADESH",
+          "ARUNACHAL PRADESH",
+          "ASSAM",
+          "BIHAR",
+          "CHANDIGARH",
+          "CHATTISGARH",
+          "DADRA & NAGAR",
+          "DAMAN & DIU",
+          "DELHI",
+          "GOA",
+          "GUJRAT",
+          "HARYANA",
+          "HIMACHAL PRADESH",
+          "JAMMU & KASHMIR",
+          "JHARKHAND",
+          "KARNATAKA",
+          "KERALA",
+          "LAKSHDWEEP",
+          "MADHYA PRADESH",
+          "MAHARASHTRA",
+          "MANIPUR",
+          "MEGHALAYA",
+          "MIZORAM",
+          "NAGALAND",
+          "ORISSA",
+          "PONDICHERY",
+          "PUNJAB",
+          "RAJASTHAN",
+          "SIKKIM",
+          "TAMIL NADU",
+          "TRIPURA",
+          "UTTAR PRADESH",
+          "UTTARANCHAL",
+          "WEST BENGAL"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "city",
+        "type": "select-one",
+        "required": true,
+        "label": "City *",
+        "options": [
+          "Select City"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "pincode",
+        "type": "text",
+        "placeholder": "Enter pincode",
+        "required": false,
+        "label": "Pincode",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_number",
+        "type": "text",
+        "placeholder": "Enter PAN number",
+        "required": true,
+        "label": "PAN Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "PAN Document Upload *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20",
+        "type": "text",
+        "placeholder": "DL No. 20",
+        "required": true,
+        "label": "Drug Licence 20 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 20 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21",
+        "type": "text",
+        "placeholder": "DL No. 21",
+        "required": true,
+        "label": "Drug Licence 21 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 21 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password",
+        "type": "password",
+        "placeholder": "Minimum 8 characters",
+        "required": true,
+        "label": "Password *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password_confirmation",
+        "type": "password",
+        "placeholder": "Re-enter password",
+        "required": true,
+        "label": "Confirm Password *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive",
+          "Pending Approval"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Super Distributor\n0\nA\nBack to Super Distributors\nAdd New Super Distributor\n\nCreate a new super distributor account with margin settings\n\nPersonal Information\nFull Name *\nEmail Address *\nMobile Number *\nBusiness Name\nAddress\nState *\nSelect State\nANDAMAN & NICOBAR\nANDHRA PRADESH\nARUNACHAL PRADESH\nASSAM\nBIHAR\nCHANDIGARH\nCHATTISGARH\nDADRA & NAGAR\nDAMAN & DIU\nDELHI\nGOA\nGUJRAT\nHARYANA\nHIMACHAL PRADESH\nJAMMU & KASHMIR\nJHARKHAND\nKARNATAKA\nKERALA\nLAKSHDWEEP\nMADHYA PRADESH\nMAHARASHTRA\nMANIPUR\nMEGHALAYA\nMIZORAM\nNAGALAND\nORISSA\nPONDICHERY\nPUNJAB\nRAJASTHAN\nSIKKIM\nTAMIL NADU\nTRIPURA\nUTTAR PRADESH\nUTTARANCHAL\nWEST BENGAL\nCity *\nSelect City\nPincode\nRegulatory Compliance\nPAN Number *\nPAN Document Upload *\n\nUpload scanned copy (JPG, PNG or PDF)\n\nDrug Licence 20 Number *\nDrug Licence 20 Document *\nDrug Licence 21 Number *\nDrug Licence 21 Document *\nAccount Settings\nPassword *\nConfirm Password *\nStatus *\nActive\nInactive\nPending Approval\nCancel\nCreate Super Distributor"
+  },
+  "distributors": {
+    "title": "Distributors Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Create Distributor",
+        "href": "https://mgpjn.com/admin/distributors/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "MEMBER ID",
+      "NAME",
+      "SUPER DISTRIBUTOR",
+      "DOWNLINE",
+      "TOTAL SALES",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "D32662709",
+        "M\n\nMgpdt\n\nmgpjn03@gmail.com",
+        "SD87106694",
+        "1 SUB",
+        "₹0",
+        "Active",
+        "View Edit"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/4",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nDistributors Management\n0\nA\nAll Distributors\n\nView all distributors across the network\n\n Create Distributor\n\nTotal Distributors\n\n1\n\nActive\n\n1\n\nTotal Network\n\n168\n\nTotal Sales\n\n₹1,850,000\n\nMEMBER ID\tNAME\tSUPER DISTRIBUTOR\tDOWNLINE\tTOTAL SALES\tSTATUS\tACTIONS\nD32662709\t\nM\n\nMgpdt\n\nmgpjn03@gmail.com\n\n\t\nSD87106694\n\t\n1 SUB\n\t₹0\tActive\t\n View Edit"
+  },
+  "distributors_create_form": {
+    "title": "Create Distributor",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Super Distributor *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "super_distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Super Distributor *",
+        "options": [
+          "Select super distributor",
+          "SD87106694 — Mgpsd",
+          "SD97896406 — Ravinder singh"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "Enter full name",
+        "required": true,
+        "label": "Full Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "email",
+        "type": "email",
+        "placeholder": "email@example.com",
+        "required": true,
+        "label": "Email Address *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mobile",
+        "type": "tel",
+        "placeholder": "+91 98765 43210",
+        "required": true,
+        "label": "Mobile Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "business_name",
+        "type": "text",
+        "placeholder": "Business/Company name",
+        "required": false,
+        "label": "Business Name",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "address",
+        "type": "textarea",
+        "placeholder": "Complete address",
+        "required": false,
+        "label": "Address",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "state",
+        "type": "select-one",
+        "required": true,
+        "label": "State *",
+        "options": [
+          "Select State",
+          "ANDAMAN & NICOBAR",
+          "ANDHRA PRADESH",
+          "ARUNACHAL PRADESH",
+          "ASSAM",
+          "BIHAR",
+          "CHANDIGARH",
+          "CHATTISGARH",
+          "DADRA & NAGAR",
+          "DAMAN & DIU",
+          "DELHI",
+          "GOA",
+          "GUJRAT",
+          "HARYANA",
+          "HIMACHAL PRADESH",
+          "JAMMU & KASHMIR",
+          "JHARKHAND",
+          "KARNATAKA",
+          "KERALA",
+          "LAKSHDWEEP",
+          "MADHYA PRADESH",
+          "MAHARASHTRA",
+          "MANIPUR",
+          "MEGHALAYA",
+          "MIZORAM",
+          "NAGALAND",
+          "ORISSA",
+          "PONDICHERY",
+          "PUNJAB",
+          "RAJASTHAN",
+          "SIKKIM",
+          "TAMIL NADU",
+          "TRIPURA",
+          "UTTAR PRADESH",
+          "UTTARANCHAL",
+          "WEST BENGAL"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "city",
+        "type": "select-one",
+        "required": true,
+        "label": "City *",
+        "options": [
+          "Select City"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "pincode",
+        "type": "text",
+        "placeholder": "Enter pincode",
+        "required": false,
+        "label": "Pincode",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_number",
+        "type": "text",
+        "placeholder": "Enter PAN number",
+        "required": true,
+        "label": "PAN Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "PAN Document Upload *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20",
+        "type": "text",
+        "placeholder": "DL No. 20",
+        "required": true,
+        "label": "Drug Licence 20 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 20 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21",
+        "type": "text",
+        "placeholder": "DL No. 21",
+        "required": true,
+        "label": "Drug Licence 21 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 21 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password",
+        "type": "password",
+        "placeholder": "Minimum 8 characters",
+        "required": true,
+        "label": "Password *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password_confirmation",
+        "type": "password",
+        "placeholder": "Re-enter password",
+        "required": true,
+        "label": "Confirm Password *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive",
+          "Pending Approval"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Distributor\n0\nA\nBack to Distributors\nAdd New Distributor\n\nCreate a distributor account and assign it to the correct super distributor\n\nAssign Parent Super Distributor\nSuper Distributor *\nSelect super distributor\nSD87106694 — Mgpsd\nSD97896406 — Ravinder singh\n\nEnsure the distributor is linked to the correct top-level account.\n\nDistributor Information\nFull Name *\nEmail Address *\nMobile Number *\nBusiness Name\nAddress\nState *\nSelect State\nANDAMAN & NICOBAR\nANDHRA PRADESH\nARUNACHAL PRADESH\nASSAM\nBIHAR\nCHANDIGARH\nCHATTISGARH\nDADRA & NAGAR\nDAMAN & DIU\nDELHI\nGOA\nGUJRAT\nHARYANA\nHIMACHAL PRADESH\nJAMMU & KASHMIR\nJHARKHAND\nKARNATAKA\nKERALA\nLAKSHDWEEP\nMADHYA PRADESH\nMAHARASHTRA\nMANIPUR\nMEGHALAYA\nMIZORAM\nNAGALAND\nORISSA\nPONDICHERY\nPUNJAB\nRAJASTHAN\nSIKKIM\nTAMIL NADU\nTRIPURA\nUTTAR PRADESH\nUTTARANCHAL\nWEST BENGAL\nCity *\nSelect City\nPincode\nRegulatory Compliance\nPAN Number *\nPAN Document Upload *\n\nUpload scanned copy (JPG, PNG or PDF)\n\nDrug Licence 20 Number *\nDrug Licence 20 Document *\nDrug Licence 21 Number *\nDrug Licence 21 Document *\nAccount Settings\nPassword *\nConfirm Password *\nStatus *\nActive\nInactive\nPending Approval\n\nAutomatic Settings\n\nMember ID and referral tracking will be auto-generated.\n\nMargins are inherited from the assigned super distributor.\n\nCancel\nCreate Distributor"
+  },
+  "sub_distributors": {
+    "title": "Sub Distributors Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Create Sub Distributor",
+        "href": "https://mgpjn.com/admin/sub-distributors/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "MEMBER ID",
+      "NAME",
+      "PARENT DISTRIBUTOR",
+      "RETAILERS",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "SUB60576672",
+        "M\n\nMediglaxo Sub Distributor\n\nmgpsd@gmail.com",
+        "D32662709 Mgpdt",
+        "2 RTL",
+        "Active",
+        "View Edit"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/8",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nSub Distributors Management\n0\nA\nAll Sub Distributors\n\nView all sub distributors across the network\n\n Create Sub Distributor\n\nTotal Sub Distributors\n\n1\n\nActive\n\n1\n\nRetailers Under\n\n2\n\nInactive\n\n0\n\nMEMBER ID\tNAME\tPARENT DISTRIBUTOR\tRETAILERS\tSTATUS\tACTIONS\nSUB60576672\t\nM\n\nMediglaxo Sub Distributor\n\nmgpsd@gmail.com\n\n\tD32662709 Mgpdt\t2 RTL\tActive\t\n View Edit"
+  },
+  "sub_distributors_create_form": {
+    "title": "Create Sub Distributor",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Distributor *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Distributor *",
+        "options": [
+          "Select distributor",
+          "D32662709 — Mgpdt"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "Enter full name",
+        "required": true,
+        "label": "Full Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "email",
+        "type": "email",
+        "placeholder": "email@example.com",
+        "required": true,
+        "label": "Email Address *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mobile",
+        "type": "tel",
+        "placeholder": "+91 98765 43210",
+        "required": true,
+        "label": "Mobile Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "business_name",
+        "type": "text",
+        "placeholder": "Business/Company name",
+        "required": false,
+        "label": "Business Name",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "address_line1",
+        "type": "text",
+        "placeholder": "Street address",
+        "required": true,
+        "label": "Address Line 1 *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "address_line2",
+        "type": "text",
+        "placeholder": "Apt, suite, etc.",
+        "required": false,
+        "label": "Address Line 2",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "state",
+        "type": "select-one",
+        "required": true,
+        "label": "State *",
+        "options": [
+          "Select State",
+          "ANDAMAN & NICOBAR",
+          "ANDHRA PRADESH",
+          "ARUNACHAL PRADESH",
+          "ASSAM",
+          "BIHAR",
+          "CHANDIGARH",
+          "CHATTISGARH",
+          "DADRA & NAGAR",
+          "DAMAN & DIU",
+          "DELHI",
+          "GOA",
+          "GUJRAT",
+          "HARYANA",
+          "HIMACHAL PRADESH",
+          "JAMMU & KASHMIR",
+          "JHARKHAND",
+          "KARNATAKA",
+          "KERALA",
+          "LAKSHDWEEP",
+          "MADHYA PRADESH",
+          "MAHARASHTRA",
+          "MANIPUR",
+          "MEGHALAYA",
+          "MIZORAM",
+          "NAGALAND",
+          "ORISSA",
+          "PONDICHERY",
+          "PUNJAB",
+          "RAJASTHAN",
+          "SIKKIM",
+          "TAMIL NADU",
+          "TRIPURA",
+          "UTTAR PRADESH",
+          "UTTARANCHAL",
+          "WEST BENGAL"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "city",
+        "type": "select-one",
+        "required": true,
+        "label": "City *",
+        "options": [
+          "Select City"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "pincode",
+        "type": "text",
+        "placeholder": "Enter pincode",
+        "required": false,
+        "label": "Pincode",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_number",
+        "type": "text",
+        "placeholder": "Enter PAN number",
+        "required": true,
+        "label": "PAN Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "PAN Document Upload *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20",
+        "type": "text",
+        "placeholder": "DL No. 20",
+        "required": true,
+        "label": "Drug Licence 20 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 20 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21",
+        "type": "text",
+        "placeholder": "DL No. 21",
+        "required": true,
+        "label": "Drug Licence 21 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 21 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "gst_number",
+        "type": "text",
+        "placeholder": "Enter GST number",
+        "required": false,
+        "label": "GST Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "bank_name",
+        "type": "text",
+        "placeholder": "Bank name",
+        "required": false,
+        "label": "Bank Name",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "account_number",
+        "type": "text",
+        "placeholder": "Account number",
+        "required": false,
+        "label": "Account Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "ifsc_code",
+        "type": "text",
+        "placeholder": "IFSC code",
+        "required": false,
+        "label": "IFSC Code",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password",
+        "type": "password",
+        "placeholder": "Minimum 6 characters",
+        "required": true,
+        "label": "Password *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password_confirmation",
+        "type": "password",
+        "placeholder": "Re-enter password",
+        "required": true,
+        "label": "Confirm Password *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive",
+          "Pending Approval"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Sub Distributor\n0\nA\nBack to Sub Distributors\nAdd New Sub Distributor\n\nCreate a sub distributor account and assign it to the correct distributor\n\nAssign Parent Distributor\nDistributor *\nSelect distributor\nD32662709 — Mgpdt\n\nThe sub distributor will be placed under this distributor in the hierarchy.\n\nSub Distributor Information\nFull Name *\nEmail Address *\nMobile Number *\nBusiness Name\nAddress Line 1 *\nAddress Line 2\nState *\nSelect State\nANDAMAN & NICOBAR\nANDHRA PRADESH\nARUNACHAL PRADESH\nASSAM\nBIHAR\nCHANDIGARH\nCHATTISGARH\nDADRA & NAGAR\nDAMAN & DIU\nDELHI\nGOA\nGUJRAT\nHARYANA\nHIMACHAL PRADESH\nJAMMU & KASHMIR\nJHARKHAND\nKARNATAKA\nKERALA\nLAKSHDWEEP\nMADHYA PRADESH\nMAHARASHTRA\nMANIPUR\nMEGHALAYA\nMIZORAM\nNAGALAND\nORISSA\nPONDICHERY\nPUNJAB\nRAJASTHAN\nSIKKIM\nTAMIL NADU\nTRIPURA\nUTTAR PRADESH\nUTTARANCHAL\nWEST BENGAL\nCity *\nSelect City\nPincode\nRegulatory Compliance\nPAN Number *\nPAN Document Upload *\n\nUpload scanned copy (JPG, PNG or PDF)\n\nDrug Licence 20 Number *\nDrug Licence 20 Document *\nDrug Licence 21 Number *\nDrug Licence 21 Document *\nGST Number\nBank Details\nBank Name\nAccount Number\nIFSC Code\nAccount Settings\nPassword *\nConfirm Password *\nStatus *\nActive\nInactive\nPending Approval\n\nAutomatic Settings\n\nMember ID will be auto-generated (SUB2026XXXX).\n\nReferral tracking will be set automatically.\n\nMargins are inherited from the assigned distributor's structure.\n\nCancel\nCreate Sub Distributor"
+  },
+  "retailers": {
+    "title": "Retailers Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Create Retailer",
+        "href": "https://mgpjn.com/admin/retailers/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "MEMBER ID",
+      "NAME",
+      "DISTRIBUTOR",
+      "CUSTOMERS",
+      "TOTAL SALES",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "R27570532",
+        "Mgprt\n\nmgpjn04@gmail.com",
+        "SUB60576672",
+        "5 CU",
+        "₹215",
+        "Active",
+        "View Edit"
+      ],
+      [
+        "R33273706",
+        "Geeta\n\nshreeramservices.insp@gmail.com",
+        "SUB60576672",
+        "0 CU",
+        "₹0",
+        "Active",
+        "View Edit"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/5",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/15",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nRetailers Management\n0\nA\nAll Retailers\n\nView all retailers across the network\n\n Create Retailer\n\nTotal Retailers\n\n2\n\nActive\n\n2\n\nTotal Customers\n\n5\n\nTotal Sales\n\n₹215\n\nMEMBER ID\tNAME\tDISTRIBUTOR\tCUSTOMERS\tTOTAL SALES\tSTATUS\tACTIONS\nR27570532\t\n\nMgprt\n\nmgpjn04@gmail.com\n\n\tSUB60576672\t\n5 CU\n\t₹215\tActive\t\n View Edit\nR33273706\t\n\nGeeta\n\nshreeramservices.insp@gmail.com\n\n\tSUB60576672\t\n0 CU\n\t₹0\tActive\t\n View Edit"
+  },
+  "retailers_create_form": {
+    "title": "Create Retailer",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Super Distributor *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "super_distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Super Distributor *",
+        "options": [
+          "Select super distributor",
+          "SD87106694 — Mgpsd",
+          "SD97896406 — Ravinder singh"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Distributor *",
+        "options": [
+          "Select distributor",
+          "D32662709 — Mgpdt"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "sub_distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Sub Distributor *",
+        "options": [
+          "Select sub distributor",
+          "SUB60576672 — Mediglaxo Sub Distributor"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "Enter full name",
+        "required": true,
+        "label": "Full Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "email",
+        "type": "email",
+        "placeholder": "email@example.com",
+        "required": true,
+        "label": "Email Address *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mobile",
+        "type": "tel",
+        "placeholder": "+91 98765 43210",
+        "required": true,
+        "label": "Mobile Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "business_name",
+        "type": "text",
+        "placeholder": "Business/Company name",
+        "required": false,
+        "label": "Business Name",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "address",
+        "type": "textarea",
+        "placeholder": "Complete address",
+        "required": false,
+        "label": "Address",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "state",
+        "type": "select-one",
+        "required": true,
+        "label": "State *",
+        "options": [
+          "Select State",
+          "ANDAMAN & NICOBAR",
+          "ANDHRA PRADESH",
+          "ARUNACHAL PRADESH",
+          "ASSAM",
+          "BIHAR",
+          "CHANDIGARH",
+          "CHATTISGARH",
+          "DADRA & NAGAR",
+          "DAMAN & DIU",
+          "DELHI",
+          "GOA",
+          "GUJRAT",
+          "HARYANA",
+          "HIMACHAL PRADESH",
+          "JAMMU & KASHMIR",
+          "JHARKHAND",
+          "KARNATAKA",
+          "KERALA",
+          "LAKSHDWEEP",
+          "MADHYA PRADESH",
+          "MAHARASHTRA",
+          "MANIPUR",
+          "MEGHALAYA",
+          "MIZORAM",
+          "NAGALAND",
+          "ORISSA",
+          "PONDICHERY",
+          "PUNJAB",
+          "RAJASTHAN",
+          "SIKKIM",
+          "TAMIL NADU",
+          "TRIPURA",
+          "UTTAR PRADESH",
+          "UTTARANCHAL",
+          "WEST BENGAL"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "city",
+        "type": "select-one",
+        "required": true,
+        "label": "City *",
+        "options": [
+          "Select City"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "pincode",
+        "type": "text",
+        "placeholder": "Enter pincode",
+        "required": false,
+        "label": "Pincode",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_number",
+        "type": "text",
+        "placeholder": "Enter PAN number",
+        "required": true,
+        "label": "PAN Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "PAN Document Upload *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20",
+        "type": "text",
+        "placeholder": "DL No. 20",
+        "required": true,
+        "label": "Drug Licence 20 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_20_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 20 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21",
+        "type": "text",
+        "placeholder": "DL No. 21",
+        "required": true,
+        "label": "Drug Licence 21 Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "drug_license_21_document",
+        "type": "file",
+        "placeholder": "",
+        "required": true,
+        "label": "Drug Licence 21 Document *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "gst_number",
+        "type": "text",
+        "placeholder": "Enter GST number",
+        "required": false,
+        "label": "GST Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "bank_name",
+        "type": "text",
+        "placeholder": "Bank name",
+        "required": false,
+        "label": "Bank Name",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "account_number",
+        "type": "text",
+        "placeholder": "Account number",
+        "required": false,
+        "label": "Account Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "ifsc_code",
+        "type": "text",
+        "placeholder": "IFSC code",
+        "required": false,
+        "label": "IFSC Code",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password",
+        "type": "password",
+        "placeholder": "Minimum 8 characters",
+        "required": true,
+        "label": "Password *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password_confirmation",
+        "type": "password",
+        "placeholder": "Re-enter password",
+        "required": true,
+        "label": "Confirm Password *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive",
+          "Pending Approval"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Retailer\n0\nA\nBack to Retailers\nAdd New Retailer\n\nAssociate the new retailer with its parent distributor.\n\nAssign Parent Hierarchy\nSuper Distributor *\nSelect super distributor\nSD87106694 — Mgpsd\nSD97896406 — Ravinder singh\n\nThis controls which distributor list becomes available.\n\nDistributor *\nSelect distributor\nD32662709 — Mgpdt\n\nOnly distributors under the selected super distributor.\n\nSub Distributor *\nSelect sub distributor\nSUB60576672 — Mediglaxo Sub Distributor\n\nOnly sub distributors under the selected distributor.\n\nRetailer Information\nFull Name *\nEmail Address *\nMobile Number *\nBusiness Name\nAddress\nState *\nSelect State\nANDAMAN & NICOBAR\nANDHRA PRADESH\nARUNACHAL PRADESH\nASSAM\nBIHAR\nCHANDIGARH\nCHATTISGARH\nDADRA & NAGAR\nDAMAN & DIU\nDELHI\nGOA\nGUJRAT\nHARYANA\nHIMACHAL PRADESH\nJAMMU & KASHMIR\nJHARKHAND\nKARNATAKA\nKERALA\nLAKSHDWEEP\nMADHYA PRADESH\nMAHARASHTRA\nMANIPUR\nMEGHALAYA\nMIZORAM\nNAGALAND\nORISSA\nPONDICHERY\nPUNJAB\nRAJASTHAN\nSIKKIM\nTAMIL NADU\nTRIPURA\nUTTAR PRADESH\nUTTARANCHAL\nWEST BENGAL\nCity *\nSelect City\nPincode\nRegulatory Compliance\nPAN Number *\nPAN Document Upload *\n\nUpload scanned copy (JPG, PNG or PDF)\n\nDrug Licence 20 Number *\nDrug Licence 20 Document *\nDrug Licence 21 Number *\nDrug Licence 21 Document *\nGST Number\nBanking Information\nBank Name\nAccount Number\nIFSC Code\nAccount Settings\nPassword *\nConfirm Password *\nStatus *\nActive\nInactive\nPending Approval\n\nAutomatic Settings\n\nMember ID and referral tracking will be auto-generated.\n\nMargins inherit from the linked distributor’s structure.\n\nCancel\nCreate Retailer"
+  },
+  "user_customer": {
+    "title": "Customers Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Create Customer",
+        "href": "https://mgpjn.com/admin/user_customer/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "MEMBER ID",
+      "NAME",
+      "RETAILER",
+      "ORDERS",
+      "TOTAL SALES",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "CU260701059",
+        "Sanjeev Patell\n\nasbmela365mart@gmail.com",
+        "R27570532",
+        "0",
+        "₹0",
+        "Active",
+        "View"
+      ],
+      [
+        "CU260701993",
+        "NITIN Mkawnaa\n\nshubhyatra675@gmail.com",
+        "R27570532",
+        "0",
+        "₹0",
+        "Active",
+        "View"
+      ],
+      [
+        "CU260522594",
+        "NITIN\n\nallsolutionway@gmail.com",
+        "R27570532",
+        "0",
+        "₹0",
+        "Active",
+        "View"
+      ],
+      [
+        "CU260522849",
+        "NITIN\n\nall@gmail.com",
+        "R27570532",
+        "0",
+        "₹0",
+        "Active",
+        "View"
+      ],
+      [
+        "C79544383",
+        "Anant patel\n\nmgpjn05@gmail.com",
+        "R27570532",
+        "0",
+        "₹0",
+        "Active",
+        "View"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/18",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/17",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/13",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/12",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/login-as-user/6",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCustomers Management\n0\nA\nAll Customers\n\nView all customers across the network\n\n Create Customer\n\nTotal Customers\n\n5\n\nActive\n\n5\n\nTotal Orders\n\n1560\n\nTotal Sales\n\n₹420,000\n\nMEMBER ID\tNAME\tRETAILER\tORDERS\tTOTAL SALES\tSTATUS\tACTIONS\nCU260701059\t\n\nSanjeev Patell\n\nasbmela365mart@gmail.com\n\n\tR27570532\t0\t₹0\tActive\t\n View\nCU260701993\t\n\nNITIN Mkawnaa\n\nshubhyatra675@gmail.com\n\n\tR27570532\t0\t₹0\tActive\t\n View\nCU260522594\t\n\nNITIN\n\nallsolutionway@gmail.com\n\n\tR27570532\t0\t₹0\tActive\t\n View\nCU260522849\t\n\nNITIN\n\nall@gmail.com\n\n\tR27570532\t0\t₹0\tActive\t\n View\nC79544383\t\n\nAnant patel\n\nmgpjn05@gmail.com\n\n\tR27570532\t0\t₹0\tActive\t\n View"
+  },
+  "user_customer_create_form": {
+    "title": "Create Customer",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Super Distributor *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "super_distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Super Distributor *",
+        "options": [
+          "Select super distributor",
+          "SD87106694 — Mgpsd",
+          "SD97896406 — Ravinder singh"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Distributor *",
+        "options": [
+          "Select distributor",
+          "D32662709 — Mgpdt"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "sub_distributor_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Retailer *",
+        "options": [
+          "Select retailer",
+          "R27570532 — Mgprt",
+          "R33273706 — Geeta"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "Enter full name",
+        "required": true,
+        "label": "Full Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "email",
+        "type": "email",
+        "placeholder": "email@example.com",
+        "required": true,
+        "label": "Email Address *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mobile",
+        "type": "tel",
+        "placeholder": "+91 98765 43210",
+        "required": true,
+        "label": "Mobile Number *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "alternative_mobile",
+        "type": "tel",
+        "placeholder": "+91 98765 43211",
+        "required": false,
+        "label": "Alternative Mobile",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "shop_name",
+        "type": "text",
+        "placeholder": "Enter shop name",
+        "required": true,
+        "label": "Shop Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "address_line1",
+        "type": "text",
+        "placeholder": "Street address",
+        "required": true,
+        "label": "Address Line 1 *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "address_line2",
+        "type": "text",
+        "placeholder": "Area, landmark",
+        "required": false,
+        "label": "Address Line 2",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "state",
+        "type": "select-one",
+        "required": true,
+        "label": "State *",
+        "options": [
+          "Select State",
+          "ANDAMAN & NICOBAR",
+          "ANDHRA PRADESH",
+          "ARUNACHAL PRADESH",
+          "ASSAM",
+          "BIHAR",
+          "CHANDIGARH",
+          "CHATTISGARH",
+          "DADRA & NAGAR",
+          "DAMAN & DIU",
+          "DELHI",
+          "GOA",
+          "GUJRAT",
+          "HARYANA",
+          "HIMACHAL PRADESH",
+          "JAMMU & KASHMIR",
+          "JHARKHAND",
+          "KARNATAKA",
+          "KERALA",
+          "LAKSHDWEEP",
+          "MADHYA PRADESH",
+          "MAHARASHTRA",
+          "MANIPUR",
+          "MEGHALAYA",
+          "MIZORAM",
+          "NAGALAND",
+          "ORISSA",
+          "PONDICHERY",
+          "PUNJAB",
+          "RAJASTHAN",
+          "SIKKIM",
+          "TAMIL NADU",
+          "TRIPURA",
+          "UTTAR PRADESH",
+          "UTTARANCHAL",
+          "WEST BENGAL"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "city",
+        "type": "select-one",
+        "required": true,
+        "label": "City *",
+        "options": [
+          "First select a state"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "pincode",
+        "type": "text",
+        "placeholder": "400001",
+        "required": true,
+        "label": "PIN Code *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "gst_number",
+        "type": "text",
+        "placeholder": "Enter GST number",
+        "required": false,
+        "label": "GST Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "pan_number",
+        "type": "text",
+        "placeholder": "Enter PAN number",
+        "required": false,
+        "label": "PAN Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "bank_name",
+        "type": "text",
+        "placeholder": "Bank name",
+        "required": false,
+        "label": "Bank Name",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "account_number",
+        "type": "text",
+        "placeholder": "Account number",
+        "required": false,
+        "label": "Account Number",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "ifsc_code",
+        "type": "text",
+        "placeholder": "IFSC code",
+        "required": false,
+        "label": "IFSC Code",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password",
+        "type": "password",
+        "placeholder": "Minimum 6 characters",
+        "required": true,
+        "label": "Password *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive",
+          "Pending",
+          "Suspended"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Customer\n0\nA\nBack to Customers\nAdd New Customer\n\nCreate a customer account and assign it to the correct retailer\n\nAssign Parent Hierarchy\nSuper Distributor *\nSelect super distributor\nSD87106694 — Mgpsd\nSD97896406 — Ravinder singh\n\nControls distributor list.\n\nDistributor *\nSelect distributor\nD32662709 — Mgpdt\n\nControls retailer list.\n\nRetailer *\nSelect retailer\nR27570532 — Mgprt\nR33273706 — Geeta\n\nFinal parent for customer.\n\nCustomer Information\nFull Name *\nEmail Address *\nMobile Number *\nAlternative Mobile\nAddress Information\nShop Name *\nAddress Line 1 *\nAddress Line 2\nState *\nSelect State\nANDAMAN & NICOBAR\nANDHRA PRADESH\nARUNACHAL PRADESH\nASSAM\nBIHAR\nCHANDIGARH\nCHATTISGARH\nDADRA & NAGAR\nDAMAN & DIU\nDELHI\nGOA\nGUJRAT\nHARYANA\nHIMACHAL PRADESH\nJAMMU & KASHMIR\nJHARKHAND\nKARNATAKA\nKERALA\nLAKSHDWEEP\nMADHYA PRADESH\nMAHARASHTRA\nMANIPUR\nMEGHALAYA\nMIZORAM\nNAGALAND\nORISSA\nPONDICHERY\nPUNJAB\nRAJASTHAN\nSIKKIM\nTAMIL NADU\nTRIPURA\nUTTAR PRADESH\nUTTARANCHAL\nWEST BENGAL\nCity *\nFirst select a state\nPIN Code *\nBusiness Details\nGST Number\nPAN Number\nBanking Information\nBank Name\nAccount Number\nIFSC Code\nAccount Settings\nPassword *\nStatus *\nActive\nInactive\nPending\nSuspended\nCancel\nCreate Customer"
+  },
+  "margins": {
+    "title": "Margin Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "SUPER DISTRIBUTOR",
+      "SD MARGIN",
+      "DI MARGIN",
+      "SUB MARGIN",
+      "RT MARGIN",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "No margin structures found"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nMargin Management\n0\nA\nMargin Management\n\nManage margin structures for all super distributors\n\nSUPER DISTRIBUTOR\tSD MARGIN\tDI MARGIN\tSUB MARGIN\tRT MARGIN\tACTIONS\n\n\nNo margin structures found"
+  },
+  "transfers": {
+    "title": "Transfer Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "New Transfer",
+        "href": "https://mgpjn.com/admin/transfers/create",
+        "type": null
+      },
+      {
+        "text": "New Transfer",
+        "href": "https://mgpjn.com/admin/transfers/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "",
+        "options": [
+          "All Levels",
+          "Super Distributor",
+          "Distributor",
+          "Sub Distributor",
+          "Retailer"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "",
+        "options": [
+          "All Status",
+          "Completed",
+          "Pending",
+          "Cancelled"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "TRANSFER ID",
+      "USER DETAILS",
+      "FROM LEVEL",
+      "TO LEVEL",
+      "NEW PARENT",
+      "DATE",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "No transfers found\n\nGet started by creating a new transfer\n\nNew Transfer"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nTransfer Management\n0\nA\nTransfer Management\n\nTransfer users between different levels in the network\n\n New Transfer\n\nTotal Transfers\n\n0\n\nCompleted\n\n0\n\nPending\n\n0\n\nThis Month\n\n0\n\nTransfer History\nAll Levels\nSuper Distributor\nDistributor\nSub Distributor\nRetailer\nAll Status\nCompleted\nPending\nCancelled\nTRANSFER ID\tUSER DETAILS\tFROM LEVEL\tTO LEVEL\tNEW PARENT\tDATE\tSTATUS\tACTIONS\n\n\nNo transfers found\n\nGet started by creating a new transfer\n\nNew Transfer"
+  },
+  "transfers_create_form": {
+    "title": "Create Transfer",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "current_level",
+        "type": "select-one",
+        "required": true,
+        "label": "Current Level *",
+        "options": [
+          "Select Current Level",
+          "Super Distributor",
+          "Distributor",
+          "Retailer",
+          "Customer"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "user_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Select User *",
+        "options": [
+          "First select current level"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "new_parent_id",
+        "type": "select-one",
+        "required": true,
+        "label": "New Parent *",
+        "options": [
+          "Select New Parent",
+          "Super Distributors",
+          "Distributors",
+          "Retailers"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "new_parent_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Select Parent User *",
+        "options": [
+          "First select parent level"
+        ]
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "reason",
+        "type": "textarea",
+        "placeholder": "Enter reason for transfer...",
+        "required": true,
+        "label": "Reason for Transfer *",
+        "options": []
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Transfer\n0\nA\nCreate Transfer\n\nTransfer a user to a different level in the network\n\nSelect User to Transfer\nCurrent Level *\nSelect Current Level\nSuper Distributor\nDistributor\nRetailer\nCustomer\nSelect User *\nFirst select current level\nTransfer Details\nNew Parent *\nSelect New Parent\nSuper Distributors\nDistributors\nRetailers\nReason for Transfer *\nCancel\nSave as Draft\n Create Transfer"
+  },
+  "product_margins": {
+    "title": "Product Margin List",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "#",
+      "PRODUCT",
+      "SKU",
+      "CATEGORY",
+      "END USER",
+      "SD %",
+      "DIST %",
+      "SUB D %",
+      "RT %"
+    ],
+    "rows": [
+      [
+        "1",
+        "N/A\n\nAKZYME Syrup 200ml.",
+        "-",
+        "Syrups",
+        "₹108.00",
+        "2.00%",
+        "5.00%",
+        "10.00%",
+        "15.00%"
+      ],
+      [
+        "2",
+        "N/A\n\nANGOTOR-A Tablets",
+        "-",
+        "Tablets",
+        "₹160.00",
+        "2.00%",
+        "5.00%",
+        "10.00%",
+        "15.00%"
+      ],
+      [
+        "3",
+        "N/A\n\nANGOTOR-D Tablets",
+        "-",
+        "Tablets",
+        "₹130.00",
+        "2.00%",
+        "5.00%",
+        "10.00%",
+        "15.00%"
+      ],
+      [
+        "4",
+        "N/A\n\nARGIQR Sachets",
+        "-",
+        "Fitness & Health",
+        "₹840.00",
+        "2.00%",
+        "5.00%",
+        "10.00%",
+        "15.00%"
+      ],
+      [
+        "5",
+        "N/A\n\nCALOTIN-D3 Nano Shot (5ml Each) Sugar Free",
+        "-",
+        "Fitness & Health",
+        "₹249.00",
+        "2.00%",
+        "5.00%",
+        "10.00%",
+        "15.00%"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nProduct Margin List\n0\nA\nProduct Margin List\n\nAll pipeline products with margin overview across all roles\n\n#\tPRODUCT\tSKU\tCATEGORY\tEND USER\tSD %\tDIST %\tSUB D %\tRT %\n1\t\nN/A\n\nAKZYME Syrup 200ml.\n\n\t-\tSyrups\t₹108.00\t2.00%\t5.00%\t10.00%\t15.00%\n2\t\nN/A\n\nANGOTOR-A Tablets\n\n\t-\tTablets\t₹160.00\t2.00%\t5.00%\t10.00%\t15.00%\n3\t\nN/A\n\nANGOTOR-D Tablets\n\n\t-\tTablets\t₹130.00\t2.00%\t5.00%\t10.00%\t15.00%\n4\t\nN/A\n\nARGIQR Sachets\n\n\t-\tFitness & Health\t₹840.00\t2.00%\t5.00%\t10.00%\t15.00%\n5\t\nN/A\n\nCALOTIN-D3 Nano Shot (5ml Each) Sugar Free\n\n\t-\tFitness & Health\t₹249.00\t2.00%\t5.00%\t10.00%\t15.00%\n6\t\nN/A\n\nCALOTIN-K2 Softgel Capsules\n\n\t-\tCapsules\t₹128.00\t2.00%\t5.00%\t10.00%\t15.00%\n7\t\nN/A\n\nCALOTIN-Z Softgel Capsules\n\n\t-\tCapsules\t₹98.00\t2.00%\t5.00%\t10.00%\t15.00%\n8\t\nN/A\n\nCARIOMOX-625 Tablets\n\n\t-\tTablets\t₹142.00\t2.00%\t5.00%\t10.00%\t15.00%\n9\t\nN/A\n\nCEFDOTOR-200 Tablets\n\n\t-\tTablets\t₹140.00\t2.00%\t5.00%\t10.00%\t15.00%\n10\t\nN/A\n\nCEFDOTOR-CV Tablets\n\n\t-\tTablets\t₹268.00\t2.00%\t5.00%\t10.00%\t15.00%\n11\t\nN/A\n\nCEFRAXL-500 Tablets\n\n\t-\tTablets\t₹378.00\t2.00%\t5.00%\t10.00%\t15.00%\n12\t\nN/A\n\nCHYMOTOR FORTE Tablets\n\n\t-\tTablets\t₹229.00\t2.00%\t5.00%\t10.00%\t15.00%\n13\t\nN/A\n\nCIFIXTOR-200 LB Tablets\n\n\t-\tTablets\t₹122.00\t2.00%\t5.00%\t10.00%\t15.00%\n14\t\nN/A\n\nCIFIXTOR-O Tablets\n\n\t-\tTablets\t₹154.00\t2.00%\t5.00%\t10.00%\t15.00%\n15\t\nN/A\n\nCLOFEPARA-SP Tablets\n\n\t-\tTablets\t₹14.50\t15.00%\t10.00%\t0.00%\t20.00%\n16\t\nN/A\n\nDICLO HOT Gel 30 gm\n\n\t-\tOintments & Creams\t₹84.00\t2.00%\t5.00%\t10.00%\t15.00%\n17\t\nN/A\n\nDLOFEPARA-MR Tablets\n\n\t-\tTablets\t₹66.00\t2.00%\t5.00%\t10.00%\t15.00%\n18\t\nN/A\n\nDYNOTOR -AQ Injection\n\n\t-\tInjections\t₹17.00\t2.00%\t5.00%\t10.00%\t15.00%\n19\t\nN/A\n\nENRGEE 4U Energy Drink 200 gms\n\n\t-\tFitness & Health\t₹92.00\t2.00%\t5.00%\t10.00%\t15.00%\n20\t\nN/A\n\nEXER-BR Cough Syrup 100 ml\n\n\t-\tSyrups\t₹68.00\t2.00%\t5.00%\t10.00%\t15.00%\n21\t\nN/A\n\nEXER-LS Cough Syrup 100 ml\n\n\t-\tSyrups\t₹68.00\t2.00%\t5.00%\t10.00%\t15.00%\n22\t\nN/A\n\nFENACTOR-P Tablets\n\n\t-\tTablets\t₹45.00\t2.00%\t5.00%\t10.00%\t15.00%\n23\t\nN/A\n\nFENACTOR-SP Tablets\n\n\t-\tTablets\t₹86.00\t2.00%\t5.00%\t10.00%\t15.00%\n24\t\nN/A\n\nFLUTAGESIC-P Tablets\n\n\t-\tTablets\t₹124.00\t2.00%\t5.00%\t10.00%\t15.00%\n25\t\nN/A\n\nFNGI-100 Capsule\n\n\t-\tCapsules\t₹124.00\t2.00%\t5.00%\t10.00%\t15.00%\n26\t\nN/A\n\nFNGI-200 Capsule\n\n\t-\tCapsules\t₹165.00\t2.00%\t5.00%\t10.00%\t15.00%\n27\t\nN/A\n\nFNGIDERM-OZ Cream 15 gm\n\n\t-\tOintments & Creams\t₹68.00\t2.00%\t5.00%\t10.00%\t15.00%\n28\t\nN/A\n\nFREE STEP Tablets\n\n\t-\tTablets\t₹161.00\t2.00%\t5.00%\t10.00%\t15.00%\n29\t\nN/A\n\nGazperi-DSR Capsule\n\n\t-\tCapsules\t₹80.00\t2.00%\t5.00%\t10.00%\t15.00%\n30\t\nN/A\n\nGLAXODERM-5 Cream 15 gm\n\n\t-\tOintments & Creams\t₹63.00\t2.00%\t5.00%\t10.00%\t15.00%\n31\t\nN/A\n\nIROCE-XT Iron Tonic 200ml.\n\n\t-\tSyrups\t₹93.00\t2.00%\t5.00%\t10.00%\t15.00%\n32\t\nN/A\n\nJOINT-WISH Tablets\n\n\t-\tTablets\t₹122.00\t2.00%\t5.00%\t10.00%\t15.00%\n33\t\nN/A\n\nKOFGONE-DX Syrups 100 ml\n\n\t-\tSyrups\t₹82.00\t2.00%"
+  },
+  "products": {
+    "title": "Products Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Add Product",
+        "href": "https://mgpjn.com/admin/products/create",
+        "type": null
+      },
+      {
+        "text": "Search",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "search",
+        "placeholder": "Search by name, batch no...",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "category",
+        "options": [
+          "All Categories",
+          "Tablets",
+          "Capsules",
+          "Syrups",
+          "Injections"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "options": [
+          "All Status",
+          "Active",
+          "Inactive"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_method",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "PRODUCT",
+      "BATCH NO",
+      "MRP",
+      "BASE PRICE",
+      "DISCOUNT",
+      "STOCK",
+      "EXPIRY",
+      "GST",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "VITMIZINC Softgelatin Capsules\n\nCapsules",
+        "Gg",
+        "₹127.00",
+        "₹10.00",
+        "92% off",
+        "475",
+        "03/2028",
+        "0.00%",
+        "Active",
+        "View Edit Delete"
+      ],
+      [
+        "NEURVIS-N Injection\n\nInjections",
+        "td",
+        "₹75.00",
+        "₹11.00",
+        "85% off",
+        "123",
+        "05/2028",
+        "0.00%",
+        "Active",
+        "View Edit Delete"
+      ],
+      [
+        "DYNOTOR -AQ Injection\n\nInjections",
+        "apd2502",
+        "₹24.00",
+        "₹8.00",
+        "67% off",
+        "222",
+        "03/2026",
+        "0.00%",
+        "Active",
+        "View Edit Delete"
+      ],
+      [
+        "PENTOGUN 40mg Injection\n\nInjections",
+        "1222",
+        "₹53.00",
+        "₹10.00",
+        "81% off",
+        "111",
+        "03/2026",
+        "0.00%",
+        "Active",
+        "View Edit Delete"
+      ],
+      [
+        "VICOPROT PLUS Protein Supplement 200 gm\n\nFitness & Health",
+        "1222",
+        "₹325.00",
+        "₹50.00",
+        "85% off",
+        "100",
+        "03/2026",
+        "0.00%",
+        "Active",
+        "View Edit Delete"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": null,
+        "method": "GET",
+        "inputs": [
+          {
+            "name": "search",
+            "type": "text",
+            "placeholder": "Search by name, batch no...",
+            "label": "",
+            "options": []
+          },
+          {
+            "name": "category",
+            "type": "select-one",
+            "label": "",
+            "options": [
+              "All Categories",
+              "Tablets",
+              "Capsules",
+              "Syrups",
+              "Injections"
+            ]
+          },
+          {
+            "name": "status",
+            "type": "select-one",
+            "label": "",
+            "options": [
+              "All Status",
+              "Active",
+              "Inactive"
+            ]
+          }
+        ]
+      },
+      {
+        "action": null,
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          },
+          {
+            "name": "_method",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nProducts Management\n0\nA\nProducts\n\nManage pharmaceutical products inventory\n\n Add Product\n\nTotal Products\n\n59\n\nActive\n\n59\n\nInactive\n\n0\n\nLow Stock\n\n0\n\nAll Categories\nTablets\nCapsules\nSyrups\nInjections\nAll Status\nActive\nInactive\nSearch\nPRODUCT\tBATCH NO\tMRP\tBASE PRICE\tDISCOUNT\tSTOCK\tEXPIRY\tGST\tSTATUS\tACTIONS\n\n\nVITMIZINC Softgelatin Capsules\n\nCapsules\n\n\tGg\t₹127.00\t₹10.00\t92% off\t475\t03/2028\t0.00%\tActive\tView Edit Delete\n\n\nNEURVIS-N Injection\n\nInjections\n\n\ttd\t₹75.00\t₹11.00\t85% off\t123\t05/2028\t0.00%\tActive\tView Edit Delete\n\n\nDYNOTOR -AQ Injection\n\nInjections\n\n\tapd2502\t₹24.00\t₹8.00\t67% off\t222\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nPENTOGUN 40mg Injection\n\nInjections\n\n\t1222\t₹53.00\t₹10.00\t81% off\t111\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nVICOPROT PLUS Protein Supplement 200 gm\n\nFitness & Health\n\n\t1222\t₹325.00\t₹50.00\t85% off\t100\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nMAXHAIR-GOLD Tablets\n\nFitness & Health\n\n\t25669\t₹570.00\t₹130.00\t77% off\t20\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nENRGEE 4U Energy Drink 200 gms\n\nFitness & Health\n\n\t25669\t₹125.00\t₹30.00\t76% off\t100\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nCALOTIN-D3 Nano Shot (5ml Each) Sugar Free\n\nFitness & Health\n\n\ttd\t₹356.00\t₹60.00\t83% off\t50\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nARGIQR Sachets\n\nFitness & Health\n\n\tGg\t₹1,200.00\t₹130.00\t89% off\t20\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nMINI VAGINAL WASH 100ml Liquid Wash\n\nPersonal Care\n\n\tapd2502\t₹170.00\t₹35.00\t79% off\t100\t06/2027\t0.00%\tActive\tView Edit Delete\n\n\nLIVYTE Syrup 200ml.\n\nSyrups\n\n\tff\t₹175.00\t₹17.00\t90% off\t200\t06/2027\t0.00%\tActive\tView Edit Delete\n\n\nAKZYME Syrup 200ml.\n\nSyrups\n\n\t1222\t₹155.00\t₹17.00\t89% off\t200\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nVICOTOR Syrup 200ml.\n\nSyrups\n\n\t1222\t₹165.00\t₹18.00\t89% off\t200\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nPanch TULSI Drops 30ml.\n\nAyurvedic\n\n\t1222\t₹199.00\t₹32.00\t84% off\t200\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nMOVITOR Pain Reliver Oil 60ml.\n\nAyurvedic\n\n\t1222\t₹110.00\t₹31.00\t72% off\t100\t03/2026\t0.00%\tActive\tView Edit Delete\n\n\nIROCE-XT Iron Tonic 200ml.\n\nSyrups\n\n\t25669\t₹133.00\t₹17.00\t87% off\t200\t06/2027\t0.00%\tActive\tView Edit Delete\n\n\nJOINT-WISH Tablets\n\nTablets\n\n\t25669\t₹175.00\t₹28.00\t84% off\t200\t06/2027\t0.00%\tActive\tView Edit Delete\n\n\nFREE STEP Tablets\n\nTablets\n\n\tapd2502\t₹230.00\t₹20.00\t91% off\t100\t07/2027\t0.00%\tActive\tView Edit Delete\n\n\nTENDOZEN PLUS Tablets\n\nTablets\n\n\tapd2502\t₹280.00\t₹24.00\t91% off\t200\t07/2027\t0.00%\tActive\tView Edit Delete\n\n\nTENDOIS Tablets\n\nTablets\n\n\t1222\t₹210.00\t₹21.00\t90% off\t100\t04/2026\t0.00%\tActive\tView Edit Delete\nPrevious\n1\n2\n3\nNext"
+  },
+  "products_create_form": {
+    "title": "Create Product",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Product Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "e.g., Pantop-D SR Capsule",
+        "required": true,
+        "label": "Product Name *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "subtitle",
+        "type": "text",
+        "placeholder": "e.g., Domperidone (30mg)+ Pantoprazole (40mg)",
+        "required": false,
+        "label": "Subtitle / Composition",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "category_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Category *",
+        "options": [
+          "Select Category",
+          "Ayurvedic",
+          "Capsules",
+          "Fitness & Health",
+          "Injections",
+          "Ointments & Creams",
+          "Personal Care",
+          "Syrups",
+          "Tablets"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "sub_category_id",
+        "type": "select-one",
+        "required": true,
+        "label": "Sub Category *",
+        "options": [
+          "First select a category"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "batch_no",
+        "type": "text",
+        "placeholder": "BT2026001",
+        "required": true,
+        "label": "SHN No *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "manufacturer",
+        "type": "text",
+        "placeholder": "Company name",
+        "required": false,
+        "label": "Brand Name",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "description",
+        "type": "textarea",
+        "placeholder": "Product description",
+        "required": false,
+        "label": "Description",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "images[]",
+        "type": "file",
+        "placeholder": "",
+        "required": false,
+        "label": "Upload Images (Multiple)",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "mrp",
+        "type": "number",
+        "placeholder": "100.00",
+        "required": true,
+        "label": "MRP (Maximum Retail Price) *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "base_price",
+        "type": "number",
+        "placeholder": "45.00",
+        "required": true,
+        "label": "Base Price (₹) *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "stock_quantity",
+        "type": "number",
+        "placeholder": "100",
+        "required": true,
+        "label": "Stock Quantity *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "box_packing",
+        "type": "text",
+        "placeholder": "e.g., 1 Box (10 Strips)",
+        "required": true,
+        "label": "Packing *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "box_unit",
+        "type": "select-one",
+        "required": false,
+        "label": "Unit",
+        "options": [
+          "Tablet",
+          "Capsule",
+          "Strip",
+          "Blister",
+          "Box",
+          "Carton",
+          "Master Carton",
+          "Vial",
+          "Ampoule",
+          "Pre-filled Syringe",
+          "Piece",
+          "mL (Millilitre)",
+          "Bottle",
+          "Jar",
+          "Sachet",
+          "Pouch",
+          "Packet",
+          "Gram (g)",
+          "Tube",
+          "Kit",
+          "Set",
+          "Pack",
+          "Piece (Pcs)",
+          "Dozen"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "strip_packing",
+        "type": "text",
+        "placeholder": "e.g., 1 Strip (10 Tablets)",
+        "required": true,
+        "label": "Packing *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "strip_unit",
+        "type": "select-one",
+        "required": false,
+        "label": "Unit",
+        "options": [
+          "Tablet",
+          "Capsule",
+          "Strip",
+          "Blister",
+          "Box",
+          "Carton",
+          "Master Carton",
+          "Vial",
+          "Ampoule",
+          "Pre-filled Syringe",
+          "Piece",
+          "mL (Millilitre)",
+          "Bottle",
+          "Jar",
+          "Sachet",
+          "Pouch",
+          "Packet",
+          "Gram (g)",
+          "Tube",
+          "Kit",
+          "Set",
+          "Pack",
+          "Piece (Pcs)",
+          "Dozen"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "expiry_date",
+        "type": "date",
+        "placeholder": "",
+        "required": true,
+        "label": "Expiry Date *",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Product\n0\nA\nBack to Products\nAdd New Product\n\nAdd pharmaceutical product to inventory\n\n>\nProduct Information\nProduct Name *\nSubtitle / Composition\nCategory *\nSelect Category\nAyurvedic\nCapsules\nFitness & Health\nInjections\nOintments & Creams\nPersonal Care\nSyrups\nTablets\nSub Category *\nFirst select a category\nSHN No *\nBrand Name\nDescription\nProduct Images\nUpload Images (Multiple)\n\nYou can select multiple images. Supported formats: JPG, PNG, GIF (Max 2MB each)\n\nPricing & Stock\nMRP (Maximum Retail Price) *\n\nBase MRP for commission calculation\n\nBase Price (₹) *\n\nAdmin purchase/base price\n\nStock Quantity *\n\nAvailable stock units\n\nNote: Commission margins will be set when assigning products to Super Distributors. SD, Distributor, and Retailor prices will be calculated based on margins set during product assignment.\n\nBox Packaging for Wholesaler\nPacking *\nUnit\nTablet\nCapsule\nStrip\nBlister\nBox\nCarton\nMaster Carton\nVial\nAmpoule\nPre-filled Syringe\nPiece\nmL (Millilitre)\nBottle\nJar\nSachet\nPouch\nPacket\nGram (g)\nTube\nKit\nSet\nPack\nPiece (Pcs)\nDozen\nStrip Packaging for Customer\nPacking *\nUnit\nTablet\nCapsule\nStrip\nBlister\nBox\nCarton\nMaster Carton\nVial\nAmpoule\nPre-filled Syringe\nPiece\nmL (Millilitre)\nBottle\nJar\nSachet\nPouch\nPacket\nGram (g)\nTube\nKit\nSet\nPack\nPiece (Pcs)\nDozen\nAdditional Details\nExpiry Date *\nStatus *\nActive\nInactive\nCancel\nCreate Product"
+  },
+  "categories": {
+    "title": "Categories Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Add Category",
+        "href": "https://mgpjn.com/admin/categories/create",
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Delete",
+        "href": null,
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_method",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "CATEGORY NAME",
+      "PARENT CATEGORY",
+      "DESCRIPTION",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "Ayurvedic\n\nMain Category",
+        "—",
+        "Traditional Ayurvedic medicines",
+        "Active",
+        "Edit Delete"
+      ],
+      [
+        "Baby Care\n\nMain Category",
+        "—",
+        "Infant and baby care products",
+        "Inactive",
+        "Edit Delete"
+      ],
+      [
+        "Capsules\n\nMain Category",
+        "—",
+        "Gelatin shell dosage forms",
+        "Active",
+        "Edit Delete"
+      ],
+      [
+        "Drops\n\nMain Category",
+        "—",
+        "Eye, ear, and nasal drops",
+        "Inactive",
+        "Edit Delete"
+      ],
+      [
+        "Fitness & Health\n\nMain Category",
+        "—",
+        "No description",
+        "Active",
+        "Edit Delete"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": null,
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          },
+          {
+            "name": "_method",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCategories Management\n0\nA\nCategories\n\nManage product categories and sub-categories\n\n Add Category\n\nTotal Categories\n\n66\n\nMain Categories\n\n10\n\nSub-Categories\n\n56\n\nActive\n\n42\n\nCATEGORY NAME\tPARENT CATEGORY\tDESCRIPTION\tSTATUS\tACTIONS\n\n\nAyurvedic\n\nMain Category\n\n\t—\tTraditional Ayurvedic medicines\tActive\tEdit Delete\n\n\nBaby Care\n\nMain Category\n\n\t—\tInfant and baby care products\tInactive\tEdit Delete\n\n\nCapsules\n\nMain Category\n\n\t—\tGelatin shell dosage forms\tActive\tEdit Delete\n\n\nDrops\n\nMain Category\n\n\t—\tEye, ear, and nasal drops\tInactive\tEdit Delete\n\n\nFitness & Health\n\nMain Category\n\n\t—\tNo description\tActive\tEdit Delete\n\n\nInjections\n\nMain Category\n\n\t—\tInjectable medications\tActive\tEdit Delete\n\n\nOintments & Creams\n\nMain Category\n\n\t—\tTopical medications\tActive\tEdit Delete\n\n\nPersonal Care\n\nMain Category\n\n\t—\tPersonal hygiene and care products\tActive\tEdit Delete\n\n\nSyrups\n\nMain Category\n\n\t—\tLiquid oral medications\tActive\tEdit Delete\n\n\nTablets\n\nMain Category\n\n\t—\tSolid dosage forms for oral administration\tActive\tEdit Delete\n\n\nAntacids\n\nSub-category\n\n\tTablets\tDigestive and stomach care tablets\tActive\tEdit Delete\n\n\nAnti-allergic/Antihistamines\n\nSub-category\n\n\tTablets\tNo description\tActive\tEdit Delete\n\n\nAnti-arthritic\n\nSub-category\n\n\tTablets\tNo description\tActive\tEdit Delete\n\n\nAnti-Inflammatory\n\nSub-category\n\n\tTablets\tNSAIDs and inflammation tablets\tActive\tEdit Delete\n\n\nAntibiotics\n\nSub-category\n\n\tTablets\tAntibacterial tablets\tActive\tEdit Delete\n\n\nAntihistamines\n\nSub-category\n\n\tTablets\tAllergy relief tablets\tInactive\tEdit Delete\n\n\nCardiac Care\n\nSub-category\n\n\tTablets\tHeart and cardiovascular tablets\tInactive\tEdit Delete\n\n\nDiabetes Care\n\nSub-category\n\n\tTablets\tBlood sugar management tablets\tInactive\tEdit Delete\n\n\nPain Relief\n\nSub-category\n\n\tTablets\tAnalgesics and pain management tablets\tActive\tEdit Delete\n\n\nVitamins & Supplements\n\nSub-category\n\n\tTablets\tNutritional supplements in tablet form\tInactive\tEdit Delete\n\n\nAcidity/Anit-Ulcer\n\nSub-category\n\n\tCapsules\tNo description\tActive\tEdit Delete\n\n\nAnti-fungal\n\nSub-category\n\n\tCapsules\tNo description\tActive\tEdit Delete\n\n\nAntibiotics\n\nSub-category\n\n\tCapsules\tAntibacterial capsules\tInactive\tEdit Delete\n\n\nHerbal Supplements\n\nSub-category\n\n\tCapsules\tNatural herbal capsules\tInactive\tEdit Delete\n\n\nOmega-3\n\nSub-category\n\n\tCapsules\tFish oil and omega fatty acids\tInactive\tEdit Delete\n\n\nProbiotics\n\nSub-category\n\n\tCapsules\tDigestive health capsules\tInactive\tEdit Delete\n\n\nVitamins/Calcium\n\nSub-category\n\n\tCapsules\tVitamin capsules\tActive\tEdit Delete\n\n\nAntacid Syrups\n\nSub-category\n\n\tSyrups\tDigestive relief syrups\tInactive\tEdit Delete\n\n\nCough Syrups\n\nSub-category\n\n\tSyrups\tCough and cold relief syrups\tActive\tEdit Delete\n\n\nDigestive Syrup\n\nSub-category\n\n\tSyrups\tNo description\tActiv"
+  },
+  "categories_create_form": {
+    "title": "Add New Category",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Category Type *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "category_type",
+        "type": "radio",
+        "placeholder": "",
+        "required": false,
+        "label": "Main Category",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "category_type",
+        "type": "radio",
+        "placeholder": "",
+        "required": false,
+        "label": "Main Category",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "parent_id",
+        "type": "select-one",
+        "required": false,
+        "label": "Parent Category *",
+        "options": [
+          "Select Parent Category",
+          "Ayurvedic",
+          "Capsules",
+          "Fitness & Health",
+          "Injections",
+          "Ointments & Creams",
+          "Personal Care",
+          "Syrups",
+          "Tablets"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "name",
+        "type": "text",
+        "placeholder": "e.g., Tablets",
+        "required": true,
+        "label": "Category Name *",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "description",
+        "type": "textarea",
+        "placeholder": "Brief description of the category",
+        "required": false,
+        "label": "Description",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "type": "select-one",
+        "required": true,
+        "label": "Status *",
+        "options": [
+          "Active",
+          "Inactive"
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nAdd New Category\n0\nA\nBack to Categories\nCategory Type *\nMain Category\nSub-Category\nCategory Information\nCategory Name *\nDescription\nStatus *\nActive\nInactive\nCancel\n Create Category"
+  },
+  "orders": {
+    "title": "Orders Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Search",
+        "href": null,
+        "type": "submit"
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "search",
+        "placeholder": "Search by order no, customer...",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "status",
+        "options": [
+          "All Status",
+          "Pending",
+          "Processing",
+          "Shipped",
+          "Delivered",
+          "Cancelled"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "date",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "ORDER NO",
+      "CUSTOMER",
+      "ROLE",
+      "ITEMS",
+      "AMOUNT",
+      "DATE",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "#ORD6A26FADF3355D",
+        "Surat\n\n+911234123412",
+        "Guest",
+        "2 items",
+        "₹2,000.00",
+        "08 Jun 2026",
+        "Pending",
+        "View Track"
+      ],
+      [
+        "#ORD6A2692A41288D",
+        "b2-1001, sai milaap res,\n\n8347085184",
+        "Guest",
+        "1 items",
+        "₹102.00",
+        "08 Jun 2026",
+        "Delivered",
+        "View Track"
+      ],
+      [
+        "#ORD6A2502E32780F",
+        "Surat\n\n+911234123412",
+        "Guest",
+        "1 items",
+        "₹360.00",
+        "07 Jun 2026",
+        "Shipped",
+        "View Track"
+      ],
+      [
+        "#ORD-6A1E9D2817F98",
+        "Swaroop park, Lajpat Nagar\n\n9667682706",
+        "Guest",
+        "2 items",
+        "₹264.76",
+        "02 Jun 2026",
+        "Delivered",
+        "View Track"
+      ],
+      [
+        "#ORD6A1048167E2C1",
+        "asdasdasdasdad\n\n9667682705",
+        "Guest",
+        "1 items",
+        "₹215.20",
+        "22 May 2026",
+        "Pending",
+        "View Track"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": null,
+        "method": "GET",
+        "inputs": [
+          {
+            "name": "search",
+            "type": "text",
+            "placeholder": "Search by order no, customer...",
+            "label": "",
+            "options": []
+          },
+          {
+            "name": "status",
+            "type": "select-one",
+            "label": "",
+            "options": [
+              "All Status",
+              "Pending",
+              "Processing",
+              "Shipped",
+              "Delivered",
+              "Cancelled"
+            ]
+          },
+          {
+            "name": "date",
+            "type": "date",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nOrders Management\n0\nA\nOrders\n\nManage all orders across the network\n\nTotal Orders\n\n13\n\nPending\n\n9\n\nProcessing\n\n0\n\nDelivered\n\n2\n\nCancelled\n\n1\n\nAll Status\nPending\nProcessing\nShipped\nDelivered\nCancelled\nSearch\nORDER NO\tCUSTOMER\tROLE\tITEMS\tAMOUNT\tDATE\tSTATUS\tACTIONS\n#ORD6A26FADF3355D\t\n\nSurat\n\n+911234123412\n\n\tGuest\t2 items\t₹2,000.00\t08 Jun 2026\tPending\tView Track\n#ORD6A2692A41288D\t\n\nb2-1001, sai milaap res,\n\n8347085184\n\n\tGuest\t1 items\t₹102.00\t08 Jun 2026\tDelivered\tView Track\n#ORD6A2502E32780F\t\n\nSurat\n\n+911234123412\n\n\tGuest\t1 items\t₹360.00\t07 Jun 2026\tShipped\tView Track\n#ORD-6A1E9D2817F98\t\n\nSwaroop park, Lajpat Nagar\n\n9667682706\n\n\tGuest\t2 items\t₹264.76\t02 Jun 2026\tDelivered\tView Track\n#ORD6A1048167E2C1\t\n\nasdasdasdasdad\n\n9667682705\n\n\tGuest\t1 items\t₹215.20\t22 May 2026\tPending\tView Track\n#ORD-6A104203B1489\t\n\nSai milaap,\n\n7990876436\n\n\tGuest\t3 items\t₹402.82\t22 May 2026\tPending\tView Track\n#ORD-6A1041551E723\t\n\nSai milaap,\n\n7990876436\n\n\tGuest\t2 items\t₹149.00\t22 May 2026\tPending\tView Track\n#ORD-6A10408ED3680\t\n\nSai milaap,\n\n7990876436\n\n\tGuest\t1 items\t₹200.00\t22 May 2026\tPending\tView Track\n#ORD-69C8B540D711C\t\n\ndsfsdzdsfe\n\n7990876436\n\n\tGuest\t1 items\t₹125.00\t29 Mar 2026\tPending\tView Track\n#ORD-69C89BFA299F1\t\n\n1140 Sec 15 Vashundra\n\n9667682705\n\n\tGuest\t1 items\t₹570.00\t29 Mar 2026\tPending\tView Track\n#ORD-69C65CD568318\t\n\nTest\n\n9305626845\n\n\tGuest\t1 items\t₹621.00\t27 Mar 2026\tPending\tView Track\n#ORD-69C659EC03428\t\n\ndsffgsfdgsdfg\n\n9898989898\n\n\tGuest\t1 items\t₹170.00\t27 Mar 2026\tCancelled\tView Track\n#ORD-69C3B4ED10A67\t\n\ngfffc\n\n7065915165\n\n\tGuest\t1 items\t₹150.00\t25 Mar 2026\tPending\tView Track"
+  },
+  "wallet": {
+    "title": "Commission Wallet",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Filter",
+        "href": null,
+        "type": "submit"
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "from_date",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "to_date",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "product",
+        "placeholder": "Search product...",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "role",
+        "options": [
+          "All Roles",
+          "Super Distributor",
+          "Distributor",
+          "Sub Distributor",
+          "Retailer"
+        ]
+      }
+    ],
+    "ths": [
+      "#",
+      "DATE",
+      "EARNED BY",
+      "ROLE",
+      "ORDER",
+      "PRODUCT",
+      "PURCHASED BY",
+      "BASE AMT",
+      "MARGIN %",
+      "COMMISSION",
+      "BALANCE"
+    ],
+    "rows": [
+      [
+        "9",
+        "08 Jun 2026, 02:13 PM",
+        "Mgprt",
+        "Retailer",
+        "#12",
+        "NEURVIS-N Injection",
+        "NITIN",
+        "₹52.00",
+        "15.00%",
+        "+₹7.80",
+        "₹35.10"
+      ],
+      [
+        "10",
+        "08 Jun 2026, 02:13 PM",
+        "Mediglaxo Sub Distributor",
+        "Sub distributor",
+        "#12",
+        "NEURVIS-N Injection",
+        "NITIN",
+        "₹52.00",
+        "10.00%",
+        "+₹5.20",
+        "₹23.40"
+      ],
+      [
+        "11",
+        "08 Jun 2026, 02:13 PM",
+        "Mgpdt",
+        "Distributor",
+        "#12",
+        "NEURVIS-N Injection",
+        "NITIN",
+        "₹52.00",
+        "5.00%",
+        "+₹2.60",
+        "₹11.70"
+      ],
+      [
+        "12",
+        "08 Jun 2026, 02:13 PM",
+        "Mgpsd",
+        "Super distributor",
+        "#12",
+        "NEURVIS-N Injection",
+        "NITIN",
+        "₹52.00",
+        "2.00%",
+        "+₹1.04",
+        "₹4.68"
+      ],
+      [
+        "1",
+        "03 Jun 2026, 09:12 AM",
+        "Mgprt",
+        "Retailer",
+        "#10",
+        "CLOFEPARA-SP Tablets",
+        "Anant patel",
+        "₹90.00",
+        "15.00%",
+        "+₹13.50",
+        "₹13.50"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": null,
+        "method": "GET",
+        "inputs": [
+          {
+            "name": "from_date",
+            "type": "date",
+            "placeholder": "",
+            "label": "From Date",
+            "options": []
+          },
+          {
+            "name": "to_date",
+            "type": "date",
+            "placeholder": "",
+            "label": "To Date",
+            "options": []
+          },
+          {
+            "name": "product",
+            "type": "text",
+            "placeholder": "Search product...",
+            "label": "Product",
+            "options": []
+          },
+          {
+            "name": "role",
+            "type": "select-one",
+            "label": "Role",
+            "options": [
+              "All Roles",
+              "Super Distributor",
+              "Distributor",
+              "Sub Distributor",
+              "Retailer"
+            ]
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCommission Wallet\n0\nA\nCommission Distribution Overview\n\nTrack all commissions distributed across the network\n\nTotal Distributed\n\n₹74.88\n\nTotal Distributed\n\n₹74.88\n\nThis Month\n\n₹0.00\n\nTotal Transactions\n\n12\n\nFrom Date\nTo Date\nProduct\nRole\nAll Roles\nSuper Distributor\nDistributor\nSub Distributor\nRetailer\nFilter Reset\nCommission Transactions\n#\tDATE\tEARNED BY\tROLE\tORDER\tPRODUCT\tPURCHASED BY\tBASE AMT\tMARGIN %\tCOMMISSION\tBALANCE\n9\t08 Jun 2026, 02:13 PM\tMgprt\tRetailer\t#12\tNEURVIS-N Injection\tNITIN\t₹52.00\t15.00%\t+₹7.80\t₹35.10\n10\t08 Jun 2026, 02:13 PM\tMediglaxo Sub Distributor\tSub distributor\t#12\tNEURVIS-N Injection\tNITIN\t₹52.00\t10.00%\t+₹5.20\t₹23.40\n11\t08 Jun 2026, 02:13 PM\tMgpdt\tDistributor\t#12\tNEURVIS-N Injection\tNITIN\t₹52.00\t5.00%\t+₹2.60\t₹11.70\n12\t08 Jun 2026, 02:13 PM\tMgpsd\tSuper distributor\t#12\tNEURVIS-N Injection\tNITIN\t₹52.00\t2.00%\t+₹1.04\t₹4.68\n1\t03 Jun 2026, 09:12 AM\tMgprt\tRetailer\t#10\tCLOFEPARA-SP Tablets\tAnant patel\t₹90.00\t15.00%\t+₹13.50\t₹13.50\n2\t03 Jun 2026, 09:12 AM\tMediglaxo Sub Distributor\tSub distributor\t#10\tCLOFEPARA-SP Tablets\tAnant patel\t₹90.00\t10.00%\t+₹9.00\t₹9.00\n3\t03 Jun 2026, 09:12 AM\tMgpdt\tDistributor\t#10\tCLOFEPARA-SP Tablets\tAnant patel\t₹90.00\t5.00%\t+₹4.50\t₹4.50\n4\t03 Jun 2026, 09:12 AM\tMgpsd\tSuper distributor\t#10\tCLOFEPARA-SP Tablets\tAnant patel\t₹90.00\t2.00%\t+₹1.80\t₹1.80\n5\t03 Jun 2026, 09:12 AM\tMgprt\tRetailer\t#10\tGazperi-DSR Capsule\tAnant patel\t₹92.00\t15.00%\t+₹13.80\t₹27.30\n6\t03 Jun 2026, 09:12 AM\tMediglaxo Sub Distributor\tSub distributor\t#10\tGazperi-DSR Capsule\tAnant patel\t₹92.00\t10.00%\t+₹9.20\t₹18.20\n7\t03 Jun 2026, 09:12 AM\tMgpdt\tDistributor\t#10\tGazperi-DSR Capsule\tAnant patel\t₹92.00\t5.00%\t+₹4.60\t₹9.10\n8\t03 Jun 2026, 09:12 AM\tMgpsd\tSuper distributor\t#10\tGazperi-DSR Capsule\tAnant patel\t₹92.00\t2.00%\t+₹1.84\t₹3.64"
+  },
+  "banners": {
+    "title": "Banner Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Add Banner",
+        "href": "https://mgpjn.com/admin/banners/create",
+        "type": null
+      },
+      {
+        "text": "Create Banner",
+        "href": "https://mgpjn.com/admin/banners/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [],
+    "rows": [],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nBanner Management\n0\nA\nBanner Management\n\nManage website banners and promotional content\n\n Add Banner\nNo banners found\n\nGet started by creating your first banner.\n\nCreate Banner"
+  },
+  "banners_create_form": {
+    "title": "Create Banner",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Title *",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "title",
+        "type": "text",
+        "placeholder": "Enter banner title",
+        "required": true,
+        "label": "Title *",
+        "options": []
+      },
+      {
+        "tag": "TEXTAREA",
+        "name": "description",
+        "type": "textarea",
+        "placeholder": "Enter banner description",
+        "required": false,
+        "label": "Description",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "link",
+        "type": "text",
+        "placeholder": "https://example.com or /products",
+        "required": false,
+        "label": "Link",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "image",
+        "type": "file",
+        "placeholder": "",
+        "required": false,
+        "label": "Click to upload image\nPNG, JPG, GIF up to 10MB",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "sort_order",
+        "type": "number",
+        "placeholder": "0",
+        "required": false,
+        "label": "Sort Order",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "is_active",
+        "type": "checkbox",
+        "placeholder": "",
+        "required": false,
+        "label": "Active",
+        "options": []
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nCreate Banner\n0\nA\nCreate Banner\n\nAdd a new banner to the website\n\n Back to Banners\nTitle *\nDescription\nLink\nBanner Image\nClick to upload image\nPNG, JPG, GIF up to 10MB\nSort Order\n\nLower numbers appear first\n\nActive\n\nShow this banner on the website\n\nCancel\nCreate Banner"
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Generate Report",
+        "href": null,
+        "type": "submit"
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "type",
+        "options": [
+          "Sales",
+          "Network",
+          "Performance",
+          "Inventory"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "from_date",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "to_date",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [],
+    "rows": [],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/reports/generate",
+        "method": "GET",
+        "inputs": [
+          {
+            "name": "type",
+            "type": "select-one",
+            "label": "Report Type",
+            "options": [
+              "Sales",
+              "Network",
+              "Performance",
+              "Inventory"
+            ]
+          },
+          {
+            "name": "from_date",
+            "type": "date",
+            "placeholder": "",
+            "label": "From Date",
+            "options": []
+          },
+          {
+            "name": "to_date",
+            "type": "date",
+            "placeholder": "",
+            "label": "To Date",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nReports & Analytics\n0\nA\nReports & Analytics\n\nComprehensive business insights and reports\n\nSales Report\n\nView detailed sales analytics\n\nNetwork Report\n\nNetwork performance metrics\n\nPerformance Report\n\nIndividual performance data\n\nGenerate Custom Report\nReport Type\nSales\nNetwork\nPerformance\nInventory\nFrom Date\nTo Date\nGenerate Report\nSales Trends\nNetwork Growth"
+  },
+  "employees": {
+    "title": "Employee Management",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "Add Employee",
+        "href": "https://mgpjn.com/admin/employees/create",
+        "type": null
+      },
+      {
+        "text": "Add Employee",
+        "href": "https://mgpjn.com/admin/employees/create",
+        "type": null
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [
+      "EMPLOYEE ID",
+      "NAME",
+      "DEPARTMENT",
+      "ROLE",
+      "CONTACT",
+      "STATUS",
+      "ACTIONS"
+    ],
+    "rows": [
+      [
+        "No employees found\n\nAdd Employee"
+      ]
+    ],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nEmployee Management\n0\nA\nEmployee Module\n\nManage internal staff and permissions\n\n Add Employee\n\nTotal Employees\n\n25\n\nActive\n\n23\n\nSales Team\n\n8\n\nSupport\n\n6\n\nAccounts\n\n4\n\nEMPLOYEE ID\tNAME\tDEPARTMENT\tROLE\tCONTACT\tSTATUS\tACTIONS\n\n\nNo employees found\n\nAdd Employee"
+  },
+  "employees_create_form": {
+    "title": "Add New Employee",
+    "formFields": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "type": "hidden",
+        "placeholder": "",
+        "required": false,
+        "label": "Full Name",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "type": "text",
+        "placeholder": "Employee Name",
+        "required": false,
+        "label": "Full Name",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "type": "email",
+        "placeholder": "name@example.com",
+        "required": false,
+        "label": "Email",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "",
+        "type": "select-one",
+        "required": false,
+        "label": "Role",
+        "options": [
+          "Admin",
+          "Support",
+          "Finance",
+          "Operations"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "",
+        "type": "text",
+        "placeholder": "+91 98765 43210",
+        "required": false,
+        "label": "Phone",
+        "options": []
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nAdd New Employee\n0\nA\nFull Name\nEmail\nRole\nAdmin\nSupport\nFinance\nOperations\nPhone\nCancel\nSave Employee"
+  },
+  "settings": {
+    "title": "System Settings",
+    "subtitle": "Admin",
+    "statCards": [
+      "A",
+      "Logout",
+      "Tablets",
+      "Capsules",
+      "Syrups",
+      "Injections",
+      "Ointments & Creams",
+      "Drops",
+      "Ayurvedic",
+      "Personal Care"
+    ],
+    "buttons": [
+      {
+        "text": "Logout",
+        "href": null,
+        "type": "submit"
+      },
+      {
+        "text": "A",
+        "href": null,
+        "type": null
+      },
+      {
+        "text": "General Settings",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "System Configuration",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "Email Settings",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "Notifications",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "Security",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "Delivery Setup",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "Reset",
+        "href": null,
+        "type": "button"
+      },
+      {
+        "text": "Save Settings",
+        "href": null,
+        "type": "submit"
+      }
+    ],
+    "filters": [
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "_token",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "company_name",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "contact_email",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "contact_phone",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "SELECT",
+        "name": "currency",
+        "options": [
+          "INR (₹)",
+          "USD ($)",
+          "EUR (€)"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "timezone",
+        "options": [
+          "Asia/Kolkata (IST)",
+          "UTC",
+          "America/New_York (EST)"
+        ]
+      },
+      {
+        "tag": "SELECT",
+        "name": "date_format",
+        "options": [
+          "DD/MM/YYYY",
+          "MM/DD/YYYY",
+          "YYYY-MM-DD"
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "name": "maintenance_mode",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "smtp_host",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "smtp_port",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "smtp_username",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "smtp_password",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "notify_orders",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "notify_network",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "notify_reports",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "notification_email",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "two_factor",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "password_expiry",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "super_distributor_free_delivery_threshold",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "super_distributor_delivery_charge",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "distributor_free_delivery_threshold",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "distributor_delivery_charge",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "sub_distributor_free_delivery_threshold",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "sub_distributor_delivery_charge",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "retailer_free_delivery_threshold",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "retailer_delivery_charge",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "customer_free_delivery_threshold",
+        "placeholder": "",
+        "options": []
+      },
+      {
+        "tag": "INPUT",
+        "name": "customer_delivery_charge",
+        "placeholder": "",
+        "options": []
+      }
+    ],
+    "ths": [],
+    "rows": [],
+    "forms": [
+      {
+        "action": "https://mgpjn.com/logout",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "",
+            "options": []
+          }
+        ]
+      },
+      {
+        "action": "https://mgpjn.com/admin/settings",
+        "method": "POST",
+        "inputs": [
+          {
+            "name": "_token",
+            "type": "hidden",
+            "placeholder": "",
+            "label": "Company Name",
+            "options": []
+          },
+          {
+            "name": "company_name",
+            "type": "text",
+            "placeholder": "",
+            "label": "Company Name",
+            "options": []
+          },
+          {
+            "name": "contact_email",
+            "type": "email",
+            "placeholder": "",
+            "label": "Contact Email",
+            "options": []
+          },
+          {
+            "name": "contact_phone",
+            "type": "tel",
+            "placeholder": "",
+            "label": "Contact Phone",
+            "options": []
+          },
+          {
+            "name": "address",
+            "type": "textarea",
+            "placeholder": "",
+            "label": "Address",
+            "options": []
+          },
+          {
+            "name": "currency",
+            "type": "select-one",
+            "label": "Default Currency",
+            "options": [
+              "INR (₹)",
+              "USD ($)",
+              "EUR (€)"
+            ]
+          },
+          {
+            "name": "timezone",
+            "type": "select-one",
+            "label": "Timezone",
+            "options": [
+              "Asia/Kolkata (IST)",
+              "UTC",
+              "America/New_York (EST)"
+            ]
+          },
+          {
+            "name": "date_format",
+            "type": "select-one",
+            "label": "Date Format",
+            "options": [
+              "DD/MM/YYYY",
+              "MM/DD/YYYY",
+              "YYYY-MM-DD"
+            ]
+          },
+          {
+            "name": "maintenance_mode",
+            "type": "checkbox",
+            "placeholder": "",
+            "label": "Enable Maintenance Mode",
+            "options": []
+          },
+          {
+            "name": "smtp_host",
+            "type": "text",
+            "placeholder": "",
+            "label": "SMTP Host",
+            "options": []
+          },
+          {
+            "name": "smtp_port",
+            "type": "number",
+            "placeholder": "",
+            "label": "SMTP Port",
+            "options": []
+          },
+          {
+            "name": "smtp_username",
+            "type": "text",
+            "placeholder": "",
+            "label": "Username",
+            "options": []
+          },
+          {
+            "name": "smtp_password",
+            "type": "password",
+            "placeholder": "",
+            "label": "Password",
+            "options": []
+          },
+          {
+            "name": "notify_orders",
+            "type": "checkbox",
+            "placeholder": "",
+            "label": "\n                        \n                        Order status updates\n                    ",
+            "options": []
+          },
+          {
+            "name": "notify_network",
+            "type": "checkbox",
+            "placeholder": "",
+            "label": "\n                        \n                        Order status updates\n                    ",
+            "options": []
+          },
+          {
+            "name": "notify_reports",
+            "type": "checkbox",
+            "placeholder": "",
+            "label": "\n                        \n                        Order status updates\n                    ",
+            "options": []
+          },
+          {
+            "name": "notification_email",
+            "type": "email",
+            "placeholder": "",
+            "label": "Notification Email",
+            "options": []
+          },
+          {
+            "name": "two_factor",
+            "type": "checkbox",
+            "placeholder": "",
+            "label": "\n                        \n                        Enable Two-Factor Authentication\n                    ",
+            "options": []
+          },
+          {
+            "name": "password_expiry",
+            "type": "checkbox",
+            "placeholder": "",
+            "label": "\n                        \n                        Enable Two-Factor Authentication\n                    ",
+            "options": []
+          },
+          {
+            "name": "allowed_ips",
+            "type": "textarea",
+            "placeholder": "Enter IP addresses",
+            "label": "Allowed IPs",
+            "options": []
+          },
+          {
+            "name": "super_distributor_free_delivery_threshold",
+            "type": "number",
+            "placeholder": "",
+            "label": "Free Delivery Threshold (₹)",
+            "options": []
+          },
+          {
+            "name": "super_distributor_delivery_charge",
+            "type": "number",
+            "placeholder": "",
+            "label": "Delivery Charge (₹)",
+            "options": []
+          },
+          {
+            "name": "distributor_free_delivery_threshold",
+            "type": "number",
+            "placeholder": "",
+            "label": "Free Delivery Threshold (₹)",
+            "options": []
+          },
+          {
+            "name": "distributor_delivery_charge",
+            "type": "number",
+            "placeholder": "",
+            "label": "Delivery Charge (₹)",
+            "options": []
+          },
+          {
+            "name": "sub_distributor_free_delivery_threshold",
+            "type": "number",
+            "placeholder": "",
+            "label": "Free Delivery Threshold (₹)",
+            "options": []
+          },
+          {
+            "name": "sub_distributor_delivery_charge",
+            "type": "number",
+            "placeholder": "",
+            "label": "Delivery Charge (₹)",
+            "options": []
+          },
+          {
+            "name": "retailer_free_delivery_threshold",
+            "type": "number",
+            "placeholder": "",
+            "label": "Free Delivery Threshold (₹)",
+            "options": []
+          },
+          {
+            "name": "retailer_delivery_charge",
+            "type": "number",
+            "placeholder": "",
+            "label": "Delivery Charge (₹)",
+            "options": []
+          },
+          {
+            "name": "customer_free_delivery_threshold",
+            "type": "number",
+            "placeholder": "",
+            "label": "Free Delivery Threshold (₹)",
+            "options": []
+          },
+          {
+            "name": "customer_delivery_charge",
+            "type": "number",
+            "placeholder": "",
+            "label": "Delivery Charge (₹)",
+            "options": []
+          }
+        ]
+      }
+    ],
+    "fullText": "A\n\nAdmin\n\nN/A\n\nAdmin\n\nDashboard\nSuper Distributors\nDistributors\nSub Distributors\nRetailers\nUser Customer\nMargin Management\nTransfer Management\nProduct Margin List\nProducts\nCategories\nOrders\nCommission Wallet\nBanner Management\nReports\nEmployee Module\nSettings\nLogout\nSystem Settings\n0\nA\nSystem Settings\n\nConfigure system preferences and settings\n\nSECTIONS\n\nGeneral Settings System Configuration Email Settings Notifications Security Delivery Setup\nGeneral Settings\nCompany Name\nContact Email\nContact Phone\nAddress\nReset\nSave Settings"
+  }
+}
