@@ -11,7 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 
 export default function ProductDetailPage({ onOpenPrescriptionModal }) {
-  const { idOrSlug } = useParams();
+  const params = useParams();
+  const idOrSlug = params.slug || params.idOrSlug || params.id;
   const { user } = useAuth();
   const { addToCart, isB2BPartner } = useCart();
   const isWholesaleAllowed = user && ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role);
@@ -24,6 +25,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const [addedAnimation, setAddedAnimation] = useState(false);
 
   useEffect(() => {
+    if (!idOrSlug) return;
     setLoading(true);
     getProduct(idOrSlug)
       .then((res) => {
