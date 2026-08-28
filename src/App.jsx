@@ -81,6 +81,29 @@ function ProtectedRoute({ children, minLevel = 1, role }) {
   return children;
 }
 
+function PublicOnlyRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-xs text-slate-400">Loading MediGlaxo...</div>;
+  }
+
+  if (user) {
+    const role = user.role;
+    if (role === 'admin' || role === 'super_admin') {
+      return <Navigate to="/admin" replace />;
+    } else if (['super_distributor', 'distributor', 'sub_distributor', 'retailer'].includes(role)) {
+      return <Navigate to="/hierarchy" replace />;
+    } else if (role === 'sub_retailer' || role === 'member') {
+      return <Navigate to="/mlm" replace />;
+    } else {
+      return <Navigate to="/shop" replace />;
+    }
+  }
+
+  return children;
+}
+
 export default function App() {
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const location = useLocation();
@@ -105,8 +128,22 @@ export default function App() {
           <Route path="/order-success/:id" element={<OrderSuccessPage />} />
           <Route path="/track-order" element={<OrderTrackingPage />} />
           <Route path="/invoice/:id" element={<InvoiceView />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicOnlyRoute>
+                <RegisterPage />
+              </PublicOnlyRoute>
+            }
+          />
 
           {/* User Account Protected Routes */}
           <Route

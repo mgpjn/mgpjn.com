@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      const role = user.role;
+      if (role === 'admin' || role === 'super_admin') {
+        navigate('/admin', { replace: true });
+      } else if (['super_distributor', 'distributor', 'sub_distributor', 'retailer'].includes(role)) {
+        navigate('/hierarchy', { replace: true });
+      } else if (role === 'sub_retailer' || role === 'member') {
+        navigate('/mlm', { replace: true });
+      } else {
+        navigate('/shop', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');

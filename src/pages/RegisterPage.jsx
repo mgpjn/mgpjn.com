@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { user, register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (user) {
+      const role = user.role;
+      if (role === 'admin' || role === 'super_admin') {
+        navigate('/admin', { replace: true });
+      } else if (['super_distributor', 'distributor', 'sub_distributor', 'retailer'].includes(role)) {
+        navigate('/hierarchy', { replace: true });
+      } else if (role === 'sub_retailer' || role === 'member') {
+        navigate('/mlm', { replace: true });
+      } else {
+        navigate('/shop', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const [hasReferral, setHasReferral] = useState(Boolean(searchParams.get('ref')));
   const [formData, setFormData] = useState({
