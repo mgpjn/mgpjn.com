@@ -125,4 +125,9 @@ export const getPurchaseOrder = (id) => api.get(`/purchase-orders/${id}`);
 export const approvePurchaseOrder = (id, data) => api.post(`/purchase-orders/${id}/approve`, data);
 export const rejectPurchaseOrder = (id, data) => api.post(`/purchase-orders/${id}/reject`, data);
 
+// Image Upload
+export const uploadAdminProductImage = (formData) => api.post('/admin/upload-image', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
+
 export default api;

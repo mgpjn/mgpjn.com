@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
-  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -21,6 +21,7 @@ import {
   getAdminProductMargins,
   getAdminCategories, storeAdminCategory, updateAdminCategory, deleteAdminCategory,
   getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct,
+  uploadAdminProductImage,
   getAdminProductStatePrices, saveAdminProductStatePrices,
   getAdminOrders, updateAdminOrderStatus,
   getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
@@ -578,6 +579,27 @@ export default function AdminDashboard() {
     }
   };
 
+  // Product Image Upload
+  const [uploadingProductImage, setUploadingProductImage] = useState(false);
+
+  const handleProductImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingProductImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await uploadAdminProductImage(formData);
+      if (res.data.success) {
+        setProductForm(prev => ({ ...prev, image: res.data.url }));
+      }
+    } catch (err) {
+      alert(`Image upload failed: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setUploadingProductImage(false);
+    }
+  };
+
   // Product CRUD
   const handleSaveProduct = async (e) => {
     e.preventDefault();
@@ -777,27 +799,33 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="space-y-2.5">
-                    {[
-                      { name: 'Gazperi-DSR Capsule', cat: 'Capsules', left: 0, min: 10 },
-                      { name: 'RBETOR-DSR Capsule', cat: 'Capsules', left: 0, min: 10 },
-                      { name: 'PENTOGUN-DSR Capsules', cat: 'Capsules', left: 0, min: 10 },
-                    ].map((item, i) => (
-                      <div key={i} className="p-3.5 bg-[#fefdfa] hover:bg-amber-50/40 rounded-2xl border border-amber-100 flex items-center justify-between transition-colors">
-                        <div className="flex items-center space-x-3.5 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs flex-shrink-0 font-black">
-                            <AlertCircle className="w-5 h-5" />
+                    {(() => {
+                      const lowStockList = (productsList?.data || []).filter(p => (Number(p.stock) || 0) <= 25).slice(0, 3);
+                      if (lowStockList.length === 0) {
+                        return (
+                          <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100 text-center text-xs text-emerald-800 font-semibold">
+                            ✅ All medicines in database have healthy stock levels.
                           </div>
-                          <div className="truncate">
-                            <h4 className="font-bold text-xs text-slate-900 truncate">{item.name}</h4>
-                            <span className="text-[11px] text-slate-400 font-medium">{item.cat}</span>
+                        );
+                      }
+                      return lowStockList.map((item, i) => (
+                        <div key={item.id || i} className="p-3.5 bg-[#fefdfa] hover:bg-amber-50/40 rounded-2xl border border-amber-100 flex items-center justify-between transition-colors">
+                          <div className="flex items-center space-x-3.5 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs flex-shrink-0 font-black">
+                              <AlertCircle className="w-5 h-5" />
+                            </div>
+                            <div className="truncate">
+                              <h4 className="font-bold text-xs text-slate-900 truncate">{item.name}</h4>
+                              <span className="text-[11px] text-slate-400 font-medium">{item.category?.name || item.dosage_form || 'Medicine'}</span>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0 pl-3">
+                            <div className="text-xs font-black text-rose-600">{item.stock || 0} units left</div>
+                            <div className="text-[10px] text-slate-400 font-medium">Batch: {item.batch_no || 'Standard'}</div>
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0 pl-3">
-                          <div className="text-xs font-black text-rose-600">{item.left} left</div>
-                          <div className="text-[10px] text-slate-400 font-medium">Min: {item.min}</div>
-                        </div>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
                 </div>
               </div>
@@ -2545,14 +2573,52 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Product Image URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={productForm.image}
-                    onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono text-[11px]"
-                  />
+                  <label className="font-bold text-slate-700 block mb-1">Product Image (Upload File or URL)</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <label className="flex items-center space-x-1.5 px-3 py-2 bg-brand-blue-50 text-brand-blue-800 hover:bg-brand-blue-100 rounded-xl border border-brand-blue-200 cursor-pointer font-bold transition-all text-[11px]">
+                        <Upload className="w-4 h-4" />
+                        <span>{uploadingProductImage ? 'Uploading Image...' : 'Upload Image File'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProductImageUpload}
+                          disabled={uploadingProductImage}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">Auto-saves to database &amp; storage</span>
+                    </div>
+
+                    <input
+                      type="url"
+                      placeholder="Or paste direct image URL (https://...)"
+                      value={productForm.image}
+                      onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono text-[11px]"
+                    />
+
+                    {productForm.image && (
+                      <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
+                        <img
+                          src={productForm.image}
+                          alt="Product Preview"
+                          className="w-12 h-12 object-contain rounded-lg bg-white border border-slate-100 p-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11px] font-bold text-slate-800 block truncate">Image Ready</span>
+                          <span className="text-[9px] font-mono text-slate-400 truncate block">{productForm.image}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setProductForm({ ...productForm, image: '' })}
+                          className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -13,7 +13,7 @@ import ProductCard from '../components/ProductCard';
 export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const { idOrSlug } = useParams();
   const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, isB2BPartner } = useCart();
   const isWholesaleAllowed = user && ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role);
 
   const [product, setProduct] = useState(null);

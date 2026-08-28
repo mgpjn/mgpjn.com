@@ -297,7 +297,11 @@ export default function CheckoutPage() {
               <span>Placing Order...</span>
             ) : (
               <>
-                <span>Place Order &amp; Pay ₹{finalTotal.toFixed(2)}</span>
+                <span>
+                  {formData.payment_method === 'cod'
+                    ? `Confirm Cash on Delivery (COD) Order • ₹${finalTotal.toFixed(2)}`
+                    : `Place Order & Pay ₹${finalTotal.toFixed(2)}`}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
