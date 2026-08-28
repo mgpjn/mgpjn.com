@@ -81,7 +81,7 @@ export default function MlmDashboard() {
     { rank: 'Super Distributor', desc: 'State / C&F', icon: Building2, color: 'bg-blue-600' },
     { rank: 'Distributor', desc: 'District Wholesaler', icon: Store, color: 'bg-cyan-600' },
     { rank: 'Sub Distributor', desc: 'Area Stockist', icon: Store, color: 'bg-teal-600' },
-    { rank: 'Retailer (Cadets)', desc: 'Pharmacy Chemist', icon: Store, color: 'bg-emerald-600' },
+    { rank: 'Retailer (Chemist)', desc: 'Pharmacy Chemist', icon: Store, color: 'bg-emerald-600' },
     { rank: 'Sub Retailer (Pincode & Local)', desc: 'Local Executive (Income Starts)', icon: MapPin, color: 'bg-[#ff5722]' },
     { rank: 'Customer 1', desc: 'Direct Referral (Stage 1)', icon: Users, color: 'bg-purple-600' },
     { rank: 'Customer 2', desc: 'Level 2 (Stage 2)', icon: Users, color: 'bg-pink-600' },

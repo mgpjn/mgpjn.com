@@ -250,11 +250,11 @@ export default function AdminDashboard() {
     { key: 'super-distributors', label: 'Super Distributors', path: '/admin/super-distributors', icon: Users, roleType: 'super_distributor' },
     { key: 'distributors', label: 'Distributors', path: '/admin/distributors', icon: UserCheck, roleType: 'distributor' },
     { key: 'sub-distributors', label: 'Sub Distributors', path: '/admin/sub-distributors', icon: UserPlus, roleType: 'sub_distributor' },
-    { key: 'retailers', label: 'Retailers (Cadets)', path: '/admin/retailers', icon: Store, roleType: 'retailer' },
+    { key: 'retailers', label: 'Retailers (Chemist)', path: '/admin/retailers', icon: Store, roleType: 'retailer' },
     { key: 'sub-retailers', label: 'Sub Retailers (Pincode & Local)', path: '/admin/sub-retailers', icon: MapPin, roleType: 'sub_retailer' },
-    { key: 'customer-layer-1', label: 'Customer 1 (Stage 1 - 15%)', path: '/admin/customer-layer-1', icon: User, roleType: 'customer_layer_1' },
-    { key: 'customer-layer-2', label: 'Customer 2 (Stage 2 - 3%)', path: '/admin/customer-layer-2', icon: UserCheck2, roleType: 'customer_layer_2' },
-    { key: 'customer-layer-3', label: 'Customer 3 (Stage 3 - 2%)', path: '/admin/customer-layer-3', icon: UserPlus2, roleType: 'customer_layer_3' },
+    { key: 'customer-layer-1', label: 'Customer 1', path: '/admin/customer-layer-1', icon: User, roleType: 'customer_layer_1' },
+    { key: 'customer-layer-2', label: 'Customer 2', path: '/admin/customer-layer-2', icon: UserCheck2, roleType: 'customer_layer_2' },
+    { key: 'customer-layer-3', label: 'Customer 3', path: '/admin/customer-layer-3', icon: UserPlus2, roleType: 'customer_layer_3' },
     { key: 'user_customer', label: 'All Customers (Directory)', path: '/admin/user_customer', icon: Users2, roleType: 'customer' },
     { key: 'purchase-orders', label: 'Medicine PO Approvals', path: '/admin/purchase-orders', icon: FileCheck },
     { key: 'margins', label: 'Margin Management', path: '/admin/margins', icon: Calculator },
@@ -1015,9 +1015,9 @@ export default function AdminDashboard() {
                     {currentSection.includes('customer') ? 'Commission Stage' : currentSection === 'sub-retailers' ? 'Pincode Auto-Routing' : 'Pending Approval'}
                   </span>
                   <div className="text-xl font-black text-amber-600 truncate">
-                    {currentSection === 'customer-layer-1' ? 'Stage 1 (15%)' :
-                     currentSection === 'customer-layer-2' ? 'Stage 2 (3%)' :
-                     currentSection === 'customer-layer-3' ? 'Stage 3 (2%)' :
+                    {currentSection === 'customer-layer-1' ? 'Stage 1' :
+                     currentSection === 'customer-layer-2' ? 'Stage 2' :
+                     currentSection === 'customer-layer-3' ? 'Stage 3' :
                      currentSection === 'sub-retailers' ? 'Active & Live' :
                      roleStats.pending}
                   </div>
