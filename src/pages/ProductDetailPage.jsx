@@ -14,9 +14,9 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const params = useParams();
   const idOrSlug = params.slug || params.idOrSlug || params.id;
   const { user } = useAuth();
-  // Wholesale / Bulk Rate is strictly reserved ONLY for Distributors, Sub Distributors, Retailers (Chemist), and Super Distributors
+  // Wholesale / Bulk Rate is strictly reserved for sub-retailer se upar ke saare roles (Retailers, Sub Distributors, Distributors, Super Distributors, Admins)
   const isWholesaleAllowed = Boolean(
-    user && ['distributor', 'sub_distributor', 'retailer', 'super_distributor'].includes(user.role)
+    user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
   );
 
   const [product, setProduct] = useState(null);
@@ -48,7 +48,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           const p = res.data.product;
           setProduct(p);
           setRelated(res.data.related || []);
-          if (isB2BPartner) {
+          if (isWholesaleAllowed) {
             setPricingMode('wholesale');
             setQuantity(p.wholesale_min_qty || 5);
           }
@@ -56,7 +56,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [idOrSlug, isB2BPartner]);
+  }, [idOrSlug, isWholesaleAllowed]);
 
   if (loading) {
     return (

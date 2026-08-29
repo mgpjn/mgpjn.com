@@ -50,6 +50,8 @@ export const CartProvider = ({ children }) => {
   // Check if current logged-in user is a B2B partner (Distributor / Retailer)
   const getUser = () => {
     try {
+      const sessionUser = sessionStorage.getItem('mediglaxo_session_user');
+      if (sessionUser) return JSON.parse(sessionUser);
       const userJson = localStorage.getItem('mediglaxo_user');
       return userJson ? JSON.parse(userJson) : null;
     } catch {
@@ -58,9 +60,9 @@ export const CartProvider = ({ children }) => {
   };
 
   const user = getUser();
-  // Wholesale pricing is strictly reserved ONLY for Distributors, Sub Distributors, Retailers (Chemist), and Super Distributors
+  // Wholesale pricing is strictly reserved for sub-retailer se upar ke saare roles (Retailers, Sub Distributors, Distributors, Super Distributors, Admins)
   const isB2BWholesaleEligible = Boolean(
-    user && ['distributor', 'sub_distributor', 'retailer', 'super_distributor'].includes(user.role)
+    user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
   );
   const isB2BPartner = isB2BWholesaleEligible;
 

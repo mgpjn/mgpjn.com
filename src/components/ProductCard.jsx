@@ -2,10 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Plus, Minus, Star } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function ProductCard({ product }) {
   const { cartItems, addToCart, updateQuantity } = useCart();
+  const { user } = useAuth();
   const cartItem = cartItems.find((item) => item.id === product.id);
+
+  // Wholesale Rate is strictly for Sub-Retailer se upar ke saare roles (Retailer, Sub Distributor, Distributor, Super Distributor, Admin)
+  const isWholesaleAllowed = Boolean(
+    user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
+  );
 
   const retailPrice = Number(product.price || product.retail_price || 0);
   const wholesalePrice = Number(product.wholesale_price || (retailPrice * 0.55));
@@ -88,53 +95,69 @@ export default function ProductCard({ product }) {
       </div>
 
       {/* Pricing & Cart Action Row */}
-      <div className="pt-2 border-t border-slate-100/80 flex items-center justify-between gap-2">
-        {/* Price & Discount */}
-        <div>
-          <div className="flex items-baseline space-x-1.5 flex-wrap">
-            <span className="text-sm sm:text-base font-bold text-slate-900">
-              ₹{retailPrice.toFixed(0)}
-            </span>
-            {mrp > retailPrice && (
-              <span className="text-[11px] sm:text-xs text-slate-400 line-through">
-                ₹{mrp.toFixed(0)}
+      <div className="pt-2 border-t border-slate-100/80 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          {/* Price & Discount */}
+          <div>
+            <div className="flex items-baseline space-x-1.5 flex-wrap">
+              <span className="text-sm sm:text-base font-bold text-slate-900">
+                ₹{retailPrice.toFixed(0)}
               </span>
-            )}
-            {discount > 0 && (
-              <span className="text-[11px] sm:text-xs font-bold text-teal-600">
-                {discount}% off
-              </span>
+              {mrp > retailPrice && (
+                <span className="text-[11px] sm:text-xs text-slate-400 line-through">
+                  ₹{mrp.toFixed(0)}
+                </span>
+              )}
+              {discount > 0 && (
+                <span className="text-[11px] sm:text-xs font-bold text-teal-600">
+                  {discount}% off
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-slate-400 block font-medium">Retail Rate</span>
+          </div>
+
+          {/* Add / Quantity Button */}
+          <div>
+            {!cartItem ? (
+              <button
+                onClick={() => addToCart(product, 1)}
+                className="bg-teal-700 hover:bg-teal-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1 cursor-pointer"
+              >
+                <span>ADD</span>
+              </button>
+            ) : (
+              <div className="flex items-center bg-teal-50 border border-teal-200 rounded-lg p-0.5">
+                <button
+                  onClick={() => updateQuantity(product.id, cartItem.quantity - 1)}
+                  className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+                >
+                  <Minus className="w-2.5 h-2.5" />
+                </button>
+                <span className="text-xs font-bold text-teal-900 px-2">{cartItem.quantity}</span>
+                <button
+                  onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
+                  className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                </button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Add / Quantity Button */}
-        <div>
-          {!cartItem ? (
-            <button
-              onClick={() => addToCart(product, 1)}
-              className="bg-teal-700 hover:bg-teal-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1"
-            >
-              <span>ADD</span>
-            </button>
-          ) : (
-            <div className="flex items-center bg-teal-50 border border-teal-200 rounded-lg p-0.5">
-              <button
-                onClick={() => updateQuantity(product.id, cartItem.quantity - 1)}
-                className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs"
-              >
-                <Minus className="w-2.5 h-2.5" />
-              </button>
-              <span className="text-xs font-bold text-teal-900 px-2">{cartItem.quantity}</span>
-              <button
-                onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
-                className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs"
-              >
-                <Plus className="w-2.5 h-2.5" />
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Wholesale Rate (Strictly for Sub-Retailer se upar ke sabhi roles: Retailer, Sub Distributor, Distributor, Super Distributor, Admin) */}
+        {isWholesaleAllowed && (
+          <div className="flex items-center justify-between bg-emerald-50/90 border border-emerald-200/90 px-2 py-1 rounded-lg text-[11px]">
+            <span className="font-semibold text-emerald-900 flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              <span>Wholesale Rate:</span>
+            </span>
+            <span className="font-black text-emerald-700">
+              ₹{wholesalePrice.toFixed(0)}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
