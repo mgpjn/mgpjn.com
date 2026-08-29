@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
-  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -63,6 +63,14 @@ export default function AdminDashboard() {
   const canDispatchOrder = Boolean(
     !user || user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role)
   );
+
+  // Product assigning feature is strictly reserved for Super Admin
+  const isSuperAdmin = Boolean(
+    !user || user.role === 'super_admin' || user.role === 'owner' || user.role_level >= 5
+  );
+
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const pathParts = location.pathname.split('/');
   const currentSection = pathParts[2] || 'dashboard';
@@ -528,6 +536,10 @@ export default function AdminDashboard() {
 
   // Super Admin: Assign Products & Set Product Price Handlers (Screenshots Feature)
   const handleOpenAssignProductsModal = async (targetUser) => {
+    if (!isSuperAdmin) {
+      alert('Access Denied: Product assigning feature is strictly reserved for Super Admin only.');
+      return;
+    }
     setAssignTargetUser(targetUser);
     setShowAssignProductsModal(true);
     setAssignProductsLoading(true);
@@ -1005,15 +1017,32 @@ export default function AdminDashboard() {
   const availableSubCats = selectedCatObj?.children || [];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex">
-      {/* 1. LEFT ADMIN SIDEBAR (MATCHING SCREENSHOT & LIVE mgpjn.com) */}
-      <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between flex-shrink-0 z-30 shadow-xs">
+    <div className="min-h-screen bg-[#f8fafc] flex relative">
+      {/* Mobile Sidebar Overlay Backdrop */}
+      {isMobileSidebarOpen && (
+        <div
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 lg:hidden"
+        />
+      )}
+
+      {/* 1. LEFT ADMIN SIDEBAR (RESPONSIVE FOR DESKTOP & MOBILE) */}
+      <aside className={`w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between flex-shrink-0 z-40 shadow-xs fixed lg:static inset-y-0 left-0 transition-transform duration-200 lg:translate-x-0 ${
+        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
         <div>
-          {/* Logo Header */}
+          {/* Logo Header with Close button on mobile */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <Link to="/" className="flex items-center space-x-2">
               <img src="/logo.png" alt="MediGlaxo" className="h-9 w-auto" />
             </Link>
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="lg:hidden p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Admin User Profile Card (Matching Live Blue Gradient Card) */}
@@ -1022,14 +1051,16 @@ export default function AdminDashboard() {
               {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className="overflow-hidden">
-              <h4 className="font-black text-sm text-white truncate">{user?.name || 'Admin'}</h4>
-              <p className="text-[11px] text-blue-100/90 leading-tight">N/A</p>
-              <p className="text-[11px] text-blue-100/90 capitalize leading-tight">{user?.role || 'Admin'}</p>
+              <h4 className="font-black text-sm text-white truncate">{user?.name || 'Super Admin'}</h4>
+              <p className="text-[11px] text-blue-100/90 leading-tight truncate">{user?.phone || 'admin@mediglaxo.com'}</p>
+              <span className="inline-block mt-0.5 text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white/20 text-white">
+                {user?.role || 'Super Admin'}
+              </span>
             </div>
           </div>
 
           {/* 17 Sidebar Menu Items */}
-          <nav className="p-2.5 space-y-1 max-h-[calc(100vh-230px)] overflow-y-auto text-xs font-semibold">
+          <nav className="p-2.5 space-y-1 max-h-[calc(100vh-250px)] overflow-y-auto text-xs font-semibold">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentSection === item.key || (currentSection === '' && item.key === 'dashboard');
@@ -1037,8 +1068,11 @@ export default function AdminDashboard() {
               return (
                 <button
                   key={item.key}
-                  onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
+                  onClick={() => {
+                    navigate(item.path);
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all text-left cursor-pointer ${
                     isActive
                       ? 'bg-[#ff5722] text-white font-bold shadow-md shadow-[#ff5722]/20'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -1052,51 +1086,128 @@ export default function AdminDashboard() {
           </nav>
         </div>
 
-        {/* Bottom Logout Button */}
-        <div className="p-3 border-t border-slate-100">
+        {/* Bottom Prominent Logout Button in Sidebar */}
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50">
           <button
+            type="button"
             onClick={() => {
-              logout();
-              navigate('/login');
+              if (window.confirm('Are you sure you want to log out from Super Admin?')) {
+                logout();
+                navigate('/login');
+              }
             }}
-            className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+            className="w-full flex items-center justify-center space-x-2 px-3 py-2.5 text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all active:scale-95 shadow-2xs cursor-pointer"
           >
-            <LogOut className="w-4 h-4 text-rose-500" />
-            <span>Logout</span>
+            <LogOut className="w-4 h-4 text-rose-600" />
+            <span>Logout Session</span>
           </button>
         </div>
       </aside>
 
       {/* 2. MAIN ADMIN CONTENT WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
-        {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-slate-200/80 px-6 flex items-center justify-between sticky top-0 z-20">
-          <div>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900">
-              Super Admin Dashboard
-            </h1>
+        {/* Top Header Bar with Prominent Logout & User Dropdown */}
+        <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+          <div className="flex items-center space-x-3">
+            {/* Mobile Sidebar Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-xl text-slate-600 hover:bg-slate-100 cursor-pointer"
+              title="Open Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <div>
+              <h1 className="text-sm sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                <span>Super Admin Workspace</span>
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-brand-blue-700 border border-blue-200 uppercase">
+                  {user?.role || 'Super Admin'}
+                </span>
+              </h1>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-4 text-slate-600">
-            <div className="relative p-2 rounded-lg hover:bg-slate-100 cursor-pointer">
-              <ShoppingCart className="w-5 h-5 text-slate-600" />
-              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ff5722] text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                0
-              </span>
-            </div>
+          <div className="flex items-center space-x-2 sm:space-x-3 text-slate-600">
+            {/* Storefront Link */}
+            <Link
+              to="/"
+              target="_blank"
+              className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Storefront</span>
+            </Link>
 
-            <div className="relative p-2 rounded-lg hover:bg-slate-100 cursor-pointer">
-              <Bell className="w-5 h-5 text-slate-600" />
-              <span className="absolute top-1 right-1 w-4 h-4 bg-[#ff5722] text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                0
-              </span>
-            </div>
+            {/* PROMINENT LOGOUT BUTTON IN TOPBAR */}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Are you sure you want to log out from Super Admin?')) {
+                  logout();
+                  navigate('/login');
+                }
+              }}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-black transition-all shadow-xs cursor-pointer"
+              title="Logout from Super Admin"
+            >
+              <LogOut className="w-3.5 h-3.5 text-white" />
+              <span>Logout</span>
+            </button>
 
-            <div className="flex items-center space-x-1 pl-2 border-l border-slate-200">
-              <div className="w-8 h-8 rounded-full bg-[#ff5722] text-white flex items-center justify-center font-bold text-xs">
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
-              </div>
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+            {/* Profile Avatar with Dropdown */}
+            <div className="relative pl-1 sm:pl-2 border-l border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-1.5 p-1 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#ff5722] text-white flex items-center justify-center font-black text-xs shadow-xs">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* User Dropdown Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95">
+                  <div className="px-4 py-2 border-b border-slate-100">
+                    <p className="text-xs font-black text-slate-900 truncate">{user?.name || 'Super Admin'}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{user?.phone || user?.email || 'admin@mediglaxo.com'}</p>
+                    <span className="inline-block mt-1 text-[9px] font-black uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {user?.role || 'Super Admin'}
+                    </span>
+                  </div>
+                  <div className="py-1">
+                    <Link
+                      to="/"
+                      target="_blank"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center space-x-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                      <span>View Live Store</span>
+                    </Link>
+                  </div>
+                  <div className="border-t border-slate-100 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        if (window.confirm('Are you sure you want to log out from Super Admin?')) {
+                          logout();
+                          navigate('/login');
+                        }
+                      }}
+                      className="w-full flex items-center space-x-2 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 text-left cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Logout Session</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -1675,13 +1786,15 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
-                                  <button
-                                    onClick={() => handleOpenAssignProductsModal(u)}
-                                    title={`Assign Products & State Pricing (${u.state || 'All States'})`}
-                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                  >
-                                    <Tag className="w-3.5 h-3.5" />
-                                  </button>
+                                  {isSuperAdmin && (
+                                    <button
+                                      onClick={() => handleOpenAssignProductsModal(u)}
+                                      title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                      className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <Tag className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -1812,13 +1925,15 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
-                                  <button
-                                    onClick={() => handleOpenAssignProductsModal(u)}
-                                    title={`Assign Products & State Pricing (${u.state || 'All States'})`}
-                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                  >
-                                    <Tag className="w-3.5 h-3.5" />
-                                  </button>
+                                  {isSuperAdmin && (
+                                    <button
+                                      onClick={() => handleOpenAssignProductsModal(u)}
+                                      title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                      className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <Tag className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -1949,13 +2064,15 @@ export default function AdminDashboard() {
                                 >
                                   <Edit className="w-3.5 h-3.5" />
                                 </button>
-                                <button
-                                  onClick={() => handleOpenAssignProductsModal(u)}
-                                  title={`Assign Products & State Pricing (${u.state || 'All States'})`}
-                                  className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                >
-                                  <Tag className="w-3.5 h-3.5" />
-                                </button>
+                                {isSuperAdmin && (
+                                  <button
+                                    onClick={() => handleOpenAssignProductsModal(u)}
+                                    title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                  >
+                                    <Tag className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );
@@ -4743,7 +4860,7 @@ export default function AdminDashboard() {
       {/* ======================================================== */}
       {/* MODAL 1: ASSIGN PRODUCTS TO DISTRIBUTOR (IMAGE 2)        */}
       {/* ======================================================== */}
-      {showAssignProductsModal && assignTargetUser && (
+      {showAssignProductsModal && assignTargetUser && isSuperAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-5">
           <div className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Header with gradient matching Image 2 */}
