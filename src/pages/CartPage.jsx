@@ -54,8 +54,21 @@ export default function CartPage() {
                 />
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">{item.name}</h3>
-                  <p className="text-xs text-slate-400">{item.dosage_form} • {item.pack_size}</p>
-                  <p className="text-xs font-black text-brand-blue-900 mt-1">₹{item.price} each</p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {item.isWholesale
+                      ? `📦 Box Packaging: ${item.box_packing || '1 Box (10 Strips)'}`
+                      : `💊 ${item.dosage_form} • ${item.strip_packing || item.pack_size || '1 Strip'}`}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <p className="text-xs font-black text-brand-blue-900">
+                      ₹{item.effectiveUnitPrice || item.price} {item.isWholesale ? '/ Box' : '/ Strip'}
+                    </p>
+                    {item.isWholesale && (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                        Wholesale (Box)
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -64,14 +77,16 @@ export default function CartPage() {
                 <div className="flex items-center space-x-2 bg-slate-100 rounded-xl p-1">
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center font-bold text-slate-700"
+                    className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
-                  <span className="text-xs font-extrabold text-slate-800 w-5 text-center">{item.quantity}</span>
+                  <span className="text-xs font-extrabold text-slate-800 px-1 text-center">
+                    {item.quantity} {item.isWholesale ? (item.box_unit || 'Box') : (item.strip_unit || 'Strip')}
+                  </span>
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center font-bold text-slate-700"
+                    className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200 cursor-pointer"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
@@ -79,7 +94,7 @@ export default function CartPage() {
 
                 <div className="text-right">
                   <div className="text-base font-black text-brand-blue-900">
-                    ₹{(item.price * item.quantity).toFixed(2)}
+                    ₹{((item.effectiveUnitPrice || item.price) * item.quantity).toFixed(2)}
                   </div>
                 </div>
 

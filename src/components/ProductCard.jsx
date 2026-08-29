@@ -114,7 +114,9 @@ export default function ProductCard({ product }) {
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-slate-400 block font-medium">Retail Rate</span>
+            <span className="text-[10px] text-slate-500 block font-semibold">
+              Retail: / {product.strip_unit || 'Strip'}
+            </span>
           </div>
 
           {/* Add / Quantity Button */}
@@ -146,16 +148,26 @@ export default function ProductCard({ product }) {
           </div>
         </div>
 
-        {/* Wholesale Rate (Strictly for Sub-Retailer se upar ke sabhi roles: Retailer, Sub Distributor, Distributor, Super Distributor, Admin) */}
+        {/* Wholesale Rate (Explicitly per Box packaging, strictly for Retailer and above roles) */}
         {isWholesaleAllowed && (
-          <div className="flex items-center justify-between bg-emerald-50/90 border border-emerald-200/90 px-2 py-1 rounded-lg text-[11px]">
-            <span className="font-semibold text-emerald-900 flex items-center space-x-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-              <span>Wholesale Rate:</span>
-            </span>
-            <span className="font-black text-emerald-700">
-              ₹{wholesalePrice.toFixed(0)}
-            </span>
+          <div className="flex items-center justify-between bg-emerald-50/95 border border-emerald-300/80 px-2.5 py-1.5 rounded-xl text-[11px] shadow-2xs">
+            <div className="flex flex-col">
+              <span className="font-extrabold text-emerald-950 flex items-center space-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                <span>Wholesale (Box Rate):</span>
+              </span>
+              <span className="text-[10px] text-emerald-700 font-bold">
+                {product.box_packing || '1 Box (10 Strips)'}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="font-black text-emerald-800 text-sm">
+                ₹{wholesalePrice.toFixed(0)}
+              </span>
+              <span className="text-[10px] text-emerald-600 font-bold block">
+                / {product.box_unit || 'Box'}
+              </span>
+            </div>
           </div>
         )}
       </div>

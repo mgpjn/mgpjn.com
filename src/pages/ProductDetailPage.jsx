@@ -260,19 +260,22 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-slate-800 flex items-center space-x-1.5">
                       <Tag className="w-3.5 h-3.5 text-brand-blue-800" />
-                      <span>Retail Rate</span>
+                      <span>Retail Rate (per Strip)</span>
                     </span>
                     <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                      Single Pack
+                      {product.strip_unit || 'Strip'}
                     </span>
                   </div>
                   <div className="mt-2 flex items-baseline space-x-2">
                     <span className="text-2xl font-black text-slate-900">₹{retailPrice.toFixed(2)}</span>
+                    <span className="text-xs text-slate-500 font-bold">/ {product.strip_unit || 'Strip'}</span>
                     {mrp > retailPrice && (
                       <span className="text-xs text-slate-400 line-through">MRP ₹{mrp.toFixed(2)}</span>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1">For normal patient &amp; retail consumption</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    💊 Packing: {product.strip_packing || '1 Strip (10 Tablets)'} (Patient consumption)
+                  </p>
                 </div>
 
                 {/* Option 2: Wholesale / Bulk Rate */}
@@ -287,20 +290,24 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-emerald-800 flex items-center space-x-1.5">
                       <Package className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Wholesale / Bulk Rate</span>
+                      <span>Wholesale Rate (per Box)</span>
                     </span>
-                    <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-sm">
-                      {wholesaleMinQty}+ Units
+                    <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shadow-sm">
+                      {product.box_unit || 'Box'} Packing
                     </span>
                   </div>
                   <div className="mt-2 flex items-baseline space-x-2">
                     <span className="text-2xl font-black text-emerald-800">₹{wholesalePrice.toFixed(2)}</span>
+                    <span className="text-xs text-emerald-700 font-extrabold">/ {product.box_unit || 'Box'}</span>
                     <span className="text-xs text-emerald-600 font-bold">
-                      (Save {Math.round((1 - wholesalePrice / mrp) * 100)}% on MRP)
+                      (Wholesale Trade)
                     </span>
                   </div>
-                  <p className="text-[10px] text-emerald-700 font-medium mt-1">
-                    B2B Trade Rate for stockists, chemists &amp; bulk buyers
+                  <p className="text-[10px] text-emerald-800 font-bold mt-1">
+                    📦 Packing: {product.box_packing || '1 Box (10 Strips)'}
+                  </p>
+                  <p className="text-[10px] text-emerald-600 mt-0.5">
+                    B2B Trade Rate for stockists, chemists &amp; bulk buyers (Box packaging)
                   </p>
                 </div>
               </div>
@@ -344,9 +351,13 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div>
-                <span className="text-xs font-bold text-slate-700 block">Quantity:</span>
-                <span className="text-[11px] text-slate-400">
-                  {isWholesaleSelected ? `Wholesale active (${wholesaleMinQty}+ units)` : 'Retail active'}
+                <span className="text-xs font-bold text-slate-700 block">
+                  Quantity ({isWholesaleSelected ? 'Boxes' : 'Strips'}):
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {isWholesaleSelected
+                    ? `📦 Box Rate: ${product.box_packing || '1 Box (10 Strips)'}`
+                    : `💊 Strip Rate: ${product.strip_packing || '1 Strip (10 Tablets)'}`}
                 </span>
               </div>
 
@@ -357,7 +368,9 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-sm font-extrabold text-slate-800 w-8 text-center">{quantity}</span>
+                <span className="text-sm font-extrabold text-slate-800 px-1 text-center">
+                  {quantity} {isWholesaleSelected ? (product.box_unit || 'Box') : (product.strip_unit || 'Strip')}
+                </span>
                 <button
                   onClick={() => setQuantity(Math.min(product.stock || 500, quantity + 1))}
                   className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center font-bold hover:bg-brand-blue-800 hover:text-white transition-colors"
@@ -375,7 +388,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={handleAddToCart}
-                className={`py-3.5 rounded-2xl font-bold text-xs shadow-lg transition-all flex items-center justify-center space-x-2 ${
+                className={`py-3.5 rounded-2xl font-bold text-xs shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer ${
                   addedAnimation
                     ? 'bg-emerald-600 text-white shadow-emerald-600/20'
                     : 'bg-brand-blue-800 hover:bg-brand-blue-900 text-white shadow-brand-blue-800/20'
@@ -389,7 +402,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                 ) : (
                   <>
                     <ShoppingCart className="w-4 h-4" />
-                    <span>Add {quantity} Packs to Cart</span>
+                    <span>Add {quantity} {isWholesaleSelected ? 'Boxes' : 'Packs'} to Cart</span>
                   </>
                 )}
               </button>

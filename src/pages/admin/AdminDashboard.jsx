@@ -2109,9 +2109,9 @@ export default function AdminDashboard() {
                     <tr>
                       <th className="p-3">Medicine</th>
                       <th className="p-3">Category</th>
-                      <th className="p-3">Retail Price</th>
+                      <th className="p-3">Retail Price (Strip)</th>
                       <th className="p-3">Base Price</th>
-                      <th className="p-3">Wholesale Price</th>
+                      <th className="p-3">Wholesale Price (Box)</th>
                       <th className="p-3">MRP</th>
                       <th className="p-3 font-bold text-purple-700">Margin Spread</th>
                     </tr>
@@ -2126,9 +2126,9 @@ export default function AdminDashboard() {
                         <tr key={p.id} className="hover:bg-slate-50/60">
                           <td className="p-3 font-bold text-slate-900">{p.name}</td>
                           <td className="p-3">{p.category?.name || 'Tablets'}</td>
-                          <td className="p-3 font-bold text-slate-800">₹{retail.toFixed(0)}</td>
+                          <td className="p-3 font-bold text-slate-800">₹{retail.toFixed(0)} <span className="text-[10px] text-slate-400 font-normal">/ Strip</span></td>
                           <td className="p-3 font-bold text-blue-600">₹{base.toFixed(0)}</td>
-                          <td className="p-3 font-bold text-emerald-600">₹{wholesale.toFixed(0)}</td>
+                          <td className="p-3 font-bold text-emerald-600">₹{wholesale.toFixed(0)} <span className="text-[10px] text-emerald-600/70 font-semibold">/ Box</span></td>
                           <td className="p-3 text-slate-400">₹{mrp.toFixed(0)}</td>
                           <td className="p-3 font-black text-purple-700">₹{(retail - base).toFixed(0)}</td>
                         </tr>
@@ -4337,10 +4337,18 @@ export default function AdminDashboard() {
 
               {/* Direct Prices Section (Matching Image 3) */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <h4 className="font-bold text-slate-800 text-xs">For Wholesaler - Set Direct Prices</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-800 text-xs">For Wholesaler - Set Direct Prices (Per Box Rate)</h4>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    📦 Box Unit: {priceTargetProduct?.box_packing || '1 Box (10 Strips)'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Wholesale price applies strictly to complete Box packaging (not loose strips).
+                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">SD Price (₹)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">SD Price (₹ / Box)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -4351,7 +4359,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Dist Price (₹)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Dist Price (₹ / Box)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -4362,7 +4370,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Sub D Price (₹)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Sub D Price (₹ / Box)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -4373,7 +4381,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Retailer Price (₹)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Retailer Price (₹ / Box)</label>
                     <input
                       type="number"
                       step="0.01"
