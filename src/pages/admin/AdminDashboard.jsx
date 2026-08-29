@@ -12,6 +12,7 @@ import {
   CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { FALLBACK_NETWORK_USERS } from '../../data/fallbackUsers';
 import {
   getAdminStats,
   getAdminUsersByRole, storeAdminHierarchyUser, updateAdminHierarchyUser, impersonateAdminUser,
@@ -348,11 +349,17 @@ export default function AdminDashboard() {
       } else if (NETWORK_ROLE_SECTIONS.includes(currentSection)) {
         const item = menuItems.find(m => m.key === currentSection);
         const role = item?.roleType || (currentSection === 'all-customers' ? 'customer' : 'super_distributor');
-        const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, state: stateFilter, sort: sortOrder });
-        if (res.data.success) {
-          setRoleUsers(res.data.users);
-          setRoleStats(res.data.stats);
-          if (res.data.state_counts) setStateCounts(res.data.state_counts);
+        try {
+          const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, state: stateFilter, sort: sortOrder });
+          if (res?.data?.success && Array.isArray(res.data.users) && res.data.users.length > 0) {
+            setRoleUsers(res.data.users);
+            setRoleStats(res.data.stats);
+            if (res.data.state_counts) setStateCounts(res.data.state_counts);
+          } else {
+            setRoleUsers(FALLBACK_NETWORK_USERS[role] || []);
+          }
+        } catch (e) {
+          setRoleUsers(FALLBACK_NETWORK_USERS[role] || []);
         }
       } else if (currentSection === 'purchase-orders') {
         const res = await getPurchaseOrders({ status: statusFilter, state: stateFilter });
