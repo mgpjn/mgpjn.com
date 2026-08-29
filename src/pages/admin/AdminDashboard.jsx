@@ -1632,14 +1632,20 @@ export default function AdminDashboard() {
                       </thead>
                     )}
                     <tbody className="divide-y divide-slate-100">
-                      {roleUsers?.data?.length === 0 ? (
-                        <tr>
-                          <td colSpan="8" className="p-8 text-center text-slate-400">
-                            No {sectionTitle.toLowerCase()} found matching criteria.
-                          </td>
-                        </tr>
-                      ) : (
-                        roleUsers?.data?.map((u) => {
+                      {(() => {
+                        const userList = Array.isArray(roleUsers)
+                          ? roleUsers
+                          : (Array.isArray(roleUsers?.data) ? roleUsers.data : []);
+                        if (userList.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="8" className="p-8 text-center text-slate-400">
+                                No {sectionTitle.toLowerCase()} found matching criteria.
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return userList.map((u) => {
                           const isCust = ['customer-layer-1', 'customer-layer-2', 'customer-layer-3', 'all-customers', 'user_customer'].includes(currentSection);
                           const isSubRet = currentSection === 'sub-retailers';
 
@@ -2083,8 +2089,8 @@ export default function AdminDashboard() {
                               </td>
                             </tr>
                           );
-                        })
-                      )}
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
