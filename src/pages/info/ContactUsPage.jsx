@@ -25,7 +25,7 @@ export default function ContactUsPage() {
             <div className="space-y-3 text-xs text-slate-600">
               <div className="flex items-start space-x-3">
                 <MapPin className="w-4 h-4 text-brand-orange-500 flex-shrink-0 mt-0.5" />
-                <span><strong>MEDIGLAXO PHARMA</strong><br />ICE FACTORY, 280, Somnath Nagar, Gabhani, Sachin, Surat, Gujarat - 394230</span>
+                <span><strong>MEDIGLAXO PHARMA</strong><br />Sachin GIDC, Surat, Gujarat - 394230</span>
               </div>
               <div className="flex items-start space-x-3">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />

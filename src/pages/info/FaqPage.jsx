@@ -11,7 +11,7 @@ export default function FaqPage() {
     },
     {
       q: 'What is MEDIGLAXO PHARMA\'s legal entity and registration status?',
-      a: 'MEDIGLAXO PHARMA is a government-registered pharmaceutical partnership enterprise operating under Form GST REG-06 with GSTIN 24ABVFM0075D1ZA (Ghatak 63, Surat, Gujarat). Our registered principal hub is located in Sachin, Surat, Gujarat - 394230.',
+      a: 'MEDIGLAXO PHARMA is a government-registered pharmaceutical partnership enterprise with GSTIN 24ABVFM0075D1ZA (Ghatak 63, Surat, Gujarat). Our registered principal hub is located in Sachin GIDC, Surat, Gujarat - 394230.',
     },
     {
       q: 'How does the Doctor Prescription (Rx) verification work?',

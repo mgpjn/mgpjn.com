@@ -106,7 +106,7 @@ export default function TermsConditionsPage() {
           </p>
           <div className="pt-2 text-xs text-slate-400">
             <p><strong>Operating Entity:</strong> MEDIGLAXO PHARMA</p>
-            <p><strong>Principal Place:</strong> ICE FACTORY, 280, Somnath Nagar, Gabhani, Sachin, Surat, Gujarat - 394230</p>
+            <p><strong>Principal Place:</strong> Sachin GIDC, Surat, Gujarat - 394230</p>
           </div>
         </section>
       </div>

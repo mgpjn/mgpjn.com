@@ -62,7 +62,6 @@ export default function Footer() {
             <div className="pt-2 text-xs text-slate-400 space-y-1">
               <p><strong>Legal Name:</strong> MEDIGLAXO PHARMA</p>
               <p><strong>GSTIN:</strong> 24ABVFM0075D1ZA</p>
-              <p><strong>Govt. Reg:</strong> Form GST REG-06</p>
             </div>
           </div>
 
@@ -104,7 +103,7 @@ export default function Footer() {
               </li>
               <li className="flex items-start space-x-3">
                 <MapPin className="w-4 h-4 text-brand-orange-400 flex-shrink-0 mt-0.5" />
-                <span>MEDIGLAXO PHARMA, ICE Factory, 280, Somnath Nagar, Gabhani, Sachin, Surat, Gujarat - 394230</span>
+                <span>MEDIGLAXO PHARMA, Sachin GIDC, Surat, Gujarat - 394230</span>
               </li>
             </ul>
           </div>

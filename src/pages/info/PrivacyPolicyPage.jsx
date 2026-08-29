@@ -99,16 +99,14 @@ export default function PrivacyPolicyPage() {
             In accordance with the Information Technology Act 2000 and the Digital Personal Data Protection Act 2023, the details of our designated Grievance Officer are provided below:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium pt-2">
-            <div className="space-y-1.5 bg-white/10 p-4 rounded-2xl border border-white/10">
-              <p className="text-amber-300 font-bold">Grievance &amp; Compliance Officer</p>
-              <p className="text-white font-semibold">MEDIGLAXO PHARMA</p>
-              <p className="text-slate-300">Form GST REG-06 Reg. Entity</p>
+            <div className="space-y-1 bg-white/10 p-4 rounded-2xl border border-white/10">
+              <h4 className="font-extrabold text-white">MEDIGLAXO PHARMA</h4>
               <p className="text-emerald-300 font-mono">GSTIN: 24ABVFM0075D1ZA</p>
             </div>
             <div className="space-y-2 bg-white/10 p-4 rounded-2xl border border-white/10">
               <div className="flex items-start space-x-2">
                 <MapPin className="w-4 h-4 text-brand-orange-400 flex-shrink-0 mt-0.5" />
-                <span className="text-slate-300">ICE FACTORY, 280, Somnath Nagar, Gabhani, Sachin, Surat, Gujarat - 394230</span>
+                <span className="text-slate-300">Sachin GIDC, Surat, Gujarat - 394230</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-brand-orange-400 flex-shrink-0" />
