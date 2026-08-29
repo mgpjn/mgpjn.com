@@ -38,9 +38,10 @@ export default function Navbar({ onOpenPrescriptionModal }) {
   };
 
   const handleMouseLeaveNav = () => {
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
     navTimerRef.current = setTimeout(() => {
       setActiveCategoryDropdown(null);
-    }, 180);
+    }, 300);
   };
 
   useEffect(() => {
