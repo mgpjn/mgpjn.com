@@ -118,6 +118,12 @@ export const rejectAdminUser = (id, data) => api.post(`/admin/users/${id}/reject
 export const getAdminProductStatePrices = (id) => api.get(`/admin/products/${id}/state-prices`);
 export const saveAdminProductStatePrices = (id, data) => api.post(`/admin/products/${id}/state-prices`, data);
 
+// Super Admin: User Product Assignment & State-Wise Pricing
+export const getAdminUserAssignedProducts = (userId) => api.get(`/admin/users/${userId}/assigned-products`);
+export const toggleAdminUserProductAssignment = (userId, data) => api.post(`/admin/users/${userId}/assign-product`, data);
+export const bulkAssignAdminUserProducts = (userId, data) => api.post(`/admin/users/${userId}/assign-all-products`, data);
+export const saveAdminUserProductPrice = (userId, data) => api.post(`/admin/users/${userId}/set-product-price`, data);
+
 // Medicine Purchase Orders (PO)
 export const getPurchaseOrders = (params) => api.get('/purchase-orders', { params });
 export const createPurchaseOrder = (data) => api.post('/purchase-orders', data);

@@ -23,6 +23,7 @@ import {
   getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct,
   uploadAdminProductImage,
   getAdminProductStatePrices, saveAdminProductStatePrices,
+  getAdminUserAssignedProducts, toggleAdminUserProductAssignment, bulkAssignAdminUserProducts, saveAdminUserProductPrice,
   getAdminOrders, updateAdminOrderStatus,
   getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
   getAdminPrescriptions, updateAdminPrescriptionStatus,
@@ -239,6 +240,30 @@ export default function AdminDashboard() {
   const [showStatePriceModal, setShowStatePriceModal] = useState(false);
   const [statePriceProduct, setStatePriceProduct] = useState(null);
   const [statePriceRows, setStatePriceRows] = useState([]);
+
+  // Super Admin: Assign Products & Set Product Price Modals (Screenshots feature)
+  const [showAssignProductsModal, setShowAssignProductsModal] = useState(false);
+  const [assignTargetUser, setAssignTargetUser] = useState(null);
+  const [assignedProductsList, setAssignedProductsList] = useState([]);
+  const [assignProductsLoading, setAssignProductsLoading] = useState(false);
+  const [assignProductsSearch, setAssignProductsSearch] = useState('');
+  const [selectedAssignProductIds, setSelectedAssignProductIds] = useState([]);
+  const [assignFilterOnlyAssigned, setAssignFilterOnlyAssigned] = useState(false);
+
+  const [showSetPriceModal, setShowSetPriceModal] = useState(false);
+  const [priceTargetProduct, setPriceTargetProduct] = useState(null);
+  const [priceForm, setPriceForm] = useState({
+    sd_margin: 2,
+    dist_margin: 5,
+    subd_margin: 10,
+    rt_margin: 15,
+    end_user_price: 86,
+    sd_price: 112,
+    dist_price: 115,
+    subd_price: 120,
+    retailer_price: 140,
+  });
+  const [savingPrice, setSavingPrice] = useState(false);
 
   // Medicine Purchase Orders (PO)
   const [purchaseOrdersList, setPurchaseOrdersList] = useState({ data: [] });
@@ -478,6 +503,113 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       alert(`Error saving state prices: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Assign Products & Set Product Price Handlers (Screenshots Feature)
+  const handleOpenAssignProductsModal = async (targetUser) => {
+    setAssignTargetUser(targetUser);
+    setShowAssignProductsModal(true);
+    setAssignProductsLoading(true);
+    setAssignProductsSearch('');
+    setSelectedAssignProductIds([]);
+    try {
+      const res = await getAdminUserAssignedProducts(targetUser.id);
+      if (res.data.success) {
+        setAssignedProductsList(res.data.products || []);
+        if (res.data.user) {
+          setAssignTargetUser(res.data.user);
+        }
+      }
+    } catch (err) {
+      alert(`Error fetching assigned products: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setAssignProductsLoading(false);
+    }
+  };
+
+  const handleToggleProductAssignment = async (productId, newStatus) => {
+    if (!assignTargetUser) return;
+    setAssignedProductsList((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, is_assigned: newStatus } : p))
+    );
+    try {
+      await toggleAdminUserProductAssignment(assignTargetUser.id, {
+        product_id: productId,
+        is_assigned: newStatus,
+      });
+    } catch (err) {
+      alert(`Failed to update assignment: ${err.response?.data?.message || err.message}`);
+      setAssignedProductsList((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, is_assigned: !newStatus } : p))
+      );
+    }
+  };
+
+  const handleBulkAssignSubmit = async (newStatus) => {
+    if (!assignTargetUser || selectedAssignProductIds.length === 0) return;
+    const targetIds = [...selectedAssignProductIds];
+    setAssignedProductsList((prev) =>
+      prev.map((p) => (targetIds.includes(p.id) ? { ...p, is_assigned: newStatus } : p))
+    );
+    try {
+      await bulkAssignAdminUserProducts(assignTargetUser.id, {
+        product_ids: targetIds,
+        is_assigned: newStatus,
+      });
+      setSelectedAssignProductIds([]);
+      alert(newStatus ? `${targetIds.length} products assigned successfully!` : `${targetIds.length} products removed from distributor!`);
+    } catch (err) {
+      alert(`Bulk update failed: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const handleOpenSetPriceModal = (product) => {
+    setPriceTargetProduct(product);
+    const endUser = product.end_user_price || product.mrp || (product.base_price ? Number((product.base_price * 8.6).toFixed(2)) : 86);
+    setPriceForm({
+      sd_margin: product.sd_margin !== undefined ? product.sd_margin : 2,
+      dist_margin: product.dist_margin !== undefined ? product.dist_margin : 5,
+      subd_margin: product.subd_margin !== undefined ? product.subd_margin : 10,
+      rt_margin: product.rt_margin !== undefined ? product.rt_margin : 15,
+      end_user_price: endUser,
+      sd_price: product.sd_price !== undefined ? product.sd_price : (product.base_price ? Number((product.base_price * 1.12).toFixed(2)) : 112),
+      dist_price: product.dist_price !== undefined ? product.dist_price : (product.base_price ? Number((product.base_price * 1.15).toFixed(2)) : 115),
+      subd_price: product.subd_price !== undefined ? product.subd_price : (product.base_price ? Number((product.base_price * 1.20).toFixed(2)) : 120),
+      retailer_price: product.retailer_price !== undefined ? product.retailer_price : (product.base_price ? Number((product.base_price * 1.40).toFixed(2)) : 140),
+    });
+    setShowSetPriceModal(true);
+  };
+
+  const handleSaveProductPriceSubmit = async (e) => {
+    e.preventDefault();
+    if (!assignTargetUser || !priceTargetProduct) return;
+    setSavingPrice(true);
+    try {
+      const payload = {
+        product_id: priceTargetProduct.id,
+        sd_margin: parseFloat(priceForm.sd_margin) || 0,
+        dist_margin: parseFloat(priceForm.dist_margin) || 0,
+        subd_margin: parseFloat(priceForm.subd_margin) || 0,
+        rt_margin: parseFloat(priceForm.rt_margin) || 0,
+        end_user_price: parseFloat(priceForm.end_user_price) || 0,
+        sd_price: parseFloat(priceForm.sd_price) || 0,
+        dist_price: parseFloat(priceForm.dist_price) || 0,
+        subd_price: parseFloat(priceForm.subd_price) || 0,
+        retailer_price: parseFloat(priceForm.retailer_price) || 0,
+      };
+      const res = await saveAdminUserProductPrice(assignTargetUser.id, payload);
+      if (res.data.success) {
+        setAssignedProductsList((prev) =>
+          prev.map((p) => (p.id === priceTargetProduct.id ? { ...p, ...payload, is_assigned: true } : p))
+        );
+        setShowSetPriceModal(false);
+        alert(res.data.message || 'Product prices and margins saved successfully!');
+      }
+    } catch (err) {
+      alert(`Failed to save price: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setSavingPrice(false);
     }
   };
 
@@ -1383,6 +1515,13 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
+                                  <button
+                                    onClick={() => handleOpenAssignProductsModal(u)}
+                                    title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                  >
+                                    <Tag className="w-3.5 h-3.5" />
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -1513,6 +1652,13 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
+                                  <button
+                                    onClick={() => handleOpenAssignProductsModal(u)}
+                                    title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                  >
+                                    <Tag className="w-3.5 h-3.5" />
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -1642,6 +1788,13 @@ export default function AdminDashboard() {
                                   className="p-1.5 text-brand-orange-500 hover:bg-orange-50 rounded-lg"
                                 >
                                   <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenAssignProductsModal(u)}
+                                  title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                  className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                >
+                                  <Tag className="w-3.5 h-3.5" />
                                 </button>
                               </td>
                             </tr>
@@ -3789,6 +3942,440 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 1: ASSIGN PRODUCTS TO DISTRIBUTOR (IMAGE 2)        */}
+      {/* ======================================================== */}
+      {showAssignProductsModal && assignTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-5">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Header with gradient matching Image 2 */}
+            <div className="bg-gradient-to-r from-[#ff5722] via-[#e64a19] to-[#0288d1] text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 flex-shrink-0 shadow-md">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">📦</span>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight">Assign Products</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAssignFilterOnlyAssigned(!assignFilterOnlyAssigned)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all flex items-center space-x-1.5 ${
+                    assignFilterOnlyAssigned
+                      ? 'bg-white text-[#ff5722] border-white shadow-xs'
+                      : 'bg-white/20 hover:bg-white/30 text-white border-white/30'
+                  }`}
+                >
+                  <span>✕</span>
+                  <span>{assignFilterOnlyAssigned ? 'Showing Assigned Only' : 'Assign to Distributor'}</span>
+                </button>
+              </div>
+
+              {/* Prominent State & Distributor Info (As Requested) */}
+              <div className="flex items-center space-x-3">
+                <div className="bg-black/25 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/20 text-right">
+                  <div className="text-[11px] font-bold text-white flex items-center space-x-1.5 justify-end">
+                    <span className="text-amber-300">📍 State:</span>
+                    <span className="bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded text-[11px] uppercase tracking-wider">
+                      {assignTargetUser.state || 'GUJARAT'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-white/90 font-medium">
+                    Distributor: <span className="font-bold text-white">{assignTargetUser.name}</span> ({assignTargetUser.role?.replace('_', ' ').toUpperCase()})
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignProductsModal(false)}
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Search & Bulk Selection Bar */}
+            <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={assignProductsSearch}
+                  onChange={(e) => setAssignProductsSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-brand-blue-500 shadow-2xs"
+                />
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <label className="flex items-center space-x-2 cursor-pointer text-xs font-bold text-slate-700 select-none">
+                  <input
+                    type="checkbox"
+                    checked={
+                      assignedProductsList.length > 0 &&
+                      selectedAssignProductIds.length === assignedProductsList.length
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedAssignProductIds(assignedProductsList.map((p) => p.id));
+                      } else {
+                        setSelectedAssignProductIds([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded text-[#ff5722] focus:ring-[#ff5722]"
+                  />
+                  <span>Select All</span>
+                </label>
+
+                <span className="bg-[#ff5722] text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs">
+                  {selectedAssignProductIds.length} Selected
+                </span>
+
+                {selectedAssignProductIds.length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => handleBulkAssignSubmit(true)}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                    >
+                      Assign Selected
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleBulkAssignSubmit(false)}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                    >
+                      Remove Selected
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Products List Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+              {assignProductsLoading ? (
+                <div className="py-20 text-center text-slate-400 text-xs font-bold flex flex-col items-center justify-center space-y-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-[#ff5722]" />
+                  <span>Loading distributor products &amp; state rates...</span>
+                </div>
+              ) : (
+                (() => {
+                  const filtered = assignedProductsList.filter((p) => {
+                    const matchSearch =
+                      !assignProductsSearch ||
+                      p.name.toLowerCase().includes(assignProductsSearch.toLowerCase()) ||
+                      (p.category_name && p.category_name.toLowerCase().includes(assignProductsSearch.toLowerCase()));
+                    const matchAssigned = !assignFilterOnlyAssigned || p.is_assigned;
+                    return matchSearch && matchAssigned;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="py-16 text-center text-slate-400 text-xs font-medium bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        No products found matching the criteria.
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((product) => {
+                    const isSelected = selectedAssignProductIds.includes(product.id);
+                    return (
+                      <div
+                        key={product.id}
+                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                          isSelected
+                            ? 'bg-amber-50/40 border-amber-300 shadow-sm'
+                            : product.is_assigned
+                            ? 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
+                            : 'bg-slate-50/70 border-dashed border-slate-300 opacity-75'
+                        }`}
+                      >
+                        {/* Checkbox & Product Details */}
+                        <div className="flex items-start space-x-3.5 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAssignProductIds((prev) => [...prev, product.id]);
+                              } else {
+                                setSelectedAssignProductIds((prev) => prev.filter((id) => id !== product.id));
+                              }
+                            }}
+                            className="w-4 h-4 mt-1 rounded text-[#ff5722] focus:ring-[#ff5722] cursor-pointer"
+                          />
+
+                          <div className="space-y-1 min-w-0">
+                            <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight truncate">
+                              {product.name}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                              <span>{product.category_name || 'Tablets'}</span>
+                              <span>•</span>
+                              <span>{product.sub_category_name || 'Medicine'}</span>
+                              <span className="text-slate-400">|</span>
+                              <span className="text-slate-600 font-semibold">{product.manufacturer || 'MEDIGLAXO PHARMA'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Packaging, Pricing, Stock & Buttons */}
+                        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-7 sm:pl-0">
+                          <div className="text-center">
+                            <span className="text-[10px] text-slate-400 block font-semibold">Packaging</span>
+                            <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                              {product.box_packing || '1 Box (10 Strips)'}
+                            </span>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="text-xs sm:text-sm font-black text-[#ff5722]">
+                              ₹{Number(product.base_price || 10).toFixed(2)}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-bold">Base Price</div>
+                            <div className="text-[10px] text-slate-400">MRP: ₹{Number(product.mrp || 124).toFixed(2)}</div>
+                          </div>
+
+                          <div>
+                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
+                              product.stock > 0 ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+                            }`}>
+                              {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            {/* Green Set Price Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSetPriceModal(product)}
+                              className="px-3 py-1.5 bg-[#00a859] hover:bg-[#008f4c] text-white text-xs font-bold rounded-lg flex items-center space-x-1 shadow-xs transition-all"
+                            >
+                              <span>📊</span>
+                              <span>Set Price</span>
+                            </button>
+
+                            {/* Red Remove / Green Assign Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProductAssignment(product.id, !product.is_assigned)}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center space-x-1 shadow-xs transition-all ${
+                                product.is_assigned
+                                  ? 'bg-[#e53935] hover:bg-[#d32f2f] text-white'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>{product.is_assigned ? 'Remove' : 'Assign'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: SET PRODUCT PRICE (IMAGE 3)                      */}
+      {/* ======================================================== */}
+      {showSetPriceModal && priceTargetProduct && assignTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-5">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Header matching Image 3 with gradient */}
+            <div className="bg-gradient-to-r from-[#ff5722] to-[#0288d1] text-white p-4 sm:p-5 flex items-center justify-between shadow-md">
+              <div>
+                <h3 className="text-base sm:text-lg font-black tracking-tight">Set Product Price</h3>
+                <p className="text-[11px] text-white/90 font-medium">
+                  {priceTargetProduct.name} • {assignTargetUser.role?.replace('_', ' ').toUpperCase()} Pricing ({assignTargetUser.name})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSetPriceModal(false)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProductPriceSubmit} className="p-5 sm:p-6 space-y-4">
+              {/* Product ID & Base Price Card */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-sm">{priceTargetProduct.name}</h4>
+                  <span className="text-[11px] font-mono text-slate-400 font-bold block">Product ID: {priceTargetProduct.id}</span>
+                  <div className="mt-1">
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">
+                      📍 Applicable State: {assignTargetUser.state || 'GUJARAT'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] text-slate-500 font-bold block">Base Price</span>
+                  <span className="text-lg font-black text-[#ff5722]">₹{Number(priceTargetProduct.base_price || 10).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Margins & End User Price Row */}
+              <div className="space-y-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">SD Margin (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.sd_margin}
+                      onChange={(e) => setPriceForm({ ...priceForm, sd_margin: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Dist Margin (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.dist_margin}
+                      onChange={(e) => setPriceForm({ ...priceForm, dist_margin: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Sub D Margin (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.subd_margin}
+                      onChange={(e) => setPriceForm({ ...priceForm, subd_margin: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Rt Margin (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.rt_margin}
+                      onChange={(e) => setPriceForm({ ...priceForm, rt_margin: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">End User Price (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.end_user_price}
+                      onChange={(e) => setPriceForm({ ...priceForm, end_user_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Margin Amounts Live Green Box (Matching Image 3) */}
+                {(() => {
+                  const endUser = Number(priceForm.end_user_price) || 0;
+                  const sdAmt = ((endUser * Number(priceForm.sd_margin || 0)) / 100).toFixed(2);
+                  const distAmt = ((endUser * Number(priceForm.dist_margin || 0)) / 100).toFixed(2);
+                  const subdAmt = ((endUser * Number(priceForm.subd_margin || 0)) / 100).toFixed(2);
+                  const rtAmt = ((endUser * Number(priceForm.rt_margin || 0)) / 100).toFixed(2);
+                  const totalAmt = (Number(sdAmt) + Number(distAmt) + Number(subdAmt) + Number(rtAmt)).toFixed(2);
+
+                  return (
+                    <div className="bg-[#e8f5e9] border border-[#c8e6c9] rounded-xl p-2.5 text-[11px] text-[#2e7d32] space-y-1">
+                      <div className="font-black text-[#1b5e20] text-[11px]">Margin Amounts</div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-semibold">
+                        <span>SD Margin: <strong className="text-[#1b5e20] font-black">₹{sdAmt}</strong></span>
+                        <span>Dist Margin: <strong className="text-[#1b5e20] font-black">₹{distAmt}</strong></span>
+                        <span>Sub D Margin: <strong className="text-[#1b5e20] font-black">₹{subdAmt}</strong></span>
+                        <span>Rt Margin: <strong className="text-[#1b5e20] font-black">₹{rtAmt}</strong></span>
+                        <span className="border-l border-[#a5d6a7] pl-3 text-slate-900">Total Margin: <strong className="font-black text-slate-900">₹{totalAmt}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Direct Prices Section (Matching Image 3) */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <h4 className="font-bold text-slate-800 text-xs">For Wholesaler - Set Direct Prices</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">SD Price (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.sd_price}
+                      onChange={(e) => setPriceForm({ ...priceForm, sd_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Dist Price (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.dist_price}
+                      onChange={(e) => setPriceForm({ ...priceForm, dist_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Sub D Price (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.subd_price}
+                      onChange={(e) => setPriceForm({ ...priceForm, subd_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Retailer Price (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceForm.retailer_price}
+                      onChange={(e) => setPriceForm({ ...priceForm, retailer_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 flex items-center justify-end space-x-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowSetPriceModal(false)}
+                  className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPrice}
+                  className="px-6 py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white text-xs font-bold rounded-xl shadow-md shadow-[#ff5722]/30 transition-all flex items-center space-x-1.5"
+                >
+                  {savingPrice && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{savingPrice ? 'Saving...' : 'Save Price'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
