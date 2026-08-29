@@ -40,7 +40,7 @@ export default function ProductCard({ product }) {
           className="block relative h-36 sm:h-44 w-full flex items-center justify-center p-2 mb-2 bg-white rounded-xl overflow-hidden"
         >
           <img
-            src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600'}
+            src={product.image || (Array.isArray(product.images) ? product.images[0] : null) || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600'}
             alt={product.name}
             className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {

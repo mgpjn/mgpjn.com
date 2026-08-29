@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ShoppingCart, Plus, Minus, ShieldCheck, Truck, Clock,
-  FileText, Check, AlertCircle, Sparkles, ChevronRight, Share2, Package, Tag,
-  Pill, Award, CheckCircle2, Info, Activity
+  FileText, Check, AlertCircle, Sparkles, ChevronRight, ChevronLeft, Share2, Package, Tag,
+  Pill, Award, CheckCircle2, Info, Activity, ZoomIn
 } from 'lucide-react';
 import { getProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -23,6 +23,19 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [addedAnimation, setAddedAnimation] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const allImages = useMemo(() => {
+    if (!product) return [];
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      return product.images.filter(Boolean);
+    }
+    return product.image ? [product.image] : ['https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800'];
+  }, [product]);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [product?.id]);
 
   useEffect(() => {
     if (!idOrSlug) return;
@@ -105,24 +118,81 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
       <div className="bg-white rounded-3xl p-5 sm:p-8 md:p-10 border border-slate-100 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
         {/* Left Image Section */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="relative aspect-square rounded-3xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center">
+          <div className="relative aspect-square rounded-3xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center group shadow-xs">
             <img
-              src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800'}
-              alt={product.name}
-              className="w-full h-full object-cover"
+              src={allImages[activeImageIndex] || product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800'}
+              alt={`${product.name} - View ${activeImageIndex + 1}`}
+              className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
               onError={(e) => {
                 e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800';
               }}
             />
             {product.discount_percentage > 0 && (
-              <span className="absolute top-4 right-4 bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
+              <span className="absolute top-4 right-4 bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">
                 {product.discount_percentage}% OFF
               </span>
             )}
-            <span className="absolute top-4 left-4 bg-brand-blue-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">
+            <span className="absolute top-4 left-4 bg-brand-blue-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg z-10">
               Batch Tested
             </span>
+
+            {/* Prev / Next navigation arrows if multiple images */}
+            {allImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center opacity-80 hover:opacity-100 transition-all z-10"
+                  aria-label="Previous Image"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center opacity-80 hover:opacity-100 transition-all z-10"
+                  aria-label="Next Image"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-1 rounded-full z-10">
+                  {activeImageIndex + 1} / {allImages.length}
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Thumbnail Gallery Strip (If 2 or more images) */}
+          {allImages.length > 1 && (
+            <div className="flex items-center space-x-2.5 overflow-x-auto pb-1.5 scrollbar-thin">
+              {allImages.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-all p-0.5 bg-white ${
+                    activeImageIndex === idx
+                      ? 'border-brand-blue-800 ring-2 ring-brand-blue-800/30 scale-105 shadow-md'
+                      : 'border-slate-200 hover:border-slate-300 opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`${product.name} thumbnail ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-xl"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800';
+                    }}
+                  />
+                  {activeImageIndex === idx && (
+                    <span className="absolute bottom-0 inset-x-0 bg-brand-blue-800 text-[8px] font-bold text-white text-center py-0.5">
+                      Selected
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center space-x-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">

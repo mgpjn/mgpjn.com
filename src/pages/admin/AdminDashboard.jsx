@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
-  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -137,7 +137,9 @@ export default function AdminDashboard() {
     expiry_date: '',
     status: 'Active',
     image: '',
+    images: [],
   });
+  const [newImageUrl, setNewImageUrl] = useState('');
 
   // Categories
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -583,31 +585,102 @@ export default function AdminDashboard() {
   const [uploadingProductImage, setUploadingProductImage] = useState(false);
 
   const handleProductImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     setUploadingProductImage(true);
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      if (files.length === 1) {
+        formData.append('image', files[0]);
+      } else {
+        files.forEach((f) => formData.append('images[]', f));
+      }
       const res = await uploadAdminProductImage(formData);
       if (res.data.success) {
-        setProductForm(prev => ({ ...prev, image: res.data.url }));
+        const newUrls = res.data.urls || (res.data.url ? [res.data.url] : []);
+        setProductForm((prev) => {
+          const currentList = Array.isArray(prev.images) && prev.images.length > 0
+            ? prev.images
+            : (prev.image ? [prev.image] : []);
+          const combined = [...currentList, ...newUrls];
+          const unique = Array.from(new Set(combined.filter(Boolean)));
+          return {
+            ...prev,
+            images: unique,
+            image: unique[0] || '',
+          };
+        });
       }
     } catch (err) {
       alert(`Image upload failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setUploadingProductImage(false);
+      e.target.value = '';
     }
+  };
+
+  const handleAddImageUrl = () => {
+    if (!newImageUrl.trim()) return;
+    const url = newImageUrl.trim();
+    setProductForm((prev) => {
+      const currentList = Array.isArray(prev.images) && prev.images.length > 0
+        ? prev.images
+        : (prev.image ? [prev.image] : []);
+      const combined = [...currentList, url];
+      const unique = Array.from(new Set(combined.filter(Boolean)));
+      return {
+        ...prev,
+        images: unique,
+        image: unique[0] || '',
+      };
+    });
+    setNewImageUrl('');
+  };
+
+  const handleRemoveProductImage = (indexToRemove) => {
+    setProductForm((prev) => {
+      const currentList = Array.isArray(prev.images) ? prev.images : [];
+      const updated = currentList.filter((_, idx) => idx !== indexToRemove);
+      return {
+        ...prev,
+        images: updated,
+        image: updated[0] || '',
+      };
+    });
+  };
+
+  const handleSetPrimaryProductImage = (indexToPrimary) => {
+    setProductForm((prev) => {
+      const currentList = Array.isArray(prev.images) ? [...prev.images] : [];
+      if (indexToPrimary < 0 || indexToPrimary >= currentList.length) return prev;
+      const [chosen] = currentList.splice(indexToPrimary, 1);
+      const updated = [chosen, ...currentList];
+      return {
+        ...prev,
+        images: updated,
+        image: chosen,
+      };
+    });
   };
 
   // Product CRUD
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     try {
+      const imagesArr = Array.isArray(productForm.images) && productForm.images.length > 0
+        ? productForm.images
+        : (productForm.image ? [productForm.image] : []);
+
+      const payload = {
+        ...productForm,
+        images: imagesArr,
+        image: imagesArr[0] || productForm.image || '',
+      };
+
       if (editingProduct) {
-        await updateAdminProduct(editingProduct.id, productForm);
+        await updateAdminProduct(editingProduct.id, payload);
       } else {
-        await storeAdminProduct(productForm);
+        await storeAdminProduct(payload);
       }
       setShowProductModal(false);
       setEditingProduct(null);
@@ -856,6 +929,7 @@ export default function AdminDashboard() {
                         expiry_date: '',
                         status: 'Active',
                         image: '',
+                        images: [],
                       });
                       setShowProductModal(true);
                     }}
@@ -1613,6 +1687,7 @@ export default function AdminDashboard() {
                       expiry_date: '',
                       status: 'Active',
                       image: '',
+                      images: [],
                     });
                     setShowProductModal(true);
                   }}
@@ -1689,6 +1764,9 @@ export default function AdminDashboard() {
                                 expiry_date: p.expiry_date || '',
                                 status: p.status || 'Active',
                                 image: p.image || '',
+                                images: Array.isArray(p.images) && p.images.length > 0
+                                  ? p.images
+                                  : (p.image ? [p.image] : []),
                               });
                               setShowProductModal(true);
                             }}
@@ -2573,49 +2651,113 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Product Image (Upload File or URL)</label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <label className="flex items-center space-x-1.5 px-3 py-2 bg-brand-blue-50 text-brand-blue-800 hover:bg-brand-blue-100 rounded-xl border border-brand-blue-200 cursor-pointer font-bold transition-all text-[11px]">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-bold text-slate-800 text-xs">
+                      Product Images (Upload up to 5 or more images)
+                    </label>
+                    <span className="text-[11px] font-bold text-brand-blue-700">
+                      {(productForm.images || []).length} image(s) attached
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
+                    {/* Action Bar: Multi File Upload + Direct URL */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="flex items-center space-x-1.5 px-3 py-2 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl cursor-pointer font-bold transition-all text-[11px] shadow-sm">
                         <Upload className="w-4 h-4" />
-                        <span>{uploadingProductImage ? 'Uploading Image...' : 'Upload Image File'}</span>
+                        <span>{uploadingProductImage ? 'Uploading Image(s)...' : 'Upload Images (Select Multiple)'}</span>
                         <input
                           type="file"
                           accept="image/*"
+                          multiple
                           onChange={handleProductImageUpload}
                           disabled={uploadingProductImage}
                           className="hidden"
                         />
                       </label>
-                      <span className="text-[10px] text-slate-400 font-medium">Auto-saves to database &amp; storage</span>
-                    </div>
 
-                    <input
-                      type="url"
-                      placeholder="Or paste direct image URL (https://...)"
-                      value={productForm.image}
-                      onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono text-[11px]"
-                    />
-
-                    {productForm.image && (
-                      <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-xl border border-slate-200">
-                        <img
-                          src={productForm.image}
-                          alt="Product Preview"
-                          className="w-12 h-12 object-contain rounded-lg bg-white border border-slate-100 p-0.5"
+                      <div className="flex-1 min-w-[220px] flex items-center space-x-1.5">
+                        <input
+                          type="url"
+                          placeholder="Or paste direct image URL (https://...)"
+                          value={newImageUrl}
+                          onChange={(e) => setNewImageUrl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddImageUrl();
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-[11px] focus:outline-none focus:border-brand-blue-600"
                         />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[11px] font-bold text-slate-800 block truncate">Image Ready</span>
-                          <span className="text-[9px] font-mono text-slate-400 truncate block">{productForm.image}</span>
-                        </div>
                         <button
                           type="button"
-                          onClick={() => setProductForm({ ...productForm, image: '' })}
-                          className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg"
+                          onClick={handleAddImageUrl}
+                          disabled={!newImageUrl.trim()}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[11px] font-bold transition-all disabled:opacity-40"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          Add URL
                         </button>
+                      </div>
+                    </div>
+
+                    {/* Uploaded Images Gallery Grid */}
+                    {(productForm.images && productForm.images.length > 0) ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-2">
+                        {productForm.images.map((imgUrl, idx) => (
+                          <div
+                            key={idx}
+                            className={`relative group bg-white rounded-2xl border p-1.5 flex flex-col items-center transition-all ${
+                              idx === 0
+                                ? 'border-brand-blue-800 ring-2 ring-brand-blue-800/20 shadow-md'
+                                : 'border-slate-200 hover:border-slate-300 shadow-xs'
+                            }`}
+                          >
+                            <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center relative">
+                              <img
+                                src={imgUrl}
+                                alt={`Product view ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300';
+                                }}
+                              />
+                              {idx === 0 && (
+                                <span className="absolute top-1 left-1 bg-brand-blue-800 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center space-x-1 shadow-xs">
+                                  <Star className="w-2.5 h-2.5 fill-current" />
+                                  <span>Cover</span>
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveProductImage(idx)}
+                                title="Delete Image"
+                                className="absolute top-1 right-1 w-6 h-6 rounded-md bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center shadow-md transition-all opacity-80 group-hover:opacity-100"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="w-full mt-1.5 flex items-center justify-between px-1">
+                              <span className="text-[10px] font-bold text-slate-500">#{idx + 1}</span>
+                              {idx !== 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimaryProductImage(idx)}
+                                  className="text-[10px] font-bold text-brand-blue-700 hover:underline"
+                                >
+                                  Make Cover
+                                </button>
+                              ) : (
+                                <span className="text-[10px] font-extrabold text-brand-blue-800">Primary</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs text-slate-400 font-medium border border-dashed border-slate-300 rounded-xl bg-white">
+                        No product images attached yet. Click "Upload Images" or paste URLs above to add images.
                       </div>
                     )}
                   </div>
