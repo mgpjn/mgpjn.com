@@ -179,7 +179,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
           <div className="flex items-center space-x-6">
             <span className="flex items-center space-x-1.5 font-semibold text-amber-300">
               <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>WHO-GMP Certified • ISO 9001:2015 Licensed Pharma Portal</span>
+              <span>WHO-GMP Certified Products • ISO 9001:2015 Licensed Pharma Portal</span>
             </span>
             <span className="flex items-center space-x-1.5 font-medium text-slate-200">
               <Phone className="w-3.5 h-3.5 text-brand-orange-400" />
