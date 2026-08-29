@@ -69,7 +69,23 @@ export const CartProvider = ({ children }) => {
   // Process item prices with Dual Pricing logic (Retail vs Wholesale)
   const processedItems = cartItems.map((item) => {
     const retailRate = Number(item.retail_price || item.price || 0);
-    const wholesaleRate = Number(item.wholesale_price || (retailRate * 0.55));
+
+    // Role-specific Wholesale Box Rate
+    let wholesaleRate = Number(item.wholesale_price || 0);
+    if (user) {
+      if (user.role === 'super_distributor' && item.sd_price) {
+        wholesaleRate = Number(item.sd_price);
+      } else if (user.role === 'distributor' && item.dist_price) {
+        wholesaleRate = Number(item.dist_price);
+      } else if (user.role === 'sub_distributor' && item.subd_price) {
+        wholesaleRate = Number(item.subd_price);
+      } else if (user.role === 'retailer' && item.retailer_price) {
+        wholesaleRate = Number(item.retailer_price);
+      }
+    }
+    if (!wholesaleRate) {
+      wholesaleRate = Number(item.retailer_price || item.wholesale_price || (retailRate * 0.55));
+    }
     const minWholesaleQty = item.wholesale_min_qty || 5;
 
     // Wholesale rate is applied ONLY for Retailer and above roles

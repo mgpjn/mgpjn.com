@@ -78,8 +78,25 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
     );
   }
 
-  const retailPrice = Number(product.price || product.retail_price || 0);
-  const wholesalePrice = Number(product.wholesale_price || (retailPrice * 0.55));
+  const retailPrice = Number(product.retail_price || product.price || 0);
+
+  // Role-specific Wholesale Box Rate
+  let wholesalePrice = Number(product.wholesale_price || 0);
+  if (user) {
+    if (user.role === 'super_distributor' && product.sd_price) {
+      wholesalePrice = Number(product.sd_price);
+    } else if (user.role === 'distributor' && product.dist_price) {
+      wholesalePrice = Number(product.dist_price);
+    } else if (user.role === 'sub_distributor' && product.subd_price) {
+      wholesalePrice = Number(product.subd_price);
+    } else if (user.role === 'retailer' && product.retailer_price) {
+      wholesalePrice = Number(product.retailer_price);
+    }
+  }
+  if (!wholesalePrice) {
+    wholesalePrice = Number(product.retailer_price || product.wholesale_price || (retailPrice * 0.55));
+  }
+
   const wholesaleMinQty = product.wholesale_min_qty || 5;
   const mrp = Number(product.mrp || (retailPrice * 1.35));
 

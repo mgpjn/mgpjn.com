@@ -130,6 +130,12 @@ export default function AdminDashboard() {
     description: '',
     mrp: '',
     base_price: '',
+    retail_price: '',
+    sd_price: '',
+    dist_price: '',
+    subd_price: '',
+    retailer_price: '',
+    wholesale_price: '',
     stock_quantity: 100,
     box_packing: '1 Box (10 Strips)',
     box_unit: 'Box',
@@ -1081,6 +1087,12 @@ export default function AdminDashboard() {
                         description: '',
                         mrp: '',
                         base_price: '',
+                        retail_price: '',
+                        sd_price: '',
+                        dist_price: '',
+                        subd_price: '',
+                        retailer_price: '',
+                        wholesale_price: '',
                         stock_quantity: 100,
                         box_packing: '1 Box (10 Strips)',
                         box_unit: 'Box',
@@ -1860,6 +1872,12 @@ export default function AdminDashboard() {
                       description: '',
                       mrp: '',
                       base_price: '',
+                      retail_price: '',
+                      sd_price: '',
+                      dist_price: '',
+                      subd_price: '',
+                      retailer_price: '',
+                      wholesale_price: '',
                       stock_quantity: 100,
                       box_packing: '1 Box (10 Strips)',
                       box_unit: 'Box',
@@ -1887,7 +1905,8 @@ export default function AdminDashboard() {
                       <th className="p-3.5">Category</th>
                       <th className="p-3.5">Batch / SHN</th>
                       <th className="p-3.5">MRP</th>
-                      <th className="p-3.5">Base Price</th>
+                      <th className="p-3.5">Retail Rate (Strip)</th>
+                      <th className="p-3.5">Wholesale (Box)</th>
                       <th className="p-3.5">Stock</th>
                       <th className="p-3.5">Status</th>
                       <th className="p-3.5 text-right">Actions</th>
@@ -1910,10 +1929,15 @@ export default function AdminDashboard() {
                           {p.batch_no || 'BT2026001'}
                         </td>
                         <td className="p-3.5 font-bold text-slate-900">
-                          ₹{p.mrp || (p.price * 1.25).toFixed(2)}
+                          ₹{Number(p.mrp || (p.price * 1.25)).toFixed(0)}
                         </td>
-                        <td className="p-3.5 font-bold text-emerald-600">
-                          ₹{p.base_price || (p.price * 0.45).toFixed(2)}
+                        <td className="p-3.5 font-bold text-blue-700">
+                          ₹{Number(p.retail_price || p.price || 0).toFixed(0)}
+                          <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || 'Strip'}</span>
+                        </td>
+                        <td className="p-3.5 font-bold text-emerald-700">
+                          ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
+                          <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Box'}</span>
                         </td>
                         <td className="p-3.5 font-bold text-slate-800">
                           {p.stock}
@@ -1937,6 +1961,12 @@ export default function AdminDashboard() {
                                 description: p.description || '',
                                 mrp: p.mrp || p.price,
                                 base_price: p.base_price || (p.price * 0.45),
+                                retail_price: p.retail_price || p.price || '',
+                                sd_price: p.sd_price || '',
+                                dist_price: p.dist_price || '',
+                                subd_price: p.subd_price || '',
+                                retailer_price: p.retailer_price || p.wholesale_price || '',
+                                wholesale_price: p.wholesale_price || '',
                                 stock_quantity: p.stock,
                                 box_packing: p.box_packing || '1 Box (10 Strips)',
                                 box_unit: p.box_unit || 'Box',
@@ -2947,7 +2977,7 @@ export default function AdminDashboard() {
 
               {/* Pricing & Stock */}
               <div className="space-y-3 pt-3 border-t">
-                <h4 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Pricing &amp; Stock</h4>
+                <h4 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Base Pricing &amp; Stock</h4>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="font-bold text-slate-700 block mb-1">MRP (Maximum Retail Price) *</label>
@@ -2972,7 +3002,7 @@ export default function AdminDashboard() {
                       onChange={(e) => setProductForm({ ...productForm, base_price: e.target.value })}
                       className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-black text-sm text-emerald-600"
                     />
-                    <span className="text-[10px] text-slate-400 block mt-0.5">Admin purchase rate</span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Admin purchase / cost rate</span>
                   </div>
 
                   <div>
@@ -2986,6 +3016,184 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
                     />
                     <span className="text-[10px] text-slate-400 block mt-0.5">Available units</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* POST-WISE MEDICINE RATES (Super Distributor, Distributor, Sub Distributor, Retailer, Customer/Sub-Retailer) */}
+              <div className="space-y-3 pt-3 border-t border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                    <h4 className="font-black text-slate-900 uppercase tracking-wider text-xs">
+                      Post-Wise Product Rates (Role-Based Pricing)
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-200 w-fit">
+                    Wholesale (Box) vs Retail (Strip)
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 space-y-1">
+                  <p className="font-medium">
+                    <strong className="text-slate-900 font-bold">1. Sub-Retailer &amp; Customer:</strong> Inko sirf <span className="text-blue-700 font-bold">Retail Rate (per Strip)</span> show hoga (Wholesale rate hide rahega).
+                  </p>
+                  <p className="font-medium">
+                    <strong className="text-slate-900 font-bold">2. Retailer, Sub-Distributor, Distributor, Super Distributor:</strong> In sabhi uper ke posts ko <span className="text-emerald-700 font-bold">Retail Rate aur unka respective Wholesale Rate (per Box) dono</span> show hoga.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* 1. Retail Rate (Strip) - Customer & Sub-Retailer */}
+                  <div className="p-3 bg-white rounded-2xl border-2 border-blue-200 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-black text-blue-950">
+                        Retail Rate (₹ / Strip) *
+                      </label>
+                      <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                        Customer &amp; Sub-Retailer
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 100.00"
+                      value={productForm.retail_price}
+                      onChange={(e) => setProductForm({ ...productForm, retail_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-blue-50/40 border border-blue-300 rounded-xl font-black text-xs text-blue-900 outline-none focus:bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
+                      Per Strip sale rate for patient &amp; sub-retailer
+                    </span>
+                  </div>
+
+                  {/* 2. Super Distributor Purchase Rate (Box) */}
+                  <div className="p-3 bg-white rounded-2xl border-2 border-emerald-200 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-black text-emerald-950">
+                        Super Dist. Purchase Rate (₹ / Box)
+                      </label>
+                      <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                        Super Dist.
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 45.00"
+                      value={productForm.sd_price}
+                      onChange={(e) => setProductForm({ ...productForm, sd_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-emerald-50/40 border border-emerald-300 rounded-xl font-black text-xs text-emerald-900 outline-none focus:bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
+                      Super Distributor purchase rate per box
+                    </span>
+                  </div>
+
+                  {/* 3. Distributor Sale Rate (Box) */}
+                  <div className="p-3 bg-white rounded-2xl border-2 border-teal-200 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-black text-teal-950">
+                        Distributor Sale Rate (₹ / Box)
+                      </label>
+                      <span className="text-[9px] font-bold bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded">
+                        Distributor
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 50.00"
+                      value={productForm.dist_price}
+                      onChange={(e) => setProductForm({ ...productForm, dist_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-teal-50/40 border border-teal-300 rounded-xl font-black text-xs text-teal-900 outline-none focus:bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
+                      Sale rate for Distributor per box
+                    </span>
+                  </div>
+
+                  {/* 4. Sub-Distributor Sale Rate (Box) */}
+                  <div className="p-3 bg-white rounded-2xl border-2 border-sky-200 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-black text-sky-950">
+                        Sub-Dist. Sale Rate (₹ / Box)
+                      </label>
+                      <span className="text-[9px] font-bold bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">
+                        Sub-Distributor
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 55.00"
+                      value={productForm.subd_price}
+                      onChange={(e) => setProductForm({ ...productForm, subd_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-sky-50/40 border border-sky-300 rounded-xl font-black text-xs text-sky-900 outline-none focus:bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
+                      Sale rate for Sub-Distributor per box
+                    </span>
+                  </div>
+
+                  {/* 5. Retailer Sale Rate (Box) */}
+                  <div className="p-3 bg-white rounded-2xl border-2 border-indigo-200 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-black text-indigo-950">
+                        Retailer Sale Rate (₹ / Box)
+                      </label>
+                      <span className="text-[9px] font-bold bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">
+                        Retailer / Chemist
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g. 65.00"
+                      value={productForm.retailer_price}
+                      onChange={(e) => setProductForm({ ...productForm, retailer_price: e.target.value, wholesale_price: e.target.value })}
+                      className="w-full px-3 py-2 bg-indigo-50/40 border border-indigo-300 rounded-xl font-black text-xs text-indigo-900 outline-none focus:bg-white"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
+                      Wholesale rate for Retailer (Chemist) per box
+                    </span>
+                  </div>
+
+                  {/* 6. Quick Auto-Calculate Helper */}
+                  <div className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200/90 flex flex-col justify-between">
+                    <div>
+                      <span className="text-xs font-black text-amber-950 flex items-center space-x-1 mb-1">
+                        <span>⚡ Quick Rate Suggestion</span>
+                      </span>
+                      <p className="text-[10px] text-amber-800 leading-tight">
+                        Base Price aur MRP ke hisaab se sabhi posts (SD, Dist, SubD, Retailer) ke standard margins auto-fill karein.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const mrpVal = parseFloat(productForm.mrp) || 100;
+                        const baseVal = parseFloat(productForm.base_price) || (mrpVal * 0.45);
+                        const round2 = (num) => Math.round(num * 100) / 100;
+                        const sd = round2(baseVal * 1.12);
+                        const dist = round2(sd * 1.05);
+                        const subd = round2(dist * 1.05);
+                        const ret = round2(subd * 1.15);
+                        const retail = round2(mrpVal * 0.80);
+                        setProductForm({
+                          ...productForm,
+                          retail_price: retail,
+                          sd_price: sd,
+                          dist_price: dist,
+                          subd_price: subd,
+                          retailer_price: ret,
+                          wholesale_price: ret,
+                        });
+                      }}
+                      className="mt-2.5 w-full py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl font-black text-xs transition-all shadow-xs cursor-pointer text-center"
+                    >
+                      Auto-Fill All Post Rates
+                    </button>
                   </div>
                 </div>
               </div>
