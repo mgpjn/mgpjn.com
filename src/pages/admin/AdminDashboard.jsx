@@ -349,6 +349,7 @@ export default function AdminDashboard() {
       } else if (NETWORK_ROLE_SECTIONS.includes(currentSection)) {
         const item = menuItems.find(m => m.key === currentSection);
         const role = item?.roleType || (currentSection === 'all-customers' ? 'customer' : 'super_distributor');
+        setRoleUsers({ data: FALLBACK_NETWORK_USERS[role] || [] });
         try {
           const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, state: stateFilter, sort: sortOrder });
           const usersList = res?.data?.users?.data || res?.data?.users;
@@ -356,11 +357,9 @@ export default function AdminDashboard() {
             setRoleUsers(res.data.users);
             setRoleStats(res.data.stats);
             if (res.data.state_counts) setStateCounts(res.data.state_counts);
-          } else {
-            setRoleUsers({ data: FALLBACK_NETWORK_USERS[role] || [] });
           }
         } catch (e) {
-          setRoleUsers({ data: FALLBACK_NETWORK_USERS[role] || [] });
+          // Gracefully keep fallback dataset
         }
       } else if (currentSection === 'purchase-orders') {
         const res = await getPurchaseOrders({ status: statusFilter, state: stateFilter });
