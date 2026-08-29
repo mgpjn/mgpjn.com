@@ -351,15 +351,16 @@ export default function AdminDashboard() {
         const role = item?.roleType || (currentSection === 'all-customers' ? 'customer' : 'super_distributor');
         try {
           const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, state: stateFilter, sort: sortOrder });
-          if (res?.data?.success && Array.isArray(res.data.users) && res.data.users.length > 0) {
+          const usersList = res?.data?.users?.data || res?.data?.users;
+          if (res?.data?.success && Array.isArray(usersList) && usersList.length > 0) {
             setRoleUsers(res.data.users);
             setRoleStats(res.data.stats);
             if (res.data.state_counts) setStateCounts(res.data.state_counts);
           } else {
-            setRoleUsers(FALLBACK_NETWORK_USERS[role] || []);
+            setRoleUsers({ data: FALLBACK_NETWORK_USERS[role] || [] });
           }
         } catch (e) {
-          setRoleUsers(FALLBACK_NETWORK_USERS[role] || []);
+          setRoleUsers({ data: FALLBACK_NETWORK_USERS[role] || [] });
         }
       } else if (currentSection === 'purchase-orders') {
         const res = await getPurchaseOrders({ status: statusFilter, state: stateFilter });
