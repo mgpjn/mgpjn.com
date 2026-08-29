@@ -4,7 +4,7 @@ import {
   Search, ShoppingCart, FileText, Phone, User as UserIcon,
   ChevronDown, Menu, X, ShieldCheck, HeartPulse, LogOut,
   Network, LayoutDashboard, Sparkles, Plus, AlertCircle, Users,
-  Loader2, Pill, Package, Award
+  Loader2, Pill, Package, Award, ChevronRight, ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -26,6 +26,22 @@ export default function Navbar({ onOpenPrescriptionModal }) {
 
   const searchRef = useRef(null);
   const mobileSearchRef = useRef(null);
+  const navTimerRef = useRef(null);
+
+  const handleMouseEnterCat = (catId) => {
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    setActiveCategoryDropdown(catId);
+  };
+
+  const handleMouseEnterMenu = () => {
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
+  };
+
+  const handleMouseLeaveNav = () => {
+    navTimerRef.current = setTimeout(() => {
+      setActiveCategoryDropdown(null);
+    }, 180);
+  };
 
   useEffect(() => {
     getCategories()
@@ -411,55 +427,263 @@ export default function Navbar({ onOpenPrescriptionModal }) {
         </div>
       </div>
 
-      {/* 4. Category Mega Navigation Bar (Desktop) */}
-      <nav className="border-t border-slate-100 bg-slate-50/50 hidden md:block">
+      {/* 4. Category Full-Width Mega Navigation Bar (Desktop) */}
+      <nav 
+        className="border-t border-slate-100 bg-white hidden md:block relative z-30"
+        onMouseLeave={handleMouseLeaveNav}
+      >
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center space-x-1 overflow-x-auto py-1 scrollbar-none">
-            <Link
-              to="/shop"
-              className="px-3 py-2 text-xs font-extrabold text-slate-800 hover:text-brand-blue-800 rounded-lg hover:bg-slate-100 whitespace-nowrap transition-colors"
+          <div className="flex items-center space-x-1 lg:space-x-1.5 py-1">
+            {/* All Medicines Mega Button */}
+            <div
+              className="relative"
+              onMouseEnter={() => handleMouseEnterCat('all')}
             >
-              All Medicines
-            </Link>
-
-            {categories.slice(0, 7).map((cat) => (
-              <div
-                key={cat.id}
-                className="relative group"
-                onMouseEnter={() => setActiveCategoryDropdown(cat.id)}
-                onMouseLeave={() => setActiveCategoryDropdown(null)}
+              <Link
+                to="/shop"
+                className={`px-3 py-1.5 text-xs font-extrabold rounded-lg flex items-center space-x-1 whitespace-nowrap transition-all ${
+                  activeCategoryDropdown === 'all'
+                    ? 'bg-brand-blue-50 text-brand-blue-800 shadow-xs'
+                    : 'text-slate-800 hover:text-brand-blue-800 hover:bg-slate-50'
+                }`}
               >
-                <Link
-                  to={`/shop?category=${cat.slug}`}
-                  className="px-3 py-2 text-xs font-semibold text-slate-700 hover:text-brand-blue-800 rounded-lg hover:bg-slate-100 flex items-center space-x-1 whitespace-nowrap transition-colors"
-                >
-                  <span>{cat.name}</span>
-                  {cat.children && cat.children.length > 0 && (
-                    <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-brand-blue-800 group-hover:rotate-180 transition-transform" />
-                  )}
-                </Link>
+                <span>All Medicines</span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${activeCategoryDropdown === 'all' ? 'rotate-180 text-brand-blue-800' : 'text-slate-400'}`} />
+              </Link>
+            </div>
 
-                {/* Sub-menu Mega Dropdown */}
-                {cat.children && cat.children.length > 0 && activeCategoryDropdown === cat.id && (
-                  <div className="absolute top-full left-0 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in duration-150">
-                    <div className="p-2 border-b border-slate-50 font-bold text-[11px] text-slate-400 uppercase">
-                      {cat.name} Sub-Categories
-                    </div>
-                    {cat.children.map((sub) => (
-                      <Link
-                        key={sub.id}
-                        to={`/shop?category=${cat.slug}&sub_category=${sub.slug}`}
-                        className="block px-4 py-2 text-xs font-medium text-slate-700 hover:bg-brand-blue-50 hover:text-brand-blue-800 transition-colors"
-                      >
-                        {sub.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+            {/* Individual Category Hover Links */}
+            {categories.map((cat) => {
+              const isActive = activeCategoryDropdown === cat.id;
+              return (
+                <div
+                  key={cat.id}
+                  className="relative"
+                  onMouseEnter={() => handleMouseEnterCat(cat.id)}
+                >
+                  <Link
+                    to={`/shop?category=${cat.slug}`}
+                    className={`px-2.5 lg:px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center space-x-1 whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-brand-blue-50 text-brand-blue-800 font-bold shadow-xs'
+                        : 'text-slate-700 hover:text-brand-blue-800 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{cat.name}</span>
+                    {cat.children && cat.children.length > 0 && (
+                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isActive ? 'rotate-180 text-brand-blue-800' : 'text-slate-400'}`} />
+                    )}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden xl:flex items-center space-x-2 text-[11px] font-semibold text-slate-500">
+            <span className="flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>100% Genuine Pharmacy</span>
+            </span>
           </div>
         </div>
+
+        {/* 🌟 FULL PAGE WIDTH MEGA MENU DROPDOWN */}
+        {activeCategoryDropdown && (
+          <div
+            className="absolute top-full left-0 w-full bg-white border-y border-slate-200 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+            onMouseEnter={handleMouseEnterMenu}
+            onMouseLeave={handleMouseLeaveNav}
+          >
+            <div className="max-w-7xl mx-auto px-4 py-7">
+              {activeCategoryDropdown === 'all' ? (
+                /* Mega Menu for All Medicines */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-900 flex items-center space-x-2">
+                        <Package className="w-4 h-4 text-brand-blue-800" />
+                        <span>All Medicine Divisions &amp; Therapeutic Formulations</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Explore our comprehensive portfolio of generic and ethical medicines, syrups, capsules, and health products.
+                      </p>
+                    </div>
+                    <Link
+                      to="/shop"
+                      onClick={() => setActiveCategoryDropdown(null)}
+                      className="bg-brand-blue-800 hover:bg-brand-blue-900 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center space-x-1.5 transition-all shadow-sm"
+                    >
+                      <span>Open Full Catalog</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {categories.map((c) => (
+                      <div key={c.id} className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-brand-blue-200 hover:bg-brand-blue-50/30 transition-all space-y-2 group">
+                        <Link
+                          to={`/shop?category=${c.slug}`}
+                          onClick={() => setActiveCategoryDropdown(null)}
+                          className="font-black text-xs text-slate-900 group-hover:text-brand-blue-800 flex items-center justify-between"
+                        >
+                          <span>{c.name}</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-brand-blue-800 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                        {c.children && c.children.length > 0 && (
+                          <div className="space-y-1">
+                            {c.children.slice(0, 4).map((sub) => (
+                              <Link
+                                key={sub.id}
+                                to={`/shop?category=${c.slug}&sub_category=${sub.slug}`}
+                                onClick={() => setActiveCategoryDropdown(null)}
+                                className="block text-[11px] text-slate-500 hover:text-brand-blue-800 truncate"
+                              >
+                                • {sub.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* Mega Menu for Individual Category */
+                (() => {
+                  const activeCat = categories.find((c) => c.id === activeCategoryDropdown);
+                  if (!activeCat) return null;
+                  return (
+                    <div className="grid grid-cols-12 gap-8">
+                      {/* Sub-categories Column (5 cols) */}
+                      <div className="col-span-5 border-r border-slate-100 pr-8 space-y-4">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-brand-orange-500"></span>
+                            <h4 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
+                              {activeCat.name} Sub-Categories
+                            </h4>
+                          </div>
+                          <Link
+                            to={`/shop?category=${activeCat.slug}`}
+                            onClick={() => setActiveCategoryDropdown(null)}
+                            className="text-xs font-bold text-brand-blue-800 hover:underline flex items-center space-x-0.5"
+                          >
+                            <span>View All ({activeCat.products_count || 0})</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+
+                        {activeCat.children && activeCat.children.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {activeCat.children.map((sub) => (
+                              <Link
+                                key={sub.id}
+                                to={`/shop?category=${activeCat.slug}&sub_category=${sub.slug}`}
+                                onClick={() => setActiveCategoryDropdown(null)}
+                                className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-brand-blue-50 hover:text-brand-blue-800 border border-slate-100 hover:border-brand-blue-200 transition-all flex items-center justify-between group"
+                              >
+                                <span className="truncate group-hover:translate-x-0.5 transition-transform">{sub.name}</span>
+                                {sub.products_count > 0 && (
+                                  <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded-md border border-slate-200/80">
+                                    {sub.products_count}
+                                  </span>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-400 py-4">
+                            All {activeCat.name} medicines are tested and WHO-GMP verified.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Therapeutic Applications & Dosage Forms (4 cols) */}
+                      <div className="col-span-4 border-r border-slate-100 pr-8 space-y-4">
+                        <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                          <span className="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+                          <h4 className="font-extrabold text-sm uppercase tracking-wider text-slate-900">
+                            Dosage Forms &amp; Formulations
+                          </h4>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5 text-xs">
+                          <Link
+                            to={`/shop?category=${activeCat.slug}&search=film+coated`}
+                            onClick={() => setActiveCategoryDropdown(null)}
+                            className="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/60 border border-slate-100 hover:border-teal-200 transition-all space-y-1 block"
+                          >
+                            <span className="font-bold text-slate-900 block text-xs">Film Coated &amp; Enteric</span>
+                            <span className="text-[10px] text-slate-500 block leading-tight">Enhanced bioavailability &amp; gastric safety</span>
+                          </Link>
+
+                          <Link
+                            to={`/shop?category=${activeCat.slug}&search=sustained+release`}
+                            onClick={() => setActiveCategoryDropdown(null)}
+                            className="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/60 border border-slate-100 hover:border-teal-200 transition-all space-y-1 block"
+                          >
+                            <span className="font-bold text-slate-900 block text-xs">Sustained / SR Release</span>
+                            <span className="text-[10px] text-slate-500 block leading-tight">Long-acting therapeutic dosage</span>
+                          </Link>
+
+                          <Link
+                            to={`/shop?category=${activeCat.slug}&search=sugar+free`}
+                            onClick={() => setActiveCategoryDropdown(null)}
+                            className="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/60 border border-slate-100 hover:border-teal-200 transition-all space-y-1 block"
+                          >
+                            <span className="font-bold text-slate-900 block text-xs">Sugar Free Formulations</span>
+                            <span className="text-[10px] text-slate-500 block leading-tight">Diabetic safe &amp; pure API active</span>
+                          </Link>
+
+                          <Link
+                            to={`/shop?category=${activeCat.slug}&search=pediatric`}
+                            onClick={() => setActiveCategoryDropdown(null)}
+                            className="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/60 border border-slate-100 hover:border-teal-200 transition-all space-y-1 block"
+                          >
+                            <span className="font-bold text-slate-900 block text-xs">Pediatric &amp; Adult Doses</span>
+                            <span className="text-[10px] text-slate-500 block leading-tight">Precise clinical concentrations</span>
+                          </Link>
+                        </div>
+                      </div>
+
+                      {/* Promo & Trust Column (3 cols) */}
+                      <div className="col-span-3 bg-gradient-to-br from-brand-blue-950 via-brand-blue-900 to-slate-900 rounded-3xl p-5 text-white flex flex-col justify-between shadow-lg">
+                        <div className="space-y-2.5">
+                          <div className="flex items-center space-x-2">
+                            <span className="bg-brand-orange-500 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                              WHO-GMP
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-200">Certified Quality</span>
+                          </div>
+                          <h5 className="font-black text-base tracking-tight leading-snug">
+                            100% Genuine {activeCat.name}
+                          </h5>
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            Formulated under strict CDSCO quality standards with verified batch test certificates.
+                          </p>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/10 space-y-2">
+                          <Link
+                            to={`/shop?category=${activeCat.slug}`}
+                            onClick={() => setActiveCategoryDropdown(null)}
+                            className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center space-x-1.5 transition-all shadow-md"
+                          >
+                            <span>Browse All {activeCat.name}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </Link>
+                          <div className="text-[10px] text-slate-400 text-center font-medium">
+                            ✓ Cold Chain Dispatched
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* 5. Mobile Slide-Over Navigation Menu */}
