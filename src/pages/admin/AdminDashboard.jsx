@@ -695,20 +695,48 @@ export default function AdminDashboard() {
   };
 
   const handleImpersonate = async (userId) => {
-    if (window.confirm('Log in directly to this partner/customer account as Super Admin?')) {
+    if (window.confirm('Log in directly to this partner/customer account in a new tab as Super Admin?')) {
+      // Pre-open new tab so browser popup blocker does not block it
+      const newTab = window.open('about:blank', '_blank');
+      if (newTab) {
+        newTab.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>Opening Account - MediGlaxo</title></head>
+            <body style="font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f172a;color:#f8fafc;">
+              <div style="text-align:center;padding:24px;">
+                <div style="width:36px;height:36px;border:3px solid #ff6b35;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+                <h3 style="margin:0 0 8px;font-size:16px;font-weight:700;">Opening Partner Account in New Tab...</h3>
+                <p style="margin:0;font-size:12px;color:#94a3b8;">Super Admin dashboard will remain active in the previous tab.</p>
+              </div>
+              <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+            </body>
+          </html>
+        `);
+      }
+
       try {
         const res = await impersonateAdminUser(userId);
         if (res.data.success) {
-          localStorage.setItem('mediglaxo_token', res.data.token);
-          localStorage.setItem('mediglaxo_user', JSON.stringify(res.data.user));
           const targetRole = res.data.user?.role;
           const dest = targetRole === 'customer' ? '/my-orders' :
                        (targetRole === 'sub_retailer' || targetRole === 'member') ? '/mlm' :
                        '/hierarchy';
-          window.location.href = dest;
+
+          const impersonateUrl = `/impersonate?token=${encodeURIComponent(res.data.token)}&user=${encodeURIComponent(JSON.stringify(res.data.user))}&dest=${encodeURIComponent(dest)}`;
+
+          if (newTab && !newTab.closed) {
+            newTab.location.href = impersonateUrl;
+          } else {
+            window.open(impersonateUrl, '_blank');
+          }
+        } else {
+          if (newTab && !newTab.closed) newTab.close();
+          alert('Failed to log in to user account.');
         }
       } catch (err) {
-        alert('Impersonation failed.');
+        if (newTab && !newTab.closed) newTab.close();
+        alert('Impersonation failed: ' + (err.response?.data?.message || err.message));
       }
     }
   };

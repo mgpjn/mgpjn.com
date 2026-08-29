@@ -8,6 +8,13 @@ const SESSION_DURATION_MS = 48 * 60 * 60 * 1000; // 48 Hours in milliseconds
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => {
     try {
+      // 1. Check tab-isolated session storage first (for impersonated new-tab sessions)
+      const sessionToken = sessionStorage.getItem('mediglaxo_session_token');
+      if (sessionToken) {
+        return sessionToken;
+      }
+
+      // 2. Check standard persistent localStorage
       const savedToken = localStorage.getItem('mediglaxo_token');
       let loginTime = localStorage.getItem('mediglaxo_login_time');
       if (savedToken) {
@@ -26,6 +33,13 @@ export const AuthProvider = ({ children }) => {
 
   const [user, setUser] = useState(() => {
     try {
+      // 1. Check tab-isolated session storage first
+      const sessionUser = sessionStorage.getItem('mediglaxo_session_user');
+      if (sessionUser) {
+        return JSON.parse(sessionUser);
+      }
+
+      // 2. Check standard persistent localStorage
       const savedUser = localStorage.getItem('mediglaxo_user');
       let loginTime = localStorage.getItem('mediglaxo_login_time');
       if (savedUser) {
@@ -45,11 +59,29 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(!user && Boolean(token));
 
   const clearSession = () => {
-    localStorage.removeItem('mediglaxo_token');
-    localStorage.removeItem('mediglaxo_user');
-    localStorage.removeItem('mediglaxo_login_time');
+    if (sessionStorage.getItem('mediglaxo_session_token')) {
+      sessionStorage.removeItem('mediglaxo_session_token');
+      sessionStorage.removeItem('mediglaxo_session_user');
+      sessionStorage.removeItem('mediglaxo_is_impersonated');
+    } else {
+      localStorage.removeItem('mediglaxo_token');
+      localStorage.removeItem('mediglaxo_user');
+      localStorage.removeItem('mediglaxo_login_time');
+    }
     setToken(null);
     setUser(null);
+  };
+
+  const setImpersonatedSession = (newToken, newUser) => {
+    sessionStorage.setItem('mediglaxo_session_token', newToken);
+    if (newUser) {
+      sessionStorage.setItem('mediglaxo_session_user', JSON.stringify(newUser));
+    }
+    sessionStorage.setItem('mediglaxo_is_impersonated', 'true');
+    setToken(newToken);
+    if (newUser) {
+      setUser(newUser);
+    }
   };
 
   // 48-Hour Automatic Expiration Monitor
@@ -76,7 +108,11 @@ export const AuthProvider = ({ children }) => {
         .then((res) => {
           if (res.data.success) {
             setUser(res.data.user);
-            localStorage.setItem('mediglaxo_user', JSON.stringify(res.data.user));
+            if (sessionStorage.getItem('mediglaxo_session_token')) {
+              sessionStorage.setItem('mediglaxo_session_user', JSON.stringify(res.data.user));
+            } else {
+              localStorage.setItem('mediglaxo_user', JSON.stringify(res.data.user));
+            }
           }
         })
         .catch(() => {
@@ -126,8 +162,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const isImpersonated = Boolean(sessionStorage.getItem('mediglaxo_is_impersonated'));
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser, setImpersonatedSession, isImpersonated }}>
       {children}
     </AuthContext.Provider>
   );

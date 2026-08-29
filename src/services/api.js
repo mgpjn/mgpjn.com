@@ -12,7 +12,7 @@ const api = axios.create({
 
 // Attach bearer token if present
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('mediglaxo_token');
+  const token = sessionStorage.getItem('mediglaxo_session_token') || localStorage.getItem('mediglaxo_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

@@ -34,6 +34,7 @@ import CommissionsLedger from './pages/mlm/CommissionsLedger';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ImpersonateSessionPage from './pages/admin/ImpersonateSessionPage';
 
 // Informational & Policy Pages
 import AboutUsPage from './pages/info/AboutUsPage';
@@ -105,6 +106,7 @@ function PublicOnlyRoute({ children }) {
 }
 
 export default function App() {
+  const { isImpersonated, user } = useAuth();
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -112,6 +114,28 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased selection:bg-brand-blue-900 selection:text-white">
+      {/* Super Admin Impersonated Session Notification Banner */}
+      {isImpersonated && (
+        <div className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-bold flex flex-wrap items-center justify-between gap-2 shadow-md sticky top-0 z-50">
+          <div className="flex items-center space-x-2">
+            <span className="bg-slate-950 text-amber-400 text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
+              Admin Impersonation Tab
+            </span>
+            <span>
+              Viewing account as: <strong>{user?.name || 'Partner'}</strong> ({user?.role?.replace('_', ' ').toUpperCase()}) • Super Admin tab is active in your previous tab.
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => window.close()}
+              className="bg-slate-950 hover:bg-black text-white text-[11px] font-bold px-3 py-1 rounded-lg transition-colors cursor-pointer shadow-xs"
+            >
+              Close Tab
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hide navbar on full admin & invoice print pages */}
       {!isAdminRoute && !isInvoiceRoute && (
         <Navbar onOpenPrescriptionModal={() => setIsPrescriptionModalOpen(true)} />
@@ -119,6 +143,9 @@ export default function App() {
 
       <main className="flex-grow">
         <Routes>
+          {/* Isolated Impersonation Session Initializer */}
+          <Route path="/impersonate" element={<ImpersonateSessionPage />} />
+
           {/* Public Storefront Routes */}
           <Route path="/" element={<HomePage onOpenPrescriptionModal={() => setIsPrescriptionModalOpen(true)} />} />
           <Route path="/shop" element={<ShopPage />} />
