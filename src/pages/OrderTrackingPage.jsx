@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Package, Truck, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Search, Package, Truck, CheckCircle2, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { trackOrder } from '../services/api';
 
 export default function OrderTrackingPage() {
@@ -81,6 +81,40 @@ export default function OrderTrackingPage() {
               </div>
             </div>
           </div>
+
+          {/* Courier & Tracking Details Card */}
+          {(order.tracking_number || order.courier_name) && (
+            <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-slate-50 border border-emerald-300/80 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase text-emerald-800 tracking-wider">
+                  📦 Shipment Dispatched via
+                </span>
+                <span className="text-xs font-black text-emerald-950 px-2.5 py-0.5 rounded-lg bg-white shadow-2xs border border-emerald-200">
+                  {order.courier_name || 'Express Courier'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-emerald-200 shadow-2xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold block">Tracking / AWB Number</span>
+                  <span className="text-sm font-black font-mono text-slate-900 tracking-wide select-all">
+                    {order.tracking_number || 'N/A'}
+                  </span>
+                </div>
+                {order.tracking_url && (
+                  <a
+                    href={order.tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center space-x-1.5 shadow-sm transition-all"
+                  >
+                    <span>Track on Courier Site</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Timeline */}
           <div className="py-4">

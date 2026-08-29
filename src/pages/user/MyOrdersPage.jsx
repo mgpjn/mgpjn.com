@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { ShoppingCart, Package, ChevronRight, Clock, MapPin, Truck, FileText, Printer } from 'lucide-react';
 import { getUserOrders } from '../../services/api';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
+import OrderTrackingModal from '../../components/orders/OrderTrackingModal';
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoiceOrderId, setSelectedInvoiceOrderId] = useState(null);
+  const [selectedTrackingOrder, setSelectedTrackingOrder] = useState(null);
 
   useEffect(() => {
     getUserOrders()
@@ -73,9 +75,14 @@ export default function MyOrdersPage() {
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-slate-400 block">
                     Placed on {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
+                  {order.order_status === 'dispatched' && order.tracking_number && (
+                    <span className="text-[11px] font-bold text-emerald-700 block mt-1">
+                      🚚 Dispatched via <strong className="text-emerald-900">{order.courier_name || 'Express Courier'}</strong> • AWB: <span className="font-mono bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">{order.tracking_number}</span>
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -94,13 +101,14 @@ export default function MyOrdersPage() {
                     {order.order_status}
                   </span>
                   
-                  <Link
-                    to={`/track-order?order=${order.order_number}`}
-                    className="text-xs font-bold text-brand-orange-500 hover:underline flex items-center space-x-0.5"
+                  {/* Track Order Button */}
+                  <button
+                    onClick={() => setSelectedTrackingOrder(order)}
+                    className="text-xs font-bold text-brand-orange-600 bg-brand-orange-50 hover:bg-brand-orange-100 px-3 py-1.5 rounded-xl border border-brand-orange-200 flex items-center space-x-1 transition-colors cursor-pointer"
                   >
-                    <span>Track</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Track Order</span>
+                  </button>
                 </div>
               </div>
 
@@ -157,6 +165,15 @@ export default function MyOrdersPage() {
         <GstInvoiceModal
           orderId={selectedInvoiceOrderId}
           onClose={() => setSelectedInvoiceOrderId(null)}
+        />
+      )}
+
+      {/* Order Tracking Modal */}
+      {selectedTrackingOrder && (
+        <OrderTrackingModal
+          order={selectedTrackingOrder}
+          isOpen={Boolean(selectedTrackingOrder)}
+          onClose={() => setSelectedTrackingOrder(null)}
         />
       )}
     </div>

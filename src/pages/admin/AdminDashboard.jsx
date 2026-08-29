@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
-  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -34,6 +34,8 @@ import {
   getAdminSettings, updateAdminSettings
 } from '../../services/api';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
+import DispatchModal from '../../components/orders/DispatchModal';
+import OrderTrackingModal from '../../components/orders/OrderTrackingModal';
 
 const INDIAN_STATES = [
   "ANDAMAN & NICOBAR", "ANDHRA PRADESH", "ARUNACHAL PRADESH", "ASSAM", "BIHAR",
@@ -56,6 +58,11 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Dispatch permission is strictly for Retailer and all roles above Retailer
+  const canDispatchOrder = Boolean(
+    !user || user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role)
+  );
 
   const pathParts = location.pathname.split('/');
   const currentSection = pathParts[2] || 'dashboard';
@@ -165,6 +172,10 @@ export default function AdminDashboard() {
   const [ordersList, setOrdersList] = useState({ data: [] });
   const [payoutsList, setPayoutsList] = useState({ data: [] });
   const [selectedInvoiceOrderId, setSelectedInvoiceOrderId] = useState(null);
+  const [dispatchTargetOrder, setDispatchTargetOrder] = useState(null);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [trackingTargetOrder, setTrackingTargetOrder] = useState(null);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
 
   // Banners & Reports
   const [bannersList, setBannersList] = useState([]);
@@ -2248,29 +2259,94 @@ export default function AdminDashboard() {
                           <span className="text-[10px] text-slate-400 block uppercase font-normal">{ord.payment_method} ({ord.payment_status})</span>
                         </td>
                         <td className="p-3">
-                          <select
-                            value={ord.order_status}
-                            onChange={async (e) => {
-                              await updateAdminOrderStatus(ord.id, { order_status: e.target.value });
-                              fetchData();
-                            }}
-                            className="bg-slate-50 border rounded-lg px-2 py-1 text-xs font-semibold"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="dispatched">Dispatched</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
+                          {canDispatchOrder ? (
+                            <div className="space-y-1">
+                              <select
+                                value={ord.order_status}
+                                onChange={async (e) => {
+                                  const newStatus = e.target.value;
+                                  if (newStatus === 'dispatched') {
+                                    setDispatchTargetOrder(ord);
+                                    setShowDispatchModal(true);
+                                  } else {
+                                    await updateAdminOrderStatus(ord.id, { order_status: newStatus });
+                                    fetchData();
+                                  }
+                                }}
+                                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 outline-none cursor-pointer"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="dispatched">Dispatched</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                              {ord.order_status === 'dispatched' && ord.tracking_number && (
+                                <span className="text-[10px] text-emerald-700 font-mono font-bold block">
+                                  {ord.courier_name ? `${ord.courier_name}: ` : ''}{ord.tracking_number}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-0.5">
+                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase inline-block ${
+                                ord.order_status === 'delivered' ? 'bg-emerald-50 text-emerald-700' :
+                                ord.order_status === 'dispatched' ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {ord.order_status}
+                              </span>
+                              {ord.order_status === 'dispatched' && ord.tracking_number && (
+                                <span className="text-[10px] text-slate-500 font-mono block">
+                                  {ord.courier_name ? `${ord.courier_name}: ` : ''}{ord.tracking_number}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="p-3 text-right">
-                          <button
-                            onClick={() => setSelectedInvoiceOrderId(ord.id)}
-                            className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-brand-orange-200"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                            <span>GST Bill</span>
-                          </button>
+                          <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
+                            {/* GST Bill */}
+                            <button
+                              onClick={() => setSelectedInvoiceOrderId(ord.id)}
+                              className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-brand-orange-200"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>GST Bill</span>
+                            </button>
+
+                            {/* Track Order Button (Visible to everyone when dispatched or tracking number exists) */}
+                            {(ord.order_status === 'dispatched' || ord.tracking_number) && (
+                              <button
+                                onClick={() => {
+                                  setTrackingTargetOrder(ord);
+                                  setShowTrackingModal(true);
+                                }}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-blue-200"
+                                title="Track Shipment Details"
+                              >
+                                <Truck className="w-3.5 h-3.5" />
+                                <span>Track</span>
+                              </button>
+                            )}
+
+                            {/* Dispatch / Edit Tracking Button (For Retailer and above roles) */}
+                            {canDispatchOrder && (
+                              <button
+                                onClick={() => {
+                                  setDispatchTargetOrder(ord);
+                                  setShowDispatchModal(true);
+                                }}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border ${
+                                  ord.order_status === 'dispatched'
+                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                <Truck className="w-3.5 h-3.5" />
+                                <span>{ord.order_status === 'dispatched' ? 'Edit Tracking' : 'Dispatch'}</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -4629,6 +4705,31 @@ export default function AdminDashboard() {
         <GstInvoiceModal
           orderId={selectedInvoiceOrderId}
           onClose={() => setSelectedInvoiceOrderId(null)}
+        />
+      )}
+
+      {/* Dispatch Order & Add Tracking Modal */}
+      {showDispatchModal && (
+        <DispatchModal
+          order={dispatchTargetOrder}
+          isOpen={showDispatchModal}
+          onClose={() => {
+            setShowDispatchModal(false);
+            setDispatchTargetOrder(null);
+          }}
+          onSuccess={fetchData}
+        />
+      )}
+
+      {/* Live Order Tracking Modal */}
+      {showTrackingModal && (
+        <OrderTrackingModal
+          order={trackingTargetOrder}
+          isOpen={showTrackingModal}
+          onClose={() => {
+            setShowTrackingModal(false);
+            setTrackingTargetOrder(null);
+          }}
         />
       )}
     </div>
