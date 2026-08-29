@@ -695,19 +695,44 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       const payload = { ...userForm };
+      const rawPhone = (payload.mobile || payload.phone || '').trim();
+      payload.mobile = rawPhone;
+      payload.phone = rawPhone;
+
+      // If full name is empty but business name is entered, fallback to business name
+      if (!payload.name?.trim() && payload.business_name?.trim()) {
+        payload.name = payload.business_name.trim();
+      }
+
+      // If email is empty, auto-generate from phone
+      if (!payload.email?.trim() && rawPhone) {
+        payload.email = `${rawPhone.replace(/\D/g, '')}@mediglaxo.com`;
+      }
+
       if (payload.role && payload.role.startsWith('customer')) {
         payload.role = 'customer';
       }
+
       if (editingUser) {
         await updateAdminHierarchyUser(editingUser.id, payload);
+        alert('User details updated successfully!');
       } else {
-        await storeAdminHierarchyUser(payload);
+        const res = await storeAdminHierarchyUser(payload);
+        alert(res.data?.message || 'New partner account created successfully!');
       }
       setShowAddUserModal(false);
       setEditingUser(null);
       fetchData();
     } catch (err) {
-      alert('Failed to save user. Verify details.');
+      console.error('Failed to save user:', err);
+      const serverErrors = err.response?.data?.errors;
+      let msg = '';
+      if (serverErrors && typeof serverErrors === 'object') {
+        msg = Object.values(serverErrors).flat().join('\n');
+      } else {
+        msg = err.response?.data?.message || err.message || 'Failed to save user. Please verify details.';
+      }
+      alert(msg);
     }
   };
 
@@ -3388,23 +3413,25 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleSaveUser} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Full Name *</label>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Full Name {userForm.business_name ? '(Optional)' : '*'}
+                  </label>
                   <input
                     type="text"
-                    required
-                    placeholder="Enter full name"
+                    required={!userForm.business_name}
+                    placeholder="Enter contact person name"
                     value={userForm.name}
                     onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Business Name</label>
+                  <label className="font-bold text-slate-700 block mb-1">Business / Agency Name</label>
                   <input
                     type="text"
-                    placeholder="Company / Agency name"
+                    placeholder="Company / Agency / Chemist name"
                     value={userForm.business_name}
                     onChange={(e) => setUserForm({ ...userForm, business_name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
@@ -3412,19 +3439,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    disabled={!!editingUser}
-                    placeholder="email@example.com"
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Mobile Number *</label>
                   <input
@@ -3433,18 +3448,31 @@ export default function AdminDashboard() {
                     placeholder="+91 98765 43210"
                     value={userForm.mobile || userForm.phone}
                     onChange={(e) => setUserForm({ ...userForm, mobile: e.target.value, phone: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Email Address (Optional)</label>
+                  <input
+                    type="email"
+                    disabled={!!editingUser}
+                    placeholder="email@example.com (Optional)"
+                    value={userForm.email}
+                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
                   />
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Leave blank to auto-create using mobile number.
+                  </span>
                 </div>
               </div>
 
               {!editingUser && (
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Password *</label>
+                  <label className="font-bold text-slate-700 block mb-1">Login Password (Optional)</label>
                   <input
                     type="password"
-                    required
-                    placeholder="Set login password"
+                    placeholder="Leave blank for default: password123"
                     value={userForm.password}
                     onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
@@ -3463,7 +3491,7 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">State *</label>
                   <select
@@ -3499,7 +3527,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">PAN Number</label>
                   <input
@@ -3507,7 +3535,7 @@ export default function AdminDashboard() {
                     placeholder="ABCDE1234F"
                     value={userForm.pan_number}
                     onChange={(e) => setUserForm({ ...userForm, pan_number: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono"
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono uppercase"
                   />
                 </div>
                 <div>
@@ -3517,7 +3545,7 @@ export default function AdminDashboard() {
                     placeholder="24ABVFM0075D1ZA"
                     value={userForm.gst_number}
                     onChange={(e) => setUserForm({ ...userForm, gst_number: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono font-bold"
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono uppercase font-bold"
                   />
                 </div>
               </div>
