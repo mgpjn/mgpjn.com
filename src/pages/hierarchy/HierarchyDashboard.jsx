@@ -12,8 +12,10 @@ import {
 } from '../../services/api';
 import RoleBadge, { ROLE_CONFIG } from '../../components/RoleBadge';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
+import { useAuth } from '../../context/AuthContext';
 
 export default function HierarchyDashboard() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('members'); // 'members', 'orders', 'purchase-orders'
   const [stats, setStats] = useState(null);
   const [usersData, setUsersData] = useState({ data: [], total: 0 });
@@ -260,6 +262,11 @@ export default function HierarchyDashboard() {
     { key: 'customer', label: 'Customer', level: 1, icon: '👤' },
   ];
 
+  const myLevel = user?.role
+    ? (user.role === 'super_admin' ? 8 : user.role === 'admin' ? 7 : (ROLE_CONFIG[user.role]?.level || 2))
+    : 8;
+  const visibleHierarchyFlow = hierarchyHierarchyFlow.filter((h) => h.level < myLevel);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
@@ -267,7 +274,7 @@ export default function HierarchyDashboard() {
         <div>
           <div className="inline-flex items-center space-x-2 bg-brand-blue-50 text-brand-blue-900 px-3 py-1 rounded-full text-xs font-bold mb-2">
             <Shield className="w-3.5 h-3.5" />
-            <span>8-Tier Role Hierarchy &amp; Network Control</span>
+            <span>Downline Network &amp; Subordinate Team Control</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
             Team &amp; Downline Hierarchy Management
@@ -288,35 +295,37 @@ export default function HierarchyDashboard() {
         )}
       </div>
 
-      {/* 8-Tier Hierarchy Visual Ladder */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
-            System Hierarchy Chain (Top-Down Governance)
-          </h3>
-          <span className="text-[11px] font-bold text-brand-blue-800">
-            Each role can fully control and create all roles below it
-          </span>
-        </div>
+      {/* Downline Subordinate Hierarchy Visual Ladder */}
+      {visibleHierarchyFlow.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
+              Subordinate Roles Below Your Post ({user?.role ? user.role.replace(/_/g, ' ').toUpperCase() : 'MEMBER'})
+            </h3>
+            <span className="text-[11px] font-bold text-brand-blue-800">
+              Only roles strictly below your position are manageable
+            </span>
+          </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {hierarchyHierarchyFlow.map((h, i) => (
-            <div
-              key={h.key}
-              className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center flex flex-col items-center justify-center space-y-1 relative"
-            >
-              <span className="text-xl">{h.icon}</span>
-              <span className="text-xs font-extrabold text-slate-800 truncate max-w-full">{h.label}</span>
-              <span className="text-[10px] font-bold text-slate-400">Level {h.level}</span>
-              {i < hierarchyHierarchyFlow.length - 1 && (
-                <div className="hidden lg:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-300">
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              )}
-            </div>
-          ))}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            {visibleHierarchyFlow.map((h, i) => (
+              <div
+                key={h.key}
+                className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center flex flex-col items-center justify-center space-y-1 relative"
+              >
+                <span className="text-xl">{h.icon}</span>
+                <span className="text-xs font-extrabold text-slate-800 truncate max-w-full">{h.label}</span>
+                <span className="text-[10px] font-bold text-slate-400">Level {h.level}</span>
+                {i < visibleHierarchyFlow.length - 1 && (
+                  <div className="hidden lg:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-300">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats Cards */}
       {stats && (

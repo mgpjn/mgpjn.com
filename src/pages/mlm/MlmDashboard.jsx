@@ -75,18 +75,37 @@ export default function MlmDashboard() {
   const stats = data?.stats || {};
   const customerOrders = data?.customer_orders || [];
 
-  const HIERARCHY_CHAIN = [
-    { rank: 'Super Admin', desc: 'Platform Owner', icon: ShieldCheck, color: 'bg-rose-500' },
-    { rank: 'Admin', desc: 'Head Office', icon: Building2, color: 'bg-indigo-600' },
-    { rank: 'Super Distributor', desc: 'State / C&F', icon: Building2, color: 'bg-blue-600' },
-    { rank: 'Distributor', desc: 'District Wholesaler', icon: Store, color: 'bg-cyan-600' },
-    { rank: 'Sub Distributor', desc: 'Area Stockist', icon: Store, color: 'bg-teal-600' },
-    { rank: 'Retailer (Chemist)', desc: 'Pharmacy Chemist', icon: Store, color: 'bg-emerald-600' },
-    { rank: 'Sub Retailer (Pincode & Local)', desc: 'Local Executive (Income Starts)', icon: MapPin, color: 'bg-[#ff5722]' },
-    { rank: 'Customer 1', desc: 'Direct Referral (Stage 1)', icon: Users, color: 'bg-purple-600' },
-    { rank: 'Customer 2', desc: 'Level 2 (Stage 2)', icon: Users, color: 'bg-pink-600' },
-    { rank: 'Customer 3', desc: 'Level 3 (Stage 3)', icon: Users, color: 'bg-amber-600' },
+  const ROLE_LEVEL_LOOKUP = {
+    super_admin: 10,
+    admin: 9,
+    super_distributor: 8,
+    distributor: 7,
+    sub_distributor: 6,
+    retailer: 5,
+    sub_retailer: 4,
+    customer: 3,
+    customer_1: 3,
+    customer_2: 2,
+    customer_3: 1,
+  };
+
+  const FULL_HIERARCHY_CHAIN = [
+    { key: 'super_admin', level: 10, rank: 'Super Admin', desc: 'Platform Owner', icon: ShieldCheck, color: 'bg-rose-500', stepNo: '#01' },
+    { key: 'admin', level: 9, rank: 'Admin', desc: 'Head Office', icon: Building2, color: 'bg-indigo-600', stepNo: '#02' },
+    { key: 'super_distributor', level: 8, rank: 'Super Distributor', desc: 'State / C&F', icon: Building2, color: 'bg-blue-600', stepNo: '#03' },
+    { key: 'distributor', level: 7, rank: 'Distributor', desc: 'District Wholesaler', icon: Store, color: 'bg-cyan-600', stepNo: '#04' },
+    { key: 'sub_distributor', level: 6, rank: 'Sub Distributor', desc: 'Area Stockist', icon: Store, color: 'bg-teal-600', stepNo: '#05' },
+    { key: 'retailer', level: 5, rank: 'Retailer (Chemist)', desc: 'Pharmacy Chemist', icon: Store, color: 'bg-emerald-600', stepNo: '#06' },
+    { key: 'sub_retailer', level: 4, rank: 'Sub Retailer (Pincode & Local)', desc: 'Local Executive (Income Starts)', icon: MapPin, color: 'bg-[#ff5722]', stepNo: '#07' },
+    { key: 'customer_1', level: 3, rank: 'Customer 1', desc: 'Direct Referral (Stage 1)', icon: Users, color: 'bg-purple-600', stepNo: '#08' },
+    { key: 'customer_2', level: 2, rank: 'Customer 2', desc: 'Level 2 (Stage 2)', icon: Users, color: 'bg-pink-600', stepNo: '#09' },
+    { key: 'customer_3', level: 1, rank: 'Customer 3', desc: 'Level 3 (Stage 3)', icon: Users, color: 'bg-amber-600', stepNo: '#10' },
   ];
+
+  const currentRole = user?.role || stats?.role || 'sub_retailer';
+  const currentUserLevel = ROLE_LEVEL_LOOKUP[currentRole] ?? 4;
+  // Strict rule: jo jis post pe hai usko uske neeche wala ka data hi show hoga
+  const visibleHierarchyChain = FULL_HIERARCHY_CHAIN.filter((step) => step.level < currentUserLevel);
 
   const REFERRAL_RULES_EXAMPLES = [
     {
@@ -409,37 +428,50 @@ export default function MlmDashboard() {
         </div>
       </div>
 
-      {/* Complete 10-Level Chain Hierarchy Roadmap */}
+      {/* Subordinate Downline Hierarchy Roadmap */}
       <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b gap-2">
           <div>
-            <h3 className="font-black text-slate-900 text-sm">Official Downline Hierarchy &amp; Referral Chain</h3>
-            <p className="text-xs text-slate-500">Referral income triggers from Sub-Retailer (Pincode &amp; Local) across Customers 1, 2, and 3.</p>
+            <div className="flex items-center space-x-2">
+              <h3 className="font-black text-slate-900 text-sm">Official Downline Hierarchy &amp; Referral Chain</h3>
+              <span className="text-[10px] font-extrabold bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200 uppercase">
+                Your Post: {currentRole.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Only subordinate downline roles &amp; referral channels under your post are displayed.
+            </p>
           </div>
-          <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
+          <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full whitespace-nowrap self-start sm:self-auto">
             Stage 1: 15% • Stage 2: 3% • Stage 3: 2%
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-2">
-          {HIERARCHY_CHAIN.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <div key={index} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2 relative group hover:bg-slate-100/80 transition-colors">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-400">#0{index + 1}</span>
-                  <div className={`w-6 h-6 rounded-lg ${step.color} text-white flex items-center justify-center text-[10px]`}>
-                    <Icon className="w-3.5 h-3.5" />
+        {visibleHierarchyChain.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-2">
+            {visibleHierarchyChain.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={index} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2 relative group hover:bg-slate-100/80 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-400">{step.stepNo}</span>
+                    <div className={`w-6 h-6 rounded-lg ${step.color} text-white flex items-center justify-center text-[10px]`}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900 leading-tight">{step.rank}</h4>
+                    <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{step.desc}</p>
                   </div>
                 </div>
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900 leading-tight">{step.rank}</h4>
-                  <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{step.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6 bg-slate-50 rounded-2xl text-center text-xs text-slate-500">
+            You are at Customer 3 level. Your direct referral link invites new customers to MediGlaxo!
+          </div>
+        )}
       </div>
 
       {/* GST Invoice Modal */}
