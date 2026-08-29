@@ -58,8 +58,10 @@ export const CartProvider = ({ children }) => {
   };
 
   const user = getUser();
-  // Wholesale pricing is strictly reserved for Retailers (Cadets) and above
-  const isB2BWholesaleEligible = Boolean(user && ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role));
+  // Wholesale pricing is strictly reserved ONLY for Distributors, Sub Distributors, Retailers (Chemist), and Super Distributors
+  const isB2BWholesaleEligible = Boolean(
+    user && ['distributor', 'sub_distributor', 'retailer', 'super_distributor'].includes(user.role)
+  );
   const isB2BPartner = isB2BWholesaleEligible;
 
   // Process item prices with Dual Pricing logic (Retail vs Wholesale)

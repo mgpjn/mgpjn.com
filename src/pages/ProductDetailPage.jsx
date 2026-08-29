@@ -14,8 +14,10 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const params = useParams();
   const idOrSlug = params.slug || params.idOrSlug || params.id;
   const { user } = useAuth();
-  const { addToCart, isB2BPartner } = useCart();
-  const isWholesaleAllowed = user && ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role);
+  // Wholesale / Bulk Rate is strictly reserved ONLY for Distributors, Sub Distributors, Retailers (Chemist), and Super Distributors
+  const isWholesaleAllowed = Boolean(
+    user && ['distributor', 'sub_distributor', 'retailer', 'super_distributor'].includes(user.role)
+  );
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
