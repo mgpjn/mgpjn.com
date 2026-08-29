@@ -190,6 +190,14 @@ export default function App() {
             }
           />
           <Route
+            path="/user/orders"
+            element={
+              <ProtectedRoute>
+                <MyOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/my-prescriptions"
             element={
               <ProtectedRoute>

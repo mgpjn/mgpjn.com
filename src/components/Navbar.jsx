@@ -4,7 +4,7 @@ import {
   Search, ShoppingCart, FileText, Phone, User as UserIcon,
   ChevronDown, Menu, X, ShieldCheck, HeartPulse, LogOut,
   Network, LayoutDashboard, Sparkles, Plus, AlertCircle, Users,
-  Loader2, Pill, Package, Award, ChevronRight, ArrowRight
+  Loader2, Pill, Package, Award, ChevronRight, ArrowRight, Truck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -360,10 +360,15 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                       <Link
                         to="/my-orders"
                         onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center space-x-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-brand-blue-50"
+                        className="flex items-center space-x-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-brand-blue-50 font-semibold group"
                       >
-                        <ShoppingCart className="w-4 h-4 text-slate-400" />
-                        <span>My Orders</span>
+                        <Truck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                        <div className="flex items-center justify-between flex-1">
+                          <span>My &amp; Upcoming Orders</span>
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded-full uppercase">
+                            Track
+                          </span>
+                        </div>
                       </Link>
 
                       <Link
