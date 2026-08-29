@@ -114,7 +114,7 @@ export default function Footer() {
           <p>© 2026 MediGlaxo Pharma Junction (mgpjn.com). All rights reserved.</p>
           <div className="flex items-center space-x-4">
             <span className="text-[11px] bg-slate-800 px-3 py-1 rounded-full text-slate-400 font-medium">
-              WHO-GMP & ISO 9001:2015 Certified Pharmacy
+              WHO-GMP Certified Products • ISO 9001:2015 Licensed Pharma Portal
             </span>
           </div>
         </div>

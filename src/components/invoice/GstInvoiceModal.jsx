@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Printer, Download, X, FileText, CheckCircle2, Building, ShieldCheck, MapPin, Phone, Mail } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import { getOrderInvoice } from '../../services/api';
 
 export default function GstInvoiceModal({ orderId, onClose }) {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const printRef = useRef(null);
 
   useEffect(() => {
@@ -25,6 +27,27 @@ export default function GstInvoiceModal({ orderId, onClose }) {
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    if (!printRef.current || !invoice) return;
+    setDownloadingPdf(true);
+    try {
+      const orderNo = invoice.invoice?.order_no || invoice.invoice?.invoice_no || 'invoice';
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `GST-Invoice-${orderNo}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      await html2pdf().set(opt).from(printRef.current).save();
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      window.print();
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   if (!orderId) return null;
 
   return (
@@ -43,11 +66,28 @@ export default function GstInvoiceModal({ orderId, onClose }) {
           
           <div className="flex items-center space-x-2">
             <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center space-x-1.5 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {downloadingPdf ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download PDF</span>
+                </>
+              )}
+            </button>
+            <button
               onClick={handlePrint}
-              className="bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center space-x-1.5 transition-all shadow-md cursor-pointer"
+              className="bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center space-x-1.5 transition-all shadow-md cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Print / Download PDF</span>
+              <span>Print</span>
             </button>
             <button
               onClick={onClose}
@@ -106,7 +146,7 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                   <p className="font-mono text-slate-700"><strong>D.L. No. (Form 20B):</strong> {invoice.company.dl_number_20b}</p>
                   <p className="font-mono text-slate-700"><strong>D.L. No. (Form 21B):</strong> {invoice.company.dl_number_21b}</p>
                   <p className="font-mono text-slate-700"><strong>FSSAI Lic. No.:</strong> {invoice.company.fssai_lic}</p>
-                  <p className="text-emerald-700 font-bold text-[10px]">✓ WHO-GMP Certified • ISO 9001:2015 Approved</p>
+                  <p className="text-emerald-700 font-bold text-[10px]">✓ WHO-GMP Certified Products • ISO 9001:2015 Licensed Pharma Portal</p>
                 </div>
               </div>
 
@@ -257,7 +297,7 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
 
                 <div className="text-center md:text-right flex flex-col justify-between items-center md:items-end space-y-2">
-                  <span className="font-bold text-slate-800">For MEDIGLAXO PHARMA PRIVATE LIMITED</span>
+                  <span className="font-bold text-slate-800">For MEDIGLAXO PHARMA</span>
                   <div className="w-32 h-10 border border-dashed border-slate-300 rounded flex items-center justify-center text-[9px] text-slate-400 uppercase tracking-widest font-mono">
                     [Digitally Signed]
                   </div>
