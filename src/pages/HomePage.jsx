@@ -7,21 +7,25 @@ import {
 } from 'lucide-react';
 import { getCategories, getFeaturedProducts, getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
+import {
+  FALLBACK_CATEGORIES,
+  FALLBACK_HOT_SELLING,
+  FALLBACK_FEATURED,
+  FALLBACK_TOP_DISCOUNTS
+} from '../data/fallbackProducts';
 
 export default function HomePage({ onOpenPrescriptionModal }) {
-  const [categories, setCategories] = useState([]);
-  const [featuredData, setFeaturedData] = useState({ featured: [], topDiscounts: [], hotSelling: [] });
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
+  const [featuredData, setFeaturedData] = useState({
+    featured: FALLBACK_FEATURED,
+    topDiscounts: FALLBACK_TOP_DISCOUNTS,
+    hotSelling: FALLBACK_HOT_SELLING
+  });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
-
-    // Hard safety timer so page never stays stuck in skeleton loading state
-    const safetyTimer = setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 4000);
 
     const loadData = async () => {
       try {
@@ -32,8 +36,8 @@ export default function HomePage({ onOpenPrescriptionModal }) {
 
         if (!isMounted) return;
 
-        if (catRes.status === 'fulfilled' && catRes.value?.data?.success) {
-          setCategories(catRes.value.data.categories || []);
+        if (catRes.status === 'fulfilled' && catRes.value?.data?.success && Array.isArray(catRes.value.data.categories) && catRes.value.data.categories.length > 0) {
+          setCategories(catRes.value.data.categories);
         }
 
         let featuredResult = null;
@@ -44,7 +48,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
         const hasHotSelling = featuredResult?.hotSelling && featuredResult.hotSelling.length > 0;
         const hasFeatured = featuredResult?.featured && featuredResult.featured.length > 0;
 
-        // Fallback: If no products were returned from featured, fetch standard products
+        // If backend returned empty featured/hotSelling, try fetching general active products
         if (!hasHotSelling && !hasFeatured) {
           try {
             const fallbackRes = await getProducts({ per_page: 24 });
@@ -58,20 +62,19 @@ export default function HomePage({ onOpenPrescriptionModal }) {
               };
             }
           } catch (e) {
-            console.warn('Fallback products fetch warning:', e);
+            console.warn('Backend products fetch warning:', e);
           }
         }
 
-        if (isMounted && featuredResult) {
-          setFeaturedData(featuredResult);
+        if (isMounted && featuredResult && (featuredResult.hotSelling?.length > 0 || featuredResult.featured?.length > 0)) {
+          setFeaturedData({
+            featured: (featuredResult.featured && featuredResult.featured.length > 0) ? featuredResult.featured : FALLBACK_FEATURED,
+            topDiscounts: (featuredResult.topDiscounts && featuredResult.topDiscounts.length > 0) ? featuredResult.topDiscounts : FALLBACK_TOP_DISCOUNTS,
+            hotSelling: (featuredResult.hotSelling && featuredResult.hotSelling.length > 0) ? featuredResult.hotSelling : FALLBACK_HOT_SELLING
+          });
         }
       } catch (err) {
         console.error('HomePage loading error:', err);
-      } finally {
-        if (isMounted) {
-          clearTimeout(safetyTimer);
-          setLoading(false);
-        }
       }
     };
 
@@ -79,37 +82,20 @@ export default function HomePage({ onOpenPrescriptionModal }) {
 
     return () => {
       isMounted = false;
-      clearTimeout(safetyTimer);
     };
   }, []);
 
   const hotSellingList = (featuredData?.hotSelling && featuredData.hotSelling.length > 0)
     ? featuredData.hotSelling
-    : (featuredData?.featured || []);
+    : FALLBACK_HOT_SELLING;
 
   const featuredList = (featuredData?.featured && featuredData.featured.length > 0)
     ? featuredData.featured
-    : hotSellingList;
+    : FALLBACK_FEATURED;
 
   const topDiscountsList = (featuredData?.topDiscounts && featuredData.topDiscounts.length > 0)
     ? featuredData.topDiscounts
-    : hotSellingList.slice(0, 6);
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 animate-pulse">
-        <div className="h-44 bg-gradient-to-r from-slate-200 to-slate-100 rounded-3xl"></div>
-        <div className="space-y-4">
-          <div className="h-8 w-64 bg-slate-200 rounded-xl"></div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="h-64 bg-slate-100 rounded-2xl border border-slate-200/50"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+    : FALLBACK_TOP_DISCOUNTS;
 
   return (
     <div className="space-y-8 sm:space-y-12 pb-16 pt-4">

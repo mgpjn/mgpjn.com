@@ -4,14 +4,15 @@ import { Filter, SlidersHorizontal, Search, RefreshCw, X, ChevronRight } from 'l
 import { getProducts, getCategories } from '../services/api';
 import ProductCard from '../components/ProductCard';
 import CategoryIcon from '../components/CategoryIcon';
+import { FALLBACK_PRODUCTS, FALLBACK_CATEGORIES } from '../data/fallbackProducts';
 
 export default function ShopPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
+  const [products, setProducts] = useState(FALLBACK_PRODUCTS);
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
+  const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(FALLBACK_PRODUCTS.length);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   // Filters State
@@ -24,13 +25,15 @@ export default function ShopPage() {
   useEffect(() => {
     getCategories()
       .then((res) => {
-        if (res.data.success) setCategories(res.data.categories);
+        if (res?.data?.success && Array.isArray(res.data.categories) && res.data.categories.length > 0) {
+          setCategories(res.data.categories);
+        }
       })
       .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
-    setLoading(true);
+    let isMounted = true;
     getProducts({
       category: selectedCategory,
       sub_category: selectedSubCategory,
@@ -40,13 +43,48 @@ export default function ShopPage() {
       per_page: 24,
     })
       .then((res) => {
-        if (res.data.success) {
-          setProducts(res.data.products.data || []);
-          setTotalCount(res.data.products.total || 0);
+        if (!isMounted) return;
+        if (res?.data?.success) {
+          const list = res.data.products?.data || res.data.products || res.data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setProducts(list);
+            setTotalCount(res.data.products?.total || list.length);
+          } else {
+            // Apply client-side filtering on fallback products
+            let filtered = [...FALLBACK_PRODUCTS];
+            if (searchQuery) {
+              const q = searchQuery.toLowerCase();
+              filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || (p.subtitle && p.subtitle.toLowerCase().includes(q)));
+            }
+            if (selectedDosageForm) {
+              filtered = filtered.filter(p => (p.dosage_form || '').toLowerCase() === selectedDosageForm.toLowerCase());
+            }
+            setProducts(filtered);
+            setTotalCount(filtered.length);
+          }
         }
       })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        console.error(err);
+        // Fallback filter
+        let filtered = [...FALLBACK_PRODUCTS];
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || (p.subtitle && p.subtitle.toLowerCase().includes(q)));
+        }
+        if (selectedDosageForm) {
+          filtered = filtered.filter(p => (p.dosage_form || '').toLowerCase() === selectedDosageForm.toLowerCase());
+        }
+        setProducts(filtered);
+        setTotalCount(filtered.length);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedCategory, selectedSubCategory, selectedDosageForm, searchQuery, sort]);
 
   const handleFilterChange = (key, value) => {
