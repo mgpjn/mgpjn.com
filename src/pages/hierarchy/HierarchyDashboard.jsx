@@ -112,7 +112,7 @@ export default function HierarchyDashboard() {
       if (availableProducts.length === 0) {
         const prodRes = await getProducts({ per_page: 100 });
         if (prodRes.data.success) {
-          setAvailableProducts(prodRes.data.data?.data || prodRes.data.data || []);
+          setAvailableProducts(prodRes.data.products?.data || prodRes.data.data?.data || prodRes.data.data || []);
         }
       }
       setPoFormItems([{ product_id: '', requested_quantity: 10 }]);

@@ -51,6 +51,9 @@ export default function ShopPage() {
 
   const handleFilterChange = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
+    if (key === 'category') {
+      newParams.delete('sub_category');
+    }
     if (value) {
       newParams.set(key, value);
     } else {
@@ -185,13 +188,21 @@ export default function ShopPage() {
       </div>
 
       {/* Active Filter Chips */}
-      {(selectedCategory || selectedDosageForm || searchQuery) && (
+      {(selectedCategory || selectedSubCategory || selectedDosageForm || searchQuery) && (
         <div className="flex flex-wrap items-center gap-2 p-3 bg-brand-blue-50/60 rounded-2xl border border-brand-blue-100">
           <span className="text-xs font-bold text-brand-blue-900">Active Filters:</span>
           {selectedCategory && (
             <span className="inline-flex items-center space-x-1 text-xs bg-white px-2.5 py-1 rounded-lg border text-slate-700 font-medium">
-              <span>Category: {selectedCategory}</span>
+              <span>Category: {selectedCategory.replace(/-/g, ' ')}</span>
               <button onClick={() => handleFilterChange('category', '')} className="text-slate-400 hover:text-rose-500">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {selectedSubCategory && (
+            <span className="inline-flex items-center space-x-1 text-xs bg-white px-2.5 py-1 rounded-lg border text-slate-700 font-medium">
+              <span>Sub-Category: {selectedSubCategory.replace(/-/g, ' ')}</span>
+              <button onClick={() => handleFilterChange('sub_category', '')} className="text-slate-400 hover:text-rose-500">
                 <X className="w-3 h-3" />
               </button>
             </span>
