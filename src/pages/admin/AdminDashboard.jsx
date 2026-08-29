@@ -20,7 +20,7 @@ import {
   getAdminTransfers, createAdminTransfer,
   getAdminProductMargins,
   getAdminCategories, storeAdminCategory, updateAdminCategory, deleteAdminCategory,
-  getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct,
+  getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct, toggleAdminProductSection,
   uploadAdminProductImage,
   getAdminProductStatePrices, saveAdminProductStatePrices,
   getAdminUserAssignedProducts, toggleAdminUserProductAssignment, bulkAssignAdminUserProducts, saveAdminUserProductPrice,
@@ -127,6 +127,7 @@ export default function AdminDashboard() {
   const [categoriesList, setCategoriesList] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [productSectionFilter, setProductSectionFilter] = useState('all'); // 'all', 'featured', 'trending', 'active', 'inactive'
   const [productForm, setProductForm] = useState({
     name: '',
     subtitle: '',
@@ -150,6 +151,8 @@ export default function AdminDashboard() {
     strip_unit: 'Strip',
     expiry_date: '',
     status: 'Active',
+    is_featured: false,
+    is_trending: false,
     image: '',
     images: [],
   });
@@ -949,6 +952,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleProductSection = async (productId, section, currentValue) => {
+    try {
+      const newValue = !currentValue;
+      await toggleAdminProductSection(productId, { section, value: newValue });
+      setProductsList((prev) => {
+        if (!prev) return prev;
+        if (Array.isArray(prev)) {
+          return prev.map((p) => p.id === productId ? { ...p, [section]: newValue } : p);
+        }
+        if (prev.data && Array.isArray(prev.data)) {
+          return {
+            ...prev,
+            data: prev.data.map((p) => p.id === productId ? { ...p, [section]: newValue } : p)
+          };
+        }
+        return prev;
+      });
+    } catch (err) {
+      console.error('Failed to toggle product section:', err);
+      alert('Failed to update product section.');
+    }
+  };
+
   // Transfer Submit
   const handleSaveTransfer = async (e) => {
     e.preventDefault();
@@ -1192,6 +1218,8 @@ export default function AdminDashboard() {
                         strip_unit: 'Strip',
                         expiry_date: '',
                         status: 'Active',
+                        is_featured: false,
+                        is_trending: false,
                         image: '',
                         images: [],
                       });
@@ -1977,6 +2005,8 @@ export default function AdminDashboard() {
                       strip_unit: 'Strip',
                       expiry_date: '',
                       status: 'Active',
+                      is_featured: false,
+                      is_trending: false,
                       image: '',
                       images: [],
                     });
@@ -1989,6 +2019,76 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
+              {/* Section Filters & Category Tabs */}
+              {(() => {
+                const allP = productsList?.data || (Array.isArray(productsList) ? productsList : []);
+                const featuredCnt = allP.filter(p => p.is_featured).length;
+                const hotCnt = allP.filter(p => p.is_trending).length;
+                const activeCnt = allP.filter(p => p.status !== 'Inactive').length;
+                const inactiveCnt = allP.filter(p => p.status === 'Inactive').length;
+
+                return (
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-b pb-3">
+                    <span className="text-xs font-bold text-slate-500 mr-1">Filter by Section:</span>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        productSectionFilter === 'all'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All Medicines ({allP.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('featured')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                        productSectionFilter === 'featured'
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                      }`}
+                    >
+                      <span>⭐ Featured ({featuredCnt})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('trending')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                        productSectionFilter === 'trending'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100 border border-rose-200'
+                      }`}
+                    >
+                      <span>🔥 Hot Selling ({hotCnt})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('active')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        productSectionFilter === 'active'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                      }`}
+                    >
+                      Active ({activeCnt})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('inactive')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        productSectionFilter === 'inactive'
+                          ? 'bg-rose-700 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      Inactive ({inactiveCnt})
+                    </button>
+                  </div>
+                );
+              })()}
+
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
@@ -2000,46 +2100,109 @@ export default function AdminDashboard() {
                       <th className="p-3.5">Retail Rate (Strip)</th>
                       <th className="p-3.5">Wholesale (Box)</th>
                       <th className="p-3.5">Stock</th>
+                      <th className="p-3.5 text-center">Homepage Section</th>
                       <th className="p-3.5">Status</th>
                       <th className="p-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {productsList?.data?.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/60">
-                        <td className="p-3.5 flex items-center space-x-3">
-                          <img src={p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80'} alt={p.name} className="w-9 h-9 object-contain bg-white rounded-lg border p-1" />
-                          <div>
-                            <span className="font-bold text-slate-900 block">{p.name}</span>
-                            <span className="text-[10px] text-slate-400 truncate max-w-xs block">{p.subtitle || p.composition}</span>
-                          </div>
-                        </td>
-                        <td className="p-3.5 font-semibold text-slate-700">
-                          {p.category?.name || 'Tablets'}
-                        </td>
-                        <td className="p-3.5 font-mono text-slate-600 font-bold">
-                          {p.batch_no || 'BT2026001'}
-                        </td>
-                        <td className="p-3.5 font-bold text-slate-900">
-                          ₹{Number(p.mrp || (p.price * 1.25)).toFixed(0)}
-                        </td>
-                        <td className="p-3.5 font-bold text-blue-700">
-                          ₹{Number(p.retail_price || p.price || 0).toFixed(0)}
-                          <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || 'Strip'}</span>
-                        </td>
-                        <td className="p-3.5 font-bold text-emerald-700">
-                          ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
-                          <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Box'}</span>
-                        </td>
-                        <td className="p-3.5 font-bold text-slate-800">
-                          {p.stock}
-                        </td>
-                        <td className="p-3.5">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'Inactive' ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {p.status || 'Active'}
-                          </span>
-                        </td>
-                        <td className="p-3.5 text-right space-x-2">
+                    {(() => {
+                      const allP = productsList?.data || (Array.isArray(productsList) ? productsList : []);
+                      const filtered = allP.filter(p => {
+                        if (productSectionFilter === 'featured') return Boolean(p.is_featured);
+                        if (productSectionFilter === 'trending') return Boolean(p.is_trending);
+                        if (productSectionFilter === 'active') return p.status !== 'Inactive';
+                        if (productSectionFilter === 'inactive') return p.status === 'Inactive';
+                        return true;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={10} className="p-8 text-center text-slate-400">
+                              No medicines match the selected section filter.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filtered.map((p) => (
+                        <tr key={p.id} className="hover:bg-slate-50/60">
+                          <td className="p-3.5 flex items-center space-x-3">
+                            <img src={p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80'} alt={p.name} className="w-9 h-9 object-contain bg-white rounded-lg border p-1" />
+                            <div>
+                              <span className="font-bold text-slate-900 block">{p.name}</span>
+                              <span className="text-[10px] text-slate-400 truncate max-w-xs block">{p.subtitle || p.composition}</span>
+                            </div>
+                          </td>
+                          <td className="p-3.5 font-semibold text-slate-700">
+                            {p.category?.name || 'Tablets'}
+                          </td>
+                          <td className="p-3.5 font-mono text-slate-600 font-bold">
+                            {p.batch_no || 'BT2026001'}
+                          </td>
+                          <td className="p-3.5 font-bold text-slate-900">
+                            ₹{Number(p.mrp || (p.price * 1.25)).toFixed(0)}
+                          </td>
+                          <td className="p-3.5 font-bold text-blue-700">
+                            ₹{Number(p.retail_price || p.price || 0).toFixed(0)}
+                            <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || 'Strip'}</span>
+                          </td>
+                          <td className="p-3.5 font-bold text-emerald-700">
+                            ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
+                            <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Box'}</span>
+                          </td>
+                          <td className="p-3.5 font-bold text-slate-800">
+                            {p.stock}
+                          </td>
+                          {/* Interactive Section Placement Badges */}
+                          <td className="p-3.5 text-center">
+                            <div className="flex items-center justify-center space-x-1.5">
+                              {/* 1. Featured Section Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleProductSection(p.id, 'is_featured', p.is_featured)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                                  p.is_featured
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs hover:bg-amber-200'
+                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
+                                }`}
+                                title={p.is_featured ? 'Click to remove from Homepage Featured section' : 'Click to show in Homepage Featured section'}
+                              >
+                                <span>{p.is_featured ? '★ Featured' : '☆ Featured'}</span>
+                              </button>
+
+                              {/* 2. Hot Selling / Fast Moving Section Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleProductSection(p.id, 'is_trending', p.is_trending)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                                  p.is_trending
+                                    ? 'bg-rose-100 text-rose-900 border border-rose-300 shadow-2xs hover:bg-rose-200'
+                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
+                                }`}
+                                title={p.is_trending ? 'Click to remove from Hot Selling Fast-Moving section' : 'Click to show in Hot Selling Fast-Moving section'}
+                              >
+                                <span>{p.is_trending ? '🔥 Hot' : '+ Hot'}</span>
+                              </button>
+                            </div>
+                          </td>
+                          {/* Interactive Status Toggle */}
+                          <td className="p-3.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProductSection(p.id, 'status', p.status === 'Active' ? 'Inactive' : 'Active')}
+                              className={`text-[10px] font-bold px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
+                                p.status === 'Inactive'
+                                  ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                              }`}
+                              title="Click to toggle Active / Inactive"
+                            >
+                              {p.status || 'Active'}
+                            </button>
+                          </td>
+                          <td className="p-3.5 text-right space-x-2">
                           <button
                             onClick={() => {
                               setEditingProduct(p);
@@ -2066,6 +2229,8 @@ export default function AdminDashboard() {
                                 strip_unit: p.strip_unit || 'Strip',
                                 expiry_date: p.expiry_date || '',
                                 status: p.status || 'Active',
+                                is_featured: Boolean(p.is_featured),
+                                is_trending: Boolean(p.is_trending),
                                 image: p.image || '',
                                 images: Array.isArray(p.images) && p.images.length > 0
                                   ? p.images
@@ -2097,7 +2262,8 @@ export default function AdminDashboard() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -3611,9 +3777,64 @@ export default function AdminDashboard() {
                     onChange={(e) => setProductForm({ ...productForm, status: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">Active (Visible in Store)</option>
+                    <option value="Inactive">Inactive (Hidden from Store)</option>
                   </select>
+                </div>
+              </div>
+
+              {/* STORE HOMEPAGE SECTIONS & VISIBILITY */}
+              <div className="p-4 bg-gradient-to-r from-amber-50/60 via-rose-50/60 to-orange-50/60 rounded-2xl border border-amber-200/90 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  <h4 className="font-black text-slate-900 uppercase tracking-wider text-xs">
+                    Homepage &amp; Store Section Placement
+                  </h4>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Select which sections this medicine will appear in on the store homepage:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* Option 1: Featured Medicines */}
+                  <label className={`flex items-start space-x-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    productForm.is_featured ? 'bg-amber-50/90 border-amber-300 shadow-xs' : 'bg-white border-slate-200 hover:bg-slate-50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(productForm.is_featured)}
+                      onChange={(e) => setProductForm({ ...productForm, is_featured: e.target.checked })}
+                      className="mt-0.5 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300"
+                    />
+                    <div>
+                      <span className="font-extrabold text-xs text-slate-900 flex items-center space-x-1">
+                        <span>⭐ Featured Medicines Section</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
+                        Shows in "Featured Pharmaceutical Products" showcase on Homepage.
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Option 2: Hot Selling Fast-Moving */}
+                  <label className={`flex items-start space-x-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    productForm.is_trending ? 'bg-rose-50/90 border-rose-300 shadow-xs' : 'bg-white border-slate-200 hover:bg-slate-50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(productForm.is_trending)}
+                      onChange={(e) => setProductForm({ ...productForm, is_trending: e.target.checked })}
+                      className="mt-0.5 w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
+                    />
+                    <div>
+                      <span className="font-extrabold text-xs text-slate-900 flex items-center space-x-1">
+                        <span>🔥 Hot Selling / Fast Moving Section</span>
+                      </span>
+                      <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
+                        Shows in top banner "Top Fast-Moving Medicines" high-demand deals.
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

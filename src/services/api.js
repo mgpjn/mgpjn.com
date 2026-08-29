@@ -64,6 +64,7 @@ export const deleteAdminCategory = (id) => api.delete(`/admin/categories/${id}`)
 export const getAdminProducts = (params) => api.get('/admin/products', { params });
 export const storeAdminProduct = (data) => api.post('/admin/products', data);
 export const updateAdminProduct = (id, data) => api.put(`/admin/products/${id}`, data);
+export const toggleAdminProductSection = (id, data) => api.post(`/admin/products/${id}/toggle-section`, data);
 export const deleteAdminProduct = (id) => api.delete(`/admin/products/${id}`);
 export const getAdminOrders = (params) => api.get('/admin/orders', { params });
 export const updateAdminOrderStatus = (id, data) => api.put(`/admin/orders/${id}`, data);

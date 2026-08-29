@@ -5,7 +5,7 @@ import {
   ChevronRight, Percent, Award, HeartHandshake, PhoneCall,
   Search, Upload, CheckCircle2, Flame
 } from 'lucide-react';
-import { getCategories, getFeaturedProducts } from '../services/api';
+import { getCategories, getFeaturedProducts, getProducts } from '../services/api';
 import ProductCard from '../components/ProductCard';
 
 export default function HomePage({ onOpenPrescriptionModal }) {
@@ -15,22 +15,85 @@ export default function HomePage({ onOpenPrescriptionModal }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    Promise.all([getCategories(), getFeaturedProducts()])
-      .then(([catRes, prodRes]) => {
-        if (catRes?.data?.success) setCategories(catRes.data.categories || []);
-        if (prodRes?.data?.success) setFeaturedData(prodRes.data || { featured: [], topDiscounts: [], hotSelling: [] });
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+
+    // Hard safety timer so page never stays stuck in skeleton loading state
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 4000);
+
+    const loadData = async () => {
+      try {
+        const [catRes, prodRes] = await Promise.allSettled([
+          getCategories(),
+          getFeaturedProducts()
+        ]);
+
+        if (!isMounted) return;
+
+        if (catRes.status === 'fulfilled' && catRes.value?.data?.success) {
+          setCategories(catRes.value.data.categories || []);
+        }
+
+        let featuredResult = null;
+        if (prodRes.status === 'fulfilled' && prodRes.value?.data?.success) {
+          featuredResult = prodRes.value.data;
+        }
+
+        const hasHotSelling = featuredResult?.hotSelling && featuredResult.hotSelling.length > 0;
+        const hasFeatured = featuredResult?.featured && featuredResult.featured.length > 0;
+
+        // Fallback: If no products were returned from featured, fetch standard products
+        if (!hasHotSelling && !hasFeatured) {
+          try {
+            const fallbackRes = await getProducts({ per_page: 24 });
+            const list = fallbackRes?.data?.products?.data || fallbackRes?.data?.data || fallbackRes?.data?.products || [];
+            if (Array.isArray(list) && list.length > 0) {
+              featuredResult = {
+                hotSelling: list.slice(0, 8),
+                featured: list.slice(0, 12),
+                topDiscounts: list.filter(p => (p.discount_percentage || 0) >= 15).slice(0, 8),
+                trending: list.slice(0, 8)
+              };
+            }
+          } catch (e) {
+            console.warn('Fallback products fetch warning:', e);
+          }
+        }
+
+        if (isMounted && featuredResult) {
+          setFeaturedData(featuredResult);
+        }
+      } catch (err) {
+        console.error('HomePage loading error:', err);
+      } finally {
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   const hotSellingList = (featuredData?.hotSelling && featuredData.hotSelling.length > 0)
     ? featuredData.hotSelling
     : (featuredData?.featured || []);
 
-  const featuredList = featuredData?.featured || [];
-  const topDiscountsList = featuredData?.topDiscounts || [];
+  const featuredList = (featuredData?.featured && featuredData.featured.length > 0)
+    ? featuredData.featured
+    : hotSellingList;
+
+  const topDiscountsList = (featuredData?.topDiscounts && featuredData.topDiscounts.length > 0)
+    ? featuredData.topDiscounts
+    : hotSellingList.slice(0, 6);
 
   if (loading) {
     return (
