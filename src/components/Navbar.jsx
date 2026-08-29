@@ -454,7 +454,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
 
             {/* Individual Category Hover Links */}
             {categories.map((cat) => {
-              const isActive = activeCategoryDropdown === cat.id;
+              const isActive = activeCategoryDropdown === cat.id || activeCategoryDropdown === cat.slug;
               return (
                 <div
                   key={cat.id}
@@ -463,6 +463,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                 >
                   <Link
                     to={`/shop?category=${cat.slug}`}
+                    onMouseEnter={() => handleMouseEnterCat(cat.id)}
                     className={`px-2.5 lg:px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center space-x-1 whitespace-nowrap transition-all ${
                       isActive
                         ? 'bg-brand-blue-50 text-brand-blue-800 font-bold shadow-xs'
@@ -550,7 +551,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
               ) : (
                 /* Mega Menu for Individual Category */
                 (() => {
-                  const activeCat = categories.find((c) => c.id === activeCategoryDropdown);
+                  const activeCat = categories.find((c) => c.id === activeCategoryDropdown || c.slug === activeCategoryDropdown);
                   if (!activeCat) return null;
                   return (
                     <div className="grid grid-cols-12 gap-8">
