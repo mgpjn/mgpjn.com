@@ -110,6 +110,9 @@ export default function AdminDashboard() {
     parent_id: '',
     sub_retailer_commission: 10,
     customer_commission: 5,
+    level_1_commission: 10,
+    level_2_commission: 5,
+    level_3_commission: 2,
     status: 'active',
   });
   const [hierarchyParents, setHierarchyParents] = useState([]);
@@ -641,6 +644,9 @@ export default function AdminDashboard() {
     const productPrice = product.product_price !== undefined && product.product_price !== null ? product.product_price : endUser;
     setPriceForm({
       product_price: productPrice,
+      level_1_commission: product.level_1_commission !== undefined ? product.level_1_commission : (assignTargetUser?.level_1_commission || 10),
+      level_2_commission: product.level_2_commission !== undefined ? product.level_2_commission : (assignTargetUser?.level_2_commission || 5),
+      level_3_commission: product.level_3_commission !== undefined ? product.level_3_commission : (assignTargetUser?.level_3_commission || 2),
       sub_retailer_commission: product.sub_retailer_commission !== undefined ? product.sub_retailer_commission : (assignTargetUser?.sub_retailer_commission || 10),
       customer_commission: product.customer_commission !== undefined ? product.customer_commission : (assignTargetUser?.customer_commission || 5),
       sd_margin: product.sd_margin !== undefined ? product.sd_margin : 2,
@@ -664,6 +670,9 @@ export default function AdminDashboard() {
       const payload = {
         product_id: priceTargetProduct.id,
         product_price: parseFloat(priceForm.product_price) || parseFloat(priceForm.end_user_price) || 0,
+        level_1_commission: parseFloat(priceForm.level_1_commission) || 0,
+        level_2_commission: parseFloat(priceForm.level_2_commission) || 0,
+        level_3_commission: parseFloat(priceForm.level_3_commission) || 0,
         sub_retailer_commission: parseFloat(priceForm.sub_retailer_commission) || 0,
         customer_commission: parseFloat(priceForm.customer_commission) || 0,
         sd_margin: parseFloat(priceForm.sd_margin) || 0,
@@ -4107,26 +4116,45 @@ export default function AdminDashboard() {
                   <p className="text-[10px] text-blue-700">
                     This Super Distributor operates directly under Company / Super Admin. Product rates and dynamic referral commissions can be configured separately in the "Assign Products & Set Price" tab.
                   </p>
-                  <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Default Sub-Retailer Commission (%)</label>
+                      <label className="font-bold text-slate-700 block mb-1">Default Level 1 (%)</label>
                       <input
                         type="number"
                         step="0.1"
-                        value={userForm.sub_retailer_commission || 10}
-                        onChange={(e) => setUserForm({ ...userForm, sub_retailer_commission: e.target.value })}
+                        min="0"
+                        max="100"
+                        value={userForm.level_1_commission !== undefined ? userForm.level_1_commission : 10}
+                        onChange={(e) => setUserForm({ ...userForm, level_1_commission: e.target.value })}
                         className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
                       />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Direct Referrer</span>
                     </div>
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Default Customer Commission (%)</label>
+                      <label className="font-bold text-slate-700 block mb-1">Default Level 2 (%)</label>
                       <input
                         type="number"
                         step="0.1"
-                        value={userForm.customer_commission || 5}
-                        onChange={(e) => setUserForm({ ...userForm, customer_commission: e.target.value })}
+                        min="0"
+                        max="100"
+                        value={userForm.level_2_commission !== undefined ? userForm.level_2_commission : 5}
+                        onChange={(e) => setUserForm({ ...userForm, level_2_commission: e.target.value })}
                         className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
                       />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Parent of L1</span>
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Default Level 3 (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={userForm.level_3_commission !== undefined ? userForm.level_3_commission : 2}
+                        onChange={(e) => setUserForm({ ...userForm, level_3_commission: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Parent of L2</span>
                     </div>
                   </div>
                 </div>
@@ -5200,11 +5228,13 @@ export default function AdminDashboard() {
 
                           <div className="text-left hidden md:block">
                             <div className="flex items-center space-x-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                              <span>SR: {product.sub_retailer_commission || 10}%</span>
+                              <span>L1: {product.level_1_commission !== undefined ? product.level_1_commission : 10}%</span>
                               <span>•</span>
-                              <span>Cust: {product.customer_commission || 5}%</span>
+                              <span>L2: {product.level_2_commission !== undefined ? product.level_2_commission : 5}%</span>
+                              <span>•</span>
+                              <span>L3: {product.level_3_commission !== undefined ? product.level_3_commission : 2}%</span>
                             </div>
-                            <span className="text-[9px] text-slate-400 block mt-0.5">Dynamic Commission</span>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">3-Level Referral</span>
                           </div>
 
                           <div>
@@ -5351,76 +5381,131 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Dynamic Referral Commissions (Configurable per Super Distributor) */}
-                <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3.5 space-y-2.5">
+                {/* 3-Level Dynamic Referral Commission (Configurable per Super Distributor + Product) */}
+                <div className="bg-amber-50/80 border border-amber-300 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1.5 font-black text-amber-950 text-xs">
+                    <div className="flex items-center space-x-2 font-black text-amber-950 text-xs">
                       <Calculator className="w-4 h-4 text-amber-600" />
-                      <span>Dynamic Referral Commissions ({assignTargetUser.name})</span>
+                      <span>3-Level Referral Commission Structure ({assignTargetUser.name})</span>
                     </div>
-                    <span className="text-[10px] bg-amber-600 text-white font-black px-2 py-0.5 rounded-full">
-                      Auto-Inherited by Downline
+                    <span className="text-[10px] bg-amber-600 text-white font-black px-2.5 py-0.5 rounded-full">
+                      Max 3 Levels • Zero Hardcoding
                     </span>
                   </div>
-                  <p className="text-[10px] text-amber-800">
-                    Configure dynamic commission percentages for users created under this Super Distributor. No hardcoded rates are used.
+                  <p className="text-[11px] text-amber-900 leading-relaxed">
+                    Referral commissions are calculated strictly across a maximum of 3 referral levels based on the buyer's upline chain. Commission stops completely after Level 3.
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                        Sub-Retailer Commission (%)
-                      </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-black text-slate-800">
+                          Level 1 Commission (%)
+                        </label>
+                        <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded">
+                          Direct Referrer
+                        </span>
+                      </div>
                       <input
                         type="number"
                         step="0.1"
                         min="0"
                         max="100"
-                        value={priceForm.sub_retailer_commission !== undefined ? priceForm.sub_retailer_commission : 10}
-                        onChange={(e) => setPriceForm({ ...priceForm, sub_retailer_commission: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                        value={priceForm.level_1_commission !== undefined ? priceForm.level_1_commission : 10}
+                        onChange={(e) => setPriceForm({ ...priceForm, level_1_commission: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none"
                       />
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        Earned by local Sub-Retailer for doorstep order fulfillment.
+                      <span className="text-[10px] text-slate-500 block mt-1">
+                        Immediate sponsor of the customer
                       </span>
                     </div>
 
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                        Customer Referral Commission (%)
-                      </label>
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-black text-slate-800">
+                          Level 2 Commission (%)
+                        </label>
+                        <span className="text-[9px] bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.5 rounded">
+                          Parent of L1
+                        </span>
+                      </div>
                       <input
                         type="number"
                         step="0.1"
                         min="0"
                         max="100"
-                        value={priceForm.customer_commission !== undefined ? priceForm.customer_commission : 5}
-                        onChange={(e) => setPriceForm({ ...priceForm, customer_commission: e.target.value })}
-                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                        value={priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 5}
+                        onChange={(e) => setPriceForm({ ...priceForm, level_2_commission: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none"
                       />
-                      <span className="text-[10px] text-slate-500 block mt-0.5">
-                        Earned by direct sponsor / customer who referred the buyer.
+                      <span className="text-[10px] text-slate-500 block mt-1">
+                        Upline sponsor of Level 1 user
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-black text-slate-800">
+                          Level 3 Commission (%)
+                        </label>
+                        <span className="text-[9px] bg-purple-100 text-purple-800 font-extrabold px-1.5 py-0.5 rounded">
+                          Parent of L2
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={priceForm.level_3_commission !== undefined ? priceForm.level_3_commission : 2}
+                        onChange={(e) => setPriceForm({ ...priceForm, level_3_commission: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-50 border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                      <span className="text-[10px] text-slate-500 block mt-1">
+                        Final upline (Calculation stops here)
                       </span>
                     </div>
                   </div>
 
-                  {/* Live Commission Amounts Badge */}
+                  {/* Live Commission Amounts Breakdown Badge */}
                   {(() => {
                     const pPrice = Number(priceForm.product_price || priceForm.end_user_price) || 0;
-                    const srCommissionAmt = ((pPrice * Number(priceForm.sub_retailer_commission || 0)) / 100).toFixed(2);
-                    const custCommissionAmt = ((pPrice * Number(priceForm.customer_commission || 0)) / 100).toFixed(2);
+                    const l1Pct = Number(priceForm.level_1_commission !== undefined ? priceForm.level_1_commission : 10);
+                    const l2Pct = Number(priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 5);
+                    const l3Pct = Number(priceForm.level_3_commission !== undefined ? priceForm.level_3_commission : 2);
+
+                    const l1Amt = ((pPrice * l1Pct) / 100).toFixed(2);
+                    const l2Amt = ((pPrice * l2Pct) / 100).toFixed(2);
+                    const l3Amt = ((pPrice * l3Pct) / 100).toFixed(2);
+                    const totalPct = (l1Pct + l2Pct + l3Pct).toFixed(1);
+                    const totalAmt = (Number(l1Amt) + Number(l2Amt) + Number(l3Amt)).toFixed(2);
 
                     return (
-                      <div className="bg-white border border-amber-200 rounded-xl p-2.5 text-[11px] flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-amber-900 font-bold">
-                          Calculated on Rate <strong className="font-black">₹{pPrice.toFixed(2)}</strong>:
-                        </span>
-                        <div className="flex items-center space-x-3">
-                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold">
-                            Sub-Retailer: <strong className="font-black">₹{srCommissionAmt}</strong> ({priceForm.sub_retailer_commission || 10}%)
+                      <div className="bg-white border border-amber-200 rounded-xl p-3 text-[11px] space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                          <span className="text-amber-950 font-bold">
+                            Per-Unit Payouts on Price <strong className="font-black text-slate-900">₹{pPrice.toFixed(2)}</strong>:
                           </span>
-                          <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-lg font-bold">
-                            Customer: <strong className="font-black">₹{custCommissionAmt}</strong> ({priceForm.customer_commission || 5}%)
+                          <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                            Total 3-Level Payout: {totalPct}% (₹{totalAmt})
                           </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-2 rounded-lg">
+                            <span className="text-[10px] font-bold block text-emerald-700">Level 1 (Direct)</span>
+                            <strong className="text-xs font-black">₹{l1Amt}</strong>
+                            <span className="text-[10px] text-emerald-600 block">({l1Pct}%)</span>
+                          </div>
+                          <div className="bg-blue-50 border border-blue-200 text-blue-900 p-2 rounded-lg">
+                            <span className="text-[10px] font-bold block text-blue-700">Level 2 (Parent of L1)</span>
+                            <strong className="text-xs font-black">₹{l2Amt}</strong>
+                            <span className="text-[10px] text-blue-600 block">({l2Pct}%)</span>
+                          </div>
+                          <div className="bg-purple-50 border border-purple-200 text-purple-900 p-2 rounded-lg">
+                            <span className="text-[10px] font-bold block text-purple-700">Level 3 (Parent of L2)</span>
+                            <strong className="text-xs font-black">₹{l3Amt}</strong>
+                            <span className="text-[10px] text-purple-600 block">({l3Pct}%)</span>
+                          </div>
                         </div>
                       </div>
                     );
