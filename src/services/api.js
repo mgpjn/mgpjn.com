@@ -109,12 +109,15 @@ export const getHierarchyStats = () => api.get('/hierarchy/stats');
 export const getHierarchyOrders = (params) => api.get('/hierarchy/orders', { params });
 export const getHierarchyParents = (params) => api.get('/admin/hierarchy-parents', { params });
 
-// Super Admin User Controls & Approvals
+// Super Admin User Controls, KYC & Approvals
 export const resetAdminUserPassword = (id, data) => api.post(`/admin/users/${id}/reset-password`, data);
 export const toggleAdminUserStatus = (id, data) => api.post(`/admin/users/${id}/toggle-status`, data);
 export const transferAdminUser = (id, data) => api.post(`/admin/users/${id}/transfer`, data);
 export const approveAdminUser = (id) => api.post(`/admin/users/${id}/approve`);
 export const rejectAdminUser = (id, data) => api.post(`/admin/users/${id}/reject`, data);
+export const uploadKycDocument = (formData) => api.post('/admin/upload-kyc-document', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
 
 // Product State-Wise Pricing
 export const getAdminProductStatePrices = (id) => api.get(`/admin/products/${id}/state-prices`);

@@ -9,7 +9,8 @@ import {
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
-  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download,
+  FileText, CreditCard, Building2, PhoneCall
 } from 'lucide-react';
 import { EarningsSalesChart, StockInventoryChart } from '../../components/common/DashboardCharts';
 import {
@@ -25,6 +26,7 @@ import {
   getAdminStats,
   getAdminUsersByRole, storeAdminHierarchyUser, updateAdminHierarchyUser, impersonateAdminUser,
   resetAdminUserPassword, toggleAdminUserStatus, transferAdminUser, approveAdminUser, rejectAdminUser,
+  uploadKycDocument,
   getAdminMargins, updateAdminMargins,
   getAdminTransfers, createAdminTransfer,
   getAdminProductMargins,
@@ -99,18 +101,29 @@ export default function AdminDashboard() {
   const [userForm, setUserForm] = useState({
     name: '',
     business_name: '',
+    shop_name: '',
     email: '',
     mobile: '',
     phone: '',
+    alt_phone: '',
     password: '',
+    confirm_password: '',
     role: 'super_distributor',
     sponsor_code: '',
     address: '',
+    address_line_1: '',
+    address_line_2: '',
     state: 'GUJRAT',
     city: 'Surat',
     pincode: '394230',
     pan_number: '',
+    pan_doc: '',
+    drug_license_20_no: '',
+    drug_license_20_doc: '',
+    drug_license_21_no: '',
+    drug_license_21_doc: '',
     gst_number: '',
+    gst_doc: '',
     bank_name: '',
     account_number: '',
     ifsc_code: '',
@@ -125,6 +138,20 @@ export default function AdminDashboard() {
   });
   const [hierarchyParents, setHierarchyParents] = useState([]);
   const [loadingHierarchyParents, setLoadingHierarchyParents] = useState(false);
+
+  // KYC Verification Modal & Upload States
+  const [showKycReviewModal, setShowKycReviewModal] = useState(false);
+  const [selectedKycUser, setSelectedKycUser] = useState(null);
+  const [processingKycAction, setProcessingKycAction] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState({ pan: false, dl20: false, dl21: false, gst: false });
+
+  // Cascading Customer Hierarchy Parents
+  const [chainSuperDistributors, setChainSuperDistributors] = useState([]);
+  const [chainDistributors, setChainDistributors] = useState([]);
+  const [chainRetailers, setChainRetailers] = useState([]);
+  const [selectedSdChain, setSelectedSdChain] = useState('');
+  const [selectedDistChain, setSelectedDistChain] = useState('');
+  const [selectedRtChain, setSelectedRtChain] = useState('');
 
   // Margins
   const [margins, setMargins] = useState({});
@@ -529,15 +556,94 @@ export default function AdminDashboard() {
     }
     setLoadingHierarchyParents(true);
     try {
-      const res = await getHierarchyParents({ role: targetRole });
-      if (res.data?.success) {
-        setHierarchyParents(res.data.parents || []);
+      if (targetRole === 'customer') {
+        const res = await getHierarchyParents({ role: 'customer_chain' });
+        if (res.data?.success) {
+          setChainSuperDistributors(res.data.super_distributors || []);
+          setChainDistributors(res.data.distributors || []);
+          setChainRetailers(res.data.retailers || []);
+          setHierarchyParents(res.data.retailers || []);
+        }
+      } else {
+        const res = await getHierarchyParents({ role: targetRole });
+        if (res.data?.success) {
+          setHierarchyParents(res.data.parents || []);
+        }
       }
     } catch (e) {
       console.error('Failed to fetch hierarchy parents:', e);
       setHierarchyParents([]);
     } finally {
       setLoadingHierarchyParents(false);
+    }
+  };
+
+  // Upload Regulatory KYC Document (PAN, DL20, DL21, GST)
+  const handleUploadKycDoc = async (file, docType) => {
+    if (!file) return;
+    setUploadingDoc(prev => ({ ...prev, [docType]: true }));
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('doc_type', docType);
+      const res = await uploadKycDocument(fd);
+      if (res.data?.success && res.data.url) {
+        if (docType === 'pan') {
+          setUserForm(prev => ({ ...prev, pan_doc: res.data.url }));
+        } else if (docType === 'dl20') {
+          setUserForm(prev => ({ ...prev, drug_license_20_doc: res.data.url }));
+        } else if (docType === 'dl21') {
+          setUserForm(prev => ({ ...prev, drug_license_21_doc: res.data.url }));
+        } else if (docType === 'gst') {
+          setUserForm(prev => ({ ...prev, gst_doc: res.data.url }));
+        }
+      } else {
+        alert('Failed to upload document. Please check file format (JPG, PNG, PDF).');
+      }
+    } catch (err) {
+      console.error('KYC Upload error:', err);
+      alert(err.response?.data?.message || 'Error uploading document.');
+    } finally {
+      setUploadingDoc(prev => ({ ...prev, [docType]: false }));
+    }
+  };
+
+  // Super Admin: Direct KYC Verification & Approval
+  const handleApproveKyc = async (targetUser) => {
+    if (!targetUser) return;
+    if (!window.confirm(`Are you sure you want to verify all regulatory documents & activate ${targetUser.name} (${targetUser.role?.replace(/_/g, ' ')})?`)) return;
+    setProcessingKycAction(true);
+    try {
+      const res = await approveAdminUser(targetUser.id);
+      alert(res.data?.message || `Account for ${targetUser.name} has been verified and approved!`);
+      setShowKycReviewModal(false);
+      setSelectedKycUser(null);
+      fetchData();
+    } catch (err) {
+      console.error('Approve user error:', err);
+      alert(err.response?.data?.message || 'Failed to approve account.');
+    } finally {
+      setProcessingKycAction(false);
+    }
+  };
+
+  // Super Admin: Reject KYC with reason
+  const handleRejectKyc = async (targetUser) => {
+    if (!targetUser) return;
+    const reason = window.prompt(`Please enter the rejection reason for ${targetUser.name}:`, 'Regulatory documents invalid or incomplete.');
+    if (reason === null) return;
+    setProcessingKycAction(true);
+    try {
+      const res = await rejectAdminUser(targetUser.id, { reason });
+      alert(res.data?.message || `Registration for ${targetUser.name} has been rejected.`);
+      setShowKycReviewModal(false);
+      setSelectedKycUser(null);
+      fetchData();
+    } catch (err) {
+      console.error('Reject user error:', err);
+      alert(err.response?.data?.message || 'Failed to reject account.');
+    } finally {
+      setProcessingKycAction(false);
     }
   };
 
@@ -792,8 +898,27 @@ export default function AdminDashboard() {
         payload.email = `${rawPhone.replace(/\D/g, '')}@mediglaxo.com`;
       }
 
+      // Password confirmation check
+      if (payload.password && payload.confirm_password && payload.password !== payload.confirm_password) {
+        alert('Password and Confirm Password do not match. Please re-enter.');
+        return;
+      }
+
+      // If customer role, link cascading retailer parent
       if (payload.role && payload.role.startsWith('customer')) {
         payload.role = 'customer';
+        if (selectedRtChain) {
+          payload.parent_id = selectedRtChain;
+        } else if (selectedDistChain && !payload.parent_id) {
+          payload.parent_id = selectedDistChain;
+        } else if (selectedSdChain && !payload.parent_id) {
+          payload.parent_id = selectedSdChain;
+        }
+      }
+
+      // Sync address line 1 to address field if empty
+      if (!payload.address && payload.address_line_1) {
+        payload.address = [payload.address_line_1, payload.address_line_2].filter(Boolean).join(', ');
       }
 
       if (editingUser) {
@@ -801,7 +926,7 @@ export default function AdminDashboard() {
         alert('User details updated successfully!');
       } else {
         const res = await storeAdminHierarchyUser(payload);
-        alert(res.data?.message || 'New partner account created successfully!');
+        alert(res.data?.message || 'New account created successfully!');
       }
       setShowAddUserModal(false);
       setEditingUser(null);
@@ -1909,11 +2034,14 @@ export default function AdminDashboard() {
                                     <ArrowUpRight className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => alert(`Customer Dossier:\nName: ${u.name}\nEmail: ${u.email}\nPhone: ${u.phone}\nPincode: ${u.pincode}\nSponsor: ${u.sponsor?.name || 'Direct'} (${u.sponsor?.role || 'None'})\nOrders: ${u.orders_count || 0}\nTotal Spent: ₹${(u.total_spent || 0).toFixed(2)}`)}
-                                    title="View details"
-                                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                    onClick={() => {
+                                      setSelectedKycUser(u);
+                                      setShowKycReviewModal(true);
+                                    }}
+                                    title="Review Customer Profile & KYC Details"
+                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                   >
-                                    <Eye className="w-3.5 h-3.5" />
+                                    <FileText className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => {
@@ -2048,11 +2176,14 @@ export default function AdminDashboard() {
                                     <ArrowUpRight className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => alert(`Sub-Retailer Hub Dossier:\nName: ${u.name}\nStore: ${u.business_name || 'N/A'}\nAssigned Pincode: ${u.pincode}\nCity: ${u.city}\nPhone: ${u.phone}\nWallet: ₹${u.wallet_balance || 0}\nCustomers: ${u.referrals_count || 0}`)}
-                                    title="View details"
-                                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                    onClick={() => {
+                                      setSelectedKycUser(u);
+                                      setShowKycReviewModal(true);
+                                    }}
+                                    title="Review Sub-Retailer Profile & KYC Documents"
+                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                   >
-                                    <Eye className="w-3.5 h-3.5" />
+                                    <FileText className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                     onClick={() => {
@@ -2187,11 +2318,14 @@ export default function AdminDashboard() {
                                   <ArrowUpRight className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => alert(`Partner Dossier:\nName: ${u.name}\nBusiness: ${u.business_name || 'N/A'}\nEmail: ${u.email}\nPhone: ${u.phone}\nState: ${u.state || 'GUJRAT'}\nCity: ${u.city || 'Surat'}\nGSTIN: ${u.gst_number || 'N/A'}`)}
-                                  title="View details"
-                                  className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                  onClick={() => {
+                                    setSelectedKycUser(u);
+                                    setShowKycReviewModal(true);
+                                  }}
+                                  title="Review Partner Profile & KYC Documents"
+                                  className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                 >
-                                  <Eye className="w-3.5 h-3.5" />
+                                  <FileText className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   onClick={() => {
@@ -4176,274 +4310,1309 @@ export default function AdminDashboard() {
       {/* MODAL 2: ADD / EDIT DOWNLINE PARTNER (DITTO mgpjn.com)   */}
       {/* ======================================================== */}
       {showAddUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b">
-              <h3 className="text-base font-black text-slate-900">
-                {editingUser ? 'Edit Partner Details' : `Add New ${sectionTitle.slice(0, -1)}`}
-              </h3>
-              <button onClick={() => setShowAddUserModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col my-6">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-shrink-0">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ff5722]"></span>
+                  <h3 className="text-base font-black text-slate-900">
+                    {editingUser ? `Edit ${editingUser.name}` : userForm.role === 'customer' ? 'Add New Customer' : `Add New ${sectionTitle.replace(/\(.*?\)/g, '').trim()}`}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {userForm.role === 'customer'
+                    ? 'Create a customer account and assign it to the correct retailer'
+                    : 'Create a partner account, assign hierarchy placement and verify regulatory KYC compliance'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddUserModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveUser} className="space-y-3.5 text-xs">
-              {/* Hierarchy Belongs To / Parent Selection */}
-              {userForm.role !== 'super_distributor' && (
-                <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="font-black text-orange-950 flex items-center space-x-1.5 text-xs">
-                      <FolderTree className="w-4 h-4 text-[#ff5722]" />
-                      <span>
-                        {userForm.role === 'distributor' && 'Belongs To: Select Super Distributor *'}
-                        {userForm.role === 'sub_distributor' && 'Belongs To: Select Distributor *'}
-                        {userForm.role === 'retailer' && 'Belongs To: Select Sub Distributor *'}
-                        {userForm.role === 'sub_retailer' && 'Belongs To: Select Retailer / Chemist *'}
-                        {userForm.role === 'customer' && 'Linked To: Select Sub-Retailer / Sponsor'}
+            {/* Modal Form Scrollable Area */}
+            <form onSubmit={handleSaveUser} className="space-y-4 text-xs overflow-y-auto flex-1 pr-1 overscroll-contain">
+              {/* ======================================================== */}
+              {/* CASE 1: CUSTOMER SPECIFIC FORM (DITTO USER SPECIFICATION) */}
+              {/* ======================================================== */}
+              {userForm.role === 'customer' ? (
+                <div className="space-y-4">
+                  {/* Assign Parent Hierarchy */}
+                  <div className="bg-orange-50/70 border border-orange-200/90 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="font-black text-orange-950 flex items-center space-x-1.5 text-xs">
+                        <FolderTree className="w-4 h-4 text-[#ff5722]" />
+                        <span>Assign Parent Hierarchy</span>
+                      </label>
+                      <span className="text-[10px] bg-[#ff5722] text-white font-bold px-2 py-0.5 rounded-full">
+                        Customer Upline
                       </span>
-                    </label>
-                    <span className="text-[10px] bg-[#ff5722] text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      Hierarchy Chain
-                    </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      {/* Super Distributor Dropdown */}
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Super Distributor *</label>
+                        <select
+                          value={selectedSdChain}
+                          onChange={(e) => {
+                            setSelectedSdChain(e.target.value);
+                            setSelectedDistChain('');
+                            setSelectedRtChain('');
+                          }}
+                          className="w-full px-2.5 py-2 bg-white border border-orange-200 rounded-xl font-medium text-slate-800 text-xs focus:ring-2 focus:ring-[#ff5722] outline-none"
+                        >
+                          <option value="">-- Select Super Distributor --</option>
+                          {chainSuperDistributors.map((sd) => (
+                            <option key={sd.id} value={sd.id}>
+                              {sd.referral_code} — {sd.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">Controls distributor list.</span>
+                      </div>
+
+                      {/* Distributor Dropdown */}
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Distributor</label>
+                        <select
+                          value={selectedDistChain}
+                          onChange={(e) => {
+                            setSelectedDistChain(e.target.value);
+                            setSelectedRtChain('');
+                          }}
+                          className="w-full px-2.5 py-2 bg-white border border-orange-200 rounded-xl font-medium text-slate-800 text-xs focus:ring-2 focus:ring-[#ff5722] outline-none"
+                        >
+                          <option value="">-- Select Distributor --</option>
+                          {chainDistributors
+                            .filter(d => !selectedSdChain || String(d.super_distributor_id) === String(selectedSdChain) || String(d.sponsor_id) === String(selectedSdChain))
+                            .map((dist) => (
+                              <option key={dist.id} value={dist.id}>
+                                {dist.referral_code} — {dist.name}
+                              </option>
+                            ))}
+                        </select>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">Controls retailer list.</span>
+                      </div>
+
+                      {/* Retailer Dropdown */}
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Retailer *</label>
+                        <select
+                          value={selectedRtChain || userForm.parent_id}
+                          onChange={(e) => {
+                            setSelectedRtChain(e.target.value);
+                            setUserForm({ ...userForm, parent_id: e.target.value });
+                          }}
+                          className="w-full px-2.5 py-2 bg-white border border-orange-200 rounded-xl font-medium text-slate-800 text-xs focus:ring-2 focus:ring-[#ff5722] outline-none"
+                        >
+                          <option value="">-- Select Retailer --</option>
+                          {chainRetailers
+                            .filter(r => {
+                              if (selectedDistChain) {
+                                return String(r.sponsor_id) === String(selectedDistChain) || String(r.super_distributor_id) === String(selectedSdChain);
+                              }
+                              if (selectedSdChain) {
+                                return String(r.super_distributor_id) === String(selectedSdChain);
+                              }
+                              return true;
+                            })
+                            .map((rt) => (
+                              <option key={rt.id} value={rt.id}>
+                                {rt.referral_code} — {rt.name}
+                              </option>
+                            ))}
+                        </select>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">Final parent for customer.</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {loadingHierarchyParents ? (
-                    <div className="flex items-center space-x-2 text-slate-500 py-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Loading available parent partners...</span>
+                  {/* Customer Information */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
+                      <User className="w-4 h-4 text-blue-600" />
+                      <span>Customer Information</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Ramesh Kumar"
+                          value={userForm.name}
+                          onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Email Address *</label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="customer@gmail.com"
+                          value={userForm.email}
+                          onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
                     </div>
-                  ) : (
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Mobile Number *</label>
+                        <input
+                          type="tel"
+                          required
+                          placeholder="9876543210"
+                          value={userForm.mobile || userForm.phone}
+                          onChange={(e) => setUserForm({ ...userForm, mobile: e.target.value, phone: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Alternative Mobile</label>
+                        <input
+                          type="tel"
+                          placeholder="Secondary mobile number"
+                          value={userForm.alt_phone}
+                          onChange={(e) => setUserForm({ ...userForm, alt_phone: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address Information */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
+                      <MapPin className="w-4 h-4 text-emerald-600" />
+                      <span>Address Information</span>
+                    </h4>
+
                     <div>
-                      <select
-                        value={userForm.parent_id || ''}
-                        onChange={(e) => setUserForm({ ...userForm, parent_id: e.target.value })}
-                        required={userForm.role !== 'customer'}
-                        className="w-full px-3 py-2.5 bg-white border border-orange-200 rounded-xl font-bold text-slate-800 text-xs focus:ring-2 focus:ring-[#ff5722] outline-none"
-                      >
-                        <option value="">-- Select Parent ({
-                          userForm.role === 'distributor' ? 'Super Distributor' :
-                          userForm.role === 'sub_distributor' ? 'Distributor' :
-                          userForm.role === 'retailer' ? 'Sub Distributor' :
-                          userForm.role === 'sub_retailer' ? 'Retailer' : 'Sub Retailer'
-                        }) * --</option>
-                        {hierarchyParents.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} {p.business_name ? `(${p.business_name})` : ''} • Ref: {p.referral_code} • {p.city || p.state}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[10px] text-orange-800/80 mt-1">
-                        All product rates, wholesale margins, and referral commissions configured for this parent's Super Distributor will automatically apply to this partner.
+                      <label className="font-bold text-slate-700 block mb-1">Shop Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Shri Balaji Medicos / Clinic / Store"
+                        value={userForm.shop_name || userForm.business_name}
+                        onChange={(e) => setUserForm({ ...userForm, shop_name: e.target.value, business_name: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Address Line 1 *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="House / Shop No., Street, Landmark"
+                          value={userForm.address_line_1}
+                          onChange={(e) => setUserForm({ ...userForm, address_line_1: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Address Line 2</label>
+                        <input
+                          type="text"
+                          placeholder="Area / Sector / Colony"
+                          value={userForm.address_line_2}
+                          onChange={(e) => setUserForm({ ...userForm, address_line_2: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">State *</label>
+                        <select
+                          value={userForm.state}
+                          onChange={(e) => setUserForm({ ...userForm, state: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold"
+                        >
+                          {INDIAN_STATES.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">City *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Surat / Gurugram"
+                          value={userForm.city}
+                          onChange={(e) => setUserForm({ ...userForm, city: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">PIN Code *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="394230"
+                          value={userForm.pincode}
+                          onChange={(e) => setUserForm({ ...userForm, pincode: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">PAN Number</label>
+                      <input
+                        type="text"
+                        placeholder="ABCDE1234F (Optional)"
+                        value={userForm.pan_number}
+                        onChange={(e) => setUserForm({ ...userForm, pan_number: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Banking Information */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
+                      <CreditCard className="w-4 h-4 text-purple-600" />
+                      <span>Banking Information</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Bank Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. State Bank of India"
+                          value={userForm.bank_name}
+                          onChange={(e) => setUserForm({ ...userForm, bank_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Account Number</label>
+                        <input
+                          type="text"
+                          placeholder="Account Number"
+                          value={userForm.account_number}
+                          onChange={(e) => setUserForm({ ...userForm, account_number: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">IFSC Code</label>
+                        <input
+                          type="text"
+                          placeholder="SBIN0001234"
+                          value={userForm.ifsc_code}
+                          onChange={(e) => setUserForm({ ...userForm, ifsc_code: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono uppercase"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Settings */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
+                      <Lock className="w-4 h-4 text-slate-600" />
+                      <span>Account Settings</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Password *</label>
+                        <input
+                          type="password"
+                          required={!editingUser}
+                          placeholder={editingUser ? 'Leave blank to keep same' : 'Min 6 characters'}
+                          value={userForm.password}
+                          onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Status *</label>
+                        <select
+                          value={userForm.status}
+                          onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold"
+                        >
+                          <option value="active">Active</option>
+                          <option value="pending">Pending Approval</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="suspended">Suspended</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ======================================================== */
+                /* CASE 2: ACCREDITED PARTNER FORM (DISTRIBUTOR / RETAILER) */
+                /* ======================================================== */
+                <div className="space-y-4">
+                  {/* Assign Parent Super Distributor */}
+                  {userForm.role !== 'super_distributor' && (
+                    <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-4 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-black text-orange-950 flex items-center space-x-1.5 text-xs">
+                          <FolderTree className="w-4 h-4 text-[#ff5722]" />
+                          <span>
+                            {userForm.role === 'distributor' && 'Assign Parent Super Distributor *'}
+                            {userForm.role === 'sub_distributor' && 'Assign Parent Distributor *'}
+                            {userForm.role === 'retailer' && 'Assign Parent Sub Distributor *'}
+                            {userForm.role === 'sub_retailer' && 'Assign Parent Retailer / Chemist *'}
+                          </span>
+                        </label>
+                        <span className="text-[10px] bg-[#ff5722] text-white font-bold px-2 py-0.5 rounded-full uppercase">
+                          Hierarchy Parent
+                        </span>
+                      </div>
+
+                      {loadingHierarchyParents ? (
+                        <div className="flex items-center space-x-2 text-slate-500 py-2">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Loading available parent accounts...</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <select
+                            value={userForm.parent_id || ''}
+                            onChange={(e) => setUserForm({ ...userForm, parent_id: e.target.value })}
+                            required
+                            className="w-full px-3 py-2.5 bg-white border border-orange-200 rounded-xl font-bold text-slate-800 text-xs focus:ring-2 focus:ring-[#ff5722] outline-none"
+                          >
+                            <option value="">-- Select Parent ({
+                              userForm.role === 'distributor' ? 'Super Distributor' :
+                              userForm.role === 'sub_distributor' ? 'Distributor' :
+                              userForm.role === 'retailer' ? 'Sub Distributor' : 'Retailer'
+                            }) * --</option>
+                            {hierarchyParents.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.referral_code} — {p.name} {p.business_name ? `(${p.business_name})` : ''} • {p.city || p.state}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] text-orange-800/80 mt-1">
+                            Ensure the distributor is linked to the correct top-level account. Margins are inherited from the assigned super distributor.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Super Distributor Root Notice */}
+                  {userForm.role === 'super_distributor' && (
+                    <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-blue-900 flex items-center space-x-1.5">
+                          <ShieldCheck className="w-4 h-4 text-blue-600" />
+                          <span>Top-Level Super Distributor (C&F Hub)</span>
+                        </span>
+                        <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full">
+                          Root Partner
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-blue-700">
+                        This Super Distributor operates directly under Company / Super Admin. Product rates and dynamic referral commissions can be configured separately in the "Assign Products & Set Price" tab.
                       </p>
                     </div>
                   )}
-                </div>
-              )}
 
-              {userForm.role === 'super_distributor' && (
-                <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-blue-900 flex items-center space-x-1.5">
-                      <ShieldCheck className="w-4 h-4 text-blue-600" />
-                      <span>Top-Level Super Distributor</span>
-                    </span>
-                    <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full">
-                      Root Partner
-                    </span>
+                  {/* Partner / Distributor Information */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                      <span>Distributor Information</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Contact person full name"
+                          value={userForm.name}
+                          onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Email Address *</label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="agency@example.com"
+                          value={userForm.email}
+                          onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Mobile Number *</label>
+                        <input
+                          type="tel"
+                          required
+                          placeholder="9876543210"
+                          value={userForm.mobile || userForm.phone}
+                          onChange={(e) => setUserForm({ ...userForm, mobile: e.target.value, phone: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Business Name</label>
+                        <input
+                          type="text"
+                          placeholder="Firm / Agency / Medical Store Name"
+                          value={userForm.business_name}
+                          onChange={(e) => setUserForm({ ...userForm, business_name: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Address Line 1 *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Premises, Street, Landmark"
+                          value={userForm.address_line_1}
+                          onChange={(e) => setUserForm({ ...userForm, address_line_1: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Address Line 2</label>
+                        <input
+                          type="text"
+                          placeholder="Area / Colony / Industrial Estate"
+                          value={userForm.address_line_2}
+                          onChange={(e) => setUserForm({ ...userForm, address_line_2: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">State *</label>
+                        <select
+                          value={userForm.state}
+                          onChange={(e) => setUserForm({ ...userForm, state: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold"
+                        >
+                          {INDIAN_STATES.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">City *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Surat"
+                          value={userForm.city}
+                          onChange={(e) => setUserForm({ ...userForm, city: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Pincode *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="394230"
+                          value={userForm.pincode}
+                          onChange={(e) => setUserForm({ ...userForm, pincode: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-blue-700">
-                    This Super Distributor operates directly under Company / Super Admin. Product rates and dynamic referral commissions can be configured separately in the "Assign Products & Set Price" tab.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Default Level 1 (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={userForm.level_1_commission !== undefined ? userForm.level_1_commission : 10}
-                        onChange={(e) => setUserForm({ ...userForm, level_1_commission: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Direct Referrer</span>
+
+                  {/* Regulatory Compliance & Document Upload Section */}
+                  <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-4 space-y-3.5">
+                    <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                      <h4 className="font-black text-amber-950 text-xs flex items-center space-x-1.5">
+                        <ShieldCheck className="w-4 h-4 text-amber-600" />
+                        <span>Regulatory Compliance &amp; Document Upload</span>
+                      </h4>
+                      <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                        Manual Verification Required
+                      </span>
                     </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Default Level 2 (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={userForm.level_2_commission !== undefined ? userForm.level_2_commission : 5}
-                        onChange={(e) => setUserForm({ ...userForm, level_2_commission: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Parent of L1</span>
+
+                    {/* 1. PAN Number & Scanned Document */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200/50">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">PAN Number *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="ABCDE1234F"
+                          value={userForm.pan_number}
+                          onChange={(e) => setUserForm({ ...userForm, pan_number: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">PAN Document Upload *</label>
+                        {userForm.pan_doc ? (
+                          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+                            <span className="text-[11px] font-bold text-emerald-800 flex items-center space-x-1 truncate max-w-[65%]">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <span className="truncate">PAN Scanned Copy</span>
+                            </span>
+                            <div className="flex items-center space-x-1.5">
+                              <a
+                                href={userForm.pan_doc}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-bold text-blue-700 bg-white border border-blue-200 px-2 py-1 rounded hover:bg-blue-50"
+                              >
+                                View
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setUserForm({ ...userForm, pan_doc: '' })}
+                                className="text-rose-500 hover:text-rose-700 p-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className={`flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-50 border border-dashed border-amber-300 hover:border-amber-500 rounded-xl cursor-pointer text-slate-600 font-semibold text-xs transition-all ${uploadingDoc.pan ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {uploadingDoc.pan ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#ff5722]" />
+                                <span>Uploading PAN...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Upload Scanned Copy (JPG, PNG, PDF)</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg,.webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadKycDoc(e.target.files[0], 'pan');
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Default Level 3 (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={userForm.level_3_commission !== undefined ? userForm.level_3_commission : 2}
-                        onChange={(e) => setUserForm({ ...userForm, level_3_commission: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Parent of L2</span>
+
+                    {/* 2. Drug Licence 20 Number & Scanned Document */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200/50">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Drug Licence 20 Number *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. DL-20-449102"
+                          value={userForm.drug_license_20_no}
+                          onChange={(e) => setUserForm({ ...userForm, drug_license_20_no: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Drug Licence 20 Document *</label>
+                        {userForm.drug_license_20_doc ? (
+                          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+                            <span className="text-[11px] font-bold text-emerald-800 flex items-center space-x-1 truncate max-w-[65%]">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <span className="truncate">DL 20 Scanned Copy</span>
+                            </span>
+                            <div className="flex items-center space-x-1.5">
+                              <a
+                                href={userForm.drug_license_20_doc}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-bold text-blue-700 bg-white border border-blue-200 px-2 py-1 rounded hover:bg-blue-50"
+                              >
+                                View
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setUserForm({ ...userForm, drug_license_20_doc: '' })}
+                                className="text-rose-500 hover:text-rose-700 p-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className={`flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-50 border border-dashed border-amber-300 hover:border-amber-500 rounded-xl cursor-pointer text-slate-600 font-semibold text-xs transition-all ${uploadingDoc.dl20 ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {uploadingDoc.dl20 ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#ff5722]" />
+                                <span>Uploading DL 20...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Upload Scanned Copy (JPG, PNG, PDF)</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg,.webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadKycDoc(e.target.files[0], 'dl20');
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 3. Drug Licence 21 Number & Scanned Document */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200/50">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Drug Licence 21 Number *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. DL-21-449102"
+                          value={userForm.drug_license_21_no}
+                          onChange={(e) => setUserForm({ ...userForm, drug_license_21_no: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Drug Licence 21 Document *</label>
+                        {userForm.drug_license_21_doc ? (
+                          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+                            <span className="text-[11px] font-bold text-emerald-800 flex items-center space-x-1 truncate max-w-[65%]">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <span className="truncate">DL 21 Scanned Copy</span>
+                            </span>
+                            <div className="flex items-center space-x-1.5">
+                              <a
+                                href={userForm.drug_license_21_doc}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-bold text-blue-700 bg-white border border-blue-200 px-2 py-1 rounded hover:bg-blue-50"
+                              >
+                                View
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setUserForm({ ...userForm, drug_license_21_doc: '' })}
+                                className="text-rose-500 hover:text-rose-700 p-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className={`flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-50 border border-dashed border-amber-300 hover:border-amber-500 rounded-xl cursor-pointer text-slate-600 font-semibold text-xs transition-all ${uploadingDoc.dl21 ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {uploadingDoc.dl21 ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#ff5722]" />
+                                <span>Uploading DL 21...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Upload Scanned Copy (JPG, PNG, PDF)</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg,.webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadKycDoc(e.target.files[0], 'dl21');
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 4. GSTIN Number & GST Document (Optional) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200/50">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">GSTIN Number (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="24ABVFM0075D1ZA"
+                          value={userForm.gst_number}
+                          onChange={(e) => setUserForm({ ...userForm, gst_number: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono uppercase font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">GST Certificate Upload</label>
+                        {userForm.gst_doc ? (
+                          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+                            <span className="text-[11px] font-bold text-emerald-800 flex items-center space-x-1 truncate max-w-[65%]">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                              <span className="truncate">GST Certificate</span>
+                            </span>
+                            <div className="flex items-center space-x-1.5">
+                              <a
+                                href={userForm.gst_doc}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-bold text-blue-700 bg-white border border-blue-200 px-2 py-1 rounded hover:bg-blue-50"
+                              >
+                                View
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setUserForm({ ...userForm, gst_doc: '' })}
+                                className="text-rose-500 hover:text-rose-700 p-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className={`flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-50 border border-dashed border-slate-300 hover:border-slate-500 rounded-xl cursor-pointer text-slate-600 font-semibold text-xs transition-all ${uploadingDoc.gst ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {uploadingDoc.gst ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#ff5722]" />
+                                <span>Uploading GST...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3.5 h-3.5 text-slate-600" />
+                                <span>Upload Certificate (JPG, PNG, PDF)</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg,.webp"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadKycDoc(e.target.files[0], 'gst');
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Account Settings */}
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center space-x-1.5">
+                      <Lock className="w-4 h-4 text-slate-600" />
+                      <span>Account Settings</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Password *</label>
+                        <input
+                          type="password"
+                          required={!editingUser}
+                          placeholder={editingUser ? 'Leave blank to keep same' : 'Password'}
+                          value={userForm.password}
+                          onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Confirm Password *</label>
+                        <input
+                          type="password"
+                          required={!editingUser && !!userForm.password}
+                          placeholder={editingUser ? 'Leave blank' : 'Confirm Password'}
+                          value={userForm.confirm_password}
+                          onChange={(e) => setUserForm({ ...userForm, confirm_password: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 block mb-1">Status *</label>
+                        <select
+                          value={userForm.status}
+                          onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-bold"
+                        >
+                          <option value="pending">Pending Approval</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Automatic Settings Notice Banner */}
+                  <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 flex items-start space-x-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-[11px] text-emerald-900 leading-relaxed">
+                      <span className="font-bold block">Automatic Settings</span>
+                      Member ID and referral tracking will be auto-generated upon registration. Product margins and wholesale pricing are inherited automatically from the assigned super distributor.
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Full Name {userForm.business_name ? '(Optional)' : '*'}
-                  </label>
-                  <input
-                    type="text"
-                    required={!userForm.business_name}
-                    placeholder="Enter contact person name"
-                    value={userForm.name}
-                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Business / Agency Name</label>
-                  <input
-                    type="text"
-                    placeholder="Company / Agency / Chemist name"
-                    value={userForm.business_name}
-                    onChange={(e) => setUserForm({ ...userForm, business_name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Mobile Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+91 98765 43210"
-                    value={userForm.mobile || userForm.phone}
-                    onChange={(e) => setUserForm({ ...userForm, mobile: e.target.value, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Email Address (Optional)</label>
-                  <input
-                    type="email"
-                    disabled={!!editingUser}
-                    placeholder="email@example.com (Optional)"
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
-                  />
-                  <span className="text-[10px] text-slate-400 block mt-0.5">
-                    Leave blank to auto-create using mobile number.
-                  </span>
-                </div>
-              </div>
-
-              {!editingUser && (
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Login Password (Optional)</label>
-                  <input
-                    type="password"
-                    placeholder="Leave blank for default: password123"
-                    value={userForm.password}
-                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Complete Address</label>
-                <textarea
-                  rows={2}
-                  placeholder="Address details"
-                  value={userForm.address}
-                  onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border rounded-xl"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">State *</label>
-                  <select
-                    value={userForm.state}
-                    onChange={(e) => setUserForm({ ...userForm, state: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
-                  >
-                    {INDIAN_STATES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">City *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Surat"
-                    value={userForm.city}
-                    onChange={(e) => setUserForm({ ...userForm, city: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Pincode</label>
-                  <input
-                    type="text"
-                    placeholder="394230"
-                    value={userForm.pincode}
-                    onChange={(e) => setUserForm({ ...userForm, pincode: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">PAN Number</label>
-                  <input
-                    type="text"
-                    placeholder="ABCDE1234F"
-                    value={userForm.pan_number}
-                    onChange={(e) => setUserForm({ ...userForm, pan_number: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono uppercase"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">GSTIN Number</label>
-                  <input
-                    type="text"
-                    placeholder="24ABVFM0075D1ZA"
-                    value={userForm.gst_number}
-                    onChange={(e) => setUserForm({ ...userForm, gst_number: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono uppercase font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end space-x-2">
-                <button type="button" onClick={() => setShowAddUserModal(false)} className="px-4 py-2 bg-slate-100 rounded-xl font-bold">
+              {/* Sticky Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2.5 sticky bottom-0 bg-white/95 backdrop-blur-xs z-10 py-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-xl font-bold shadow-md">
-                  Save Partner
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-xl font-bold shadow-lg shadow-[#ff5722]/25 transition-all flex items-center space-x-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>
+                    {editingUser
+                      ? 'Update Details'
+                      : userForm.role === 'customer'
+                        ? 'Create Customer'
+                        : `Create ${sectionTitle.replace(/\(.*?\)/g, '').trim()}`}
+                  </span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2.5: SUPER ADMIN KYC & DOCUMENT VERIFICATION MODAL  */}
+      {/* ======================================================== */}
+      {showKycReviewModal && selectedKycUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col my-6">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-md">
+                  {selectedKycUser.name?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base font-black text-slate-900">{selectedKycUser.name}</h3>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                      {selectedKycUser.role?.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-[#ff5722]">
+                      {selectedKycUser.referral_code}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {selectedKycUser.business_name || selectedKycUser.shop_name || 'No Business Name'} • Member since {new Date(selectedKycUser.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowKycReviewModal(false);
+                  setSelectedKycUser(null);
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="space-y-4 text-xs overflow-y-auto flex-1 pr-1 overscroll-contain">
+              {/* KYC Status Alert Bar */}
+              <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+                selectedKycUser.status === 'active'
+                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                  : selectedKycUser.status === 'pending'
+                    ? 'bg-amber-50/80 border-amber-200 text-amber-950'
+                    : 'bg-rose-50/80 border-rose-200 text-rose-950'
+              }`}>
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    selectedKycUser.status === 'active' ? 'bg-emerald-500' :
+                    selectedKycUser.status === 'pending' ? 'bg-amber-500 animate-ping' : 'bg-rose-500'
+                  }`}></div>
+                  <div>
+                    <span className="font-black text-xs block">
+                      Account Status: {selectedKycUser.status?.toUpperCase()} ({selectedKycUser.kyc_status ? `KYC: ${selectedKycUser.kyc_status.toUpperCase()}` : 'PENDING REVIEW'})
+                    </span>
+                    <span className="text-[11px] opacity-80">
+                      {selectedKycUser.status === 'active'
+                        ? 'This account is fully approved and active in the system.'
+                        : 'Review all regulatory documents below and perform manual verification.'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {selectedKycUser.status === 'pending' ? (
+                    <>
+                      <button
+                        onClick={() => handleApproveKyc(selectedKycUser)}
+                        disabled={processingKycAction}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-md shadow-emerald-600/20"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Approve &amp; Activate</span>
+                      </button>
+                      <button
+                        onClick={() => handleRejectKyc(selectedKycUser)}
+                        disabled={processingKycAction}
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold flex items-center space-x-1.5 shadow-md shadow-rose-600/20"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Reject</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => handleToggleUserStatus(selectedKycUser.id, selectedKycUser.status === 'active' ? 'inactive' : 'active')}
+                      className={`px-3 py-1.5 rounded-xl font-bold border ${
+                        selectedKycUser.status === 'active'
+                          ? 'border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100'
+                          : 'border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                      }`}
+                    >
+                      {selectedKycUser.status === 'active' ? 'Deactivate Account' : 'Re-Activate Account'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Grid 1: Contact Details & Hierarchy Upline */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Contact Profile */}
+                <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
+                  <h4 className="font-black text-slate-900 text-xs flex items-center space-x-1.5 pb-1 border-b border-slate-200/60">
+                    <User className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Contact Information</span>
+                  </h4>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Phone:</span>
+                      <a href={`tel:${selectedKycUser.phone}`} className="font-mono font-bold text-slate-800 hover:text-blue-600">
+                        {selectedKycUser.phone}
+                      </a>
+                    </div>
+                    {selectedKycUser.alt_phone && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Alt Phone:</span>
+                        <span className="font-mono font-medium text-slate-800">{selectedKycUser.alt_phone}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Email:</span>
+                      <a href={`mailto:${selectedKycUser.email}`} className="font-medium text-slate-800 hover:text-blue-600 truncate max-w-[65%]">
+                        {selectedKycUser.email}
+                      </a>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Business / Shop:</span>
+                      <span className="font-bold text-slate-800 truncate max-w-[65%]">
+                        {selectedKycUser.business_name || selectedKycUser.shop_name || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Parent Hierarchy Placement */}
+                <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
+                  <h4 className="font-black text-slate-900 text-xs flex items-center space-x-1.5 pb-1 border-b border-slate-200/60">
+                    <FolderTree className="w-3.5 h-3.5 text-[#ff5722]" />
+                    <span>Parent Hierarchy Hub</span>
+                  </h4>
+                  <div className="space-y-1.5 text-[11px]">
+                    {selectedKycUser.sponsor ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Parent Sponsor:</span>
+                          <span className="font-bold text-slate-800">{selectedKycUser.sponsor.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Sponsor Role:</span>
+                          <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded text-[10px] uppercase">
+                            {selectedKycUser.sponsor.role?.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Sponsor Code:</span>
+                          <span className="font-mono font-bold text-[#ff5722]">{selectedKycUser.sponsor.referral_code}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-slate-500 italic py-2">
+                        Direct Account / Operating under Head Office (Root)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid 2: Address & Banking Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Complete Address */}
+                <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
+                  <h4 className="font-black text-slate-900 text-xs flex items-center space-x-1.5 pb-1 border-b border-slate-200/60">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Registered Address</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-700 leading-relaxed font-medium">
+                    {[selectedKycUser.address_line_1, selectedKycUser.address_line_2, selectedKycUser.address].filter(Boolean).join(', ') || 'No address line specified'}
+                  </p>
+                  <div className="flex items-center space-x-3 text-[11px] text-slate-600 pt-1">
+                    <span className="font-bold text-slate-800">📍 {selectedKycUser.city || 'Surat'}</span>
+                    <span>•</span>
+                    <span className="font-bold text-slate-800">{selectedKycUser.state || 'GUJRAT'}</span>
+                    <span>•</span>
+                    <span className="font-mono font-bold text-slate-800">{selectedKycUser.pincode || '394230'}</span>
+                  </div>
+                </div>
+
+                {/* Banking Information */}
+                <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
+                  <h4 className="font-black text-slate-900 text-xs flex items-center space-x-1.5 pb-1 border-b border-slate-200/60">
+                    <CreditCard className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Banking Information</span>
+                  </h4>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Bank Name:</span>
+                      <span className="font-bold text-slate-800">{selectedKycUser.bank_name || 'Not Provided'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">A/C Number:</span>
+                      <span className="font-mono font-bold text-slate-800">{selectedKycUser.account_number || 'Not Provided'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">IFSC Code:</span>
+                      <span className="font-mono font-bold text-slate-800">{selectedKycUser.ifsc_code || 'Not Provided'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Regulatory Compliance & Uploaded Documents Section */}
+              <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-amber-200/70 pb-2">
+                  <h4 className="font-black text-amber-950 text-xs flex items-center space-x-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-600" />
+                    <span>Regulatory Compliance Documents</span>
+                  </h4>
+                  <span className="text-[10px] text-amber-800 font-medium">Click to inspect or download copies</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* PAN Card Card */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400">PAN Card</span>
+                      {selectedKycUser.pan_doc ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                          <Check className="w-3 h-3" />
+                          <span>Uploaded</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Not Uploaded
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono font-black text-sm text-slate-900">
+                      {selectedKycUser.pan_number || 'NO PAN ENTERED'}
+                    </div>
+                    {selectedKycUser.pan_doc ? (
+                      <a
+                        href={selectedKycUser.pan_doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors w-full justify-center"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View PAN Document</span>
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic block">No document file attached</span>
+                    )}
+                  </div>
+
+                  {/* Drug Licence 20 Card */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400">Drug Licence 20</span>
+                      {selectedKycUser.drug_license_20_doc ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                          <Check className="w-3 h-3" />
+                          <span>Uploaded</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Not Uploaded
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono font-black text-sm text-slate-900">
+                      {selectedKycUser.drug_license_20_no || 'NO DL 20 ENTERED'}
+                    </div>
+                    {selectedKycUser.drug_license_20_doc ? (
+                      <a
+                        href={selectedKycUser.drug_license_20_doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors w-full justify-center"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View DL 20 Document</span>
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic block">No document file attached</span>
+                    )}
+                  </div>
+
+                  {/* Drug Licence 21 Card */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400">Drug Licence 21</span>
+                      {selectedKycUser.drug_license_21_doc ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                          <Check className="w-3 h-3" />
+                          <span>Uploaded</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Not Uploaded
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono font-black text-sm text-slate-900">
+                      {selectedKycUser.drug_license_21_no || 'NO DL 21 ENTERED'}
+                    </div>
+                    {selectedKycUser.drug_license_21_doc ? (
+                      <a
+                        href={selectedKycUser.drug_license_21_doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors w-full justify-center"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View DL 21 Document</span>
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic block">No document file attached</span>
+                    )}
+                  </div>
+
+                  {/* GSTIN Certificate Card */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-400">GSTIN Certificate</span>
+                      {selectedKycUser.gst_doc ? (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                          <Check className="w-3 h-3" />
+                          <span>Uploaded</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                          Optional
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono font-black text-sm text-slate-900">
+                      {selectedKycUser.gst_number || 'NO GST NUMBER'}
+                    </div>
+                    {selectedKycUser.gst_doc ? (
+                      <a
+                        href={selectedKycUser.gst_doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors w-full justify-center"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>View GST Certificate</span>
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic block">No certificate uploaded</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between sticky bottom-0 bg-white/95 backdrop-blur-xs z-10 py-1">
+              <button
+                type="button"
+                onClick={() => handleImpersonate(selectedKycUser.id)}
+                className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold flex items-center space-x-1.5 transition-colors"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                <span>Login to Account (Impersonate)</span>
+              </button>
+
+              <div className="flex items-center space-x-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowKycReviewModal(false);
+                    setSelectedKycUser(null);
+                  }}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all"
+                >
+                  Close
+                </button>
+                {selectedKycUser.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={() => handleApproveKyc(selectedKycUser)}
+                    disabled={processingKycAction}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/25 transition-all flex items-center space-x-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Approve &amp; Activate</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
