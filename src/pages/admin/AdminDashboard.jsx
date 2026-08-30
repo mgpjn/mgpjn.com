@@ -5455,64 +5455,27 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Margins & End User Price Row */}
-              <div className="space-y-1.5">
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">SD Margin (%)</label>
+              {/* Product Selling Price Row */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <label className="text-xs font-black text-slate-800 block">Product Selling Price / End-User Rate (₹) *</label>
+                  <p className="text-[11px] text-slate-500">Retail price applicable for orders and dynamic 3-level referral calculations.</p>
+                </div>
+                <div className="w-full sm:w-56">
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm">₹</span>
                     <input
                       type="number"
                       step="0.01"
-                      value={priceForm.sd_margin}
-                      onChange={(e) => setPriceForm({ ...priceForm, sd_margin: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Dist Margin (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={priceForm.dist_margin}
-                      onChange={(e) => setPriceForm({ ...priceForm, dist_margin: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Sub D Margin (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={priceForm.subd_margin}
-                      onChange={(e) => setPriceForm({ ...priceForm, subd_margin: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Rt Margin (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={priceForm.rt_margin}
-                      onChange={(e) => setPriceForm({ ...priceForm, rt_margin: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs focus:bg-white focus:border-[#ff5722] outline-none"
-                    />
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Product Price / Rate (₹)</label>
-                    <input
-                      type="number"
-                      step="0.01"
+                      required
+                      placeholder="0.00"
                       value={priceForm.product_price !== undefined ? priceForm.product_price : priceForm.end_user_price}
                       onChange={(e) => setPriceForm({ ...priceForm, product_price: e.target.value, end_user_price: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:border-[#ff5722] outline-none"
+                      className="w-full pl-8 pr-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-black text-sm text-slate-900 focus:border-[#ff5722] focus:ring-2 focus:ring-[#ff5722]/20 outline-none"
                     />
                   </div>
                 </div>
+              </div>
 
                 {/* 3-Level Dynamic Referral Commission (Configurable per Super Distributor + Product) */}
                 <div className="bg-amber-50/80 border border-amber-300 rounded-2xl p-4 space-y-3">
@@ -5645,29 +5608,7 @@ export default function AdminDashboard() {
                   })()}
                 </div>
 
-                {/* Margin Amounts Live Green Box (Matching Image 3) */}
-                {(() => {
-                  const endUser = Number(priceForm.end_user_price) || 0;
-                  const sdAmt = ((endUser * Number(priceForm.sd_margin || 0)) / 100).toFixed(2);
-                  const distAmt = ((endUser * Number(priceForm.dist_margin || 0)) / 100).toFixed(2);
-                  const subdAmt = ((endUser * Number(priceForm.subd_margin || 0)) / 100).toFixed(2);
-                  const rtAmt = ((endUser * Number(priceForm.rt_margin || 0)) / 100).toFixed(2);
-                  const totalAmt = (Number(sdAmt) + Number(distAmt) + Number(subdAmt) + Number(rtAmt)).toFixed(2);
 
-                  return (
-                    <div className="bg-[#e8f5e9] border border-[#c8e6c9] rounded-xl p-2.5 text-[11px] text-[#2e7d32] space-y-1">
-                      <div className="font-black text-[#1b5e20] text-[11px]">Margin Amounts</div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-semibold">
-                        <span>SD Margin: <strong className="text-[#1b5e20] font-black">₹{sdAmt}</strong></span>
-                        <span>Dist Margin: <strong className="text-[#1b5e20] font-black">₹{distAmt}</strong></span>
-                        <span>Sub D Margin: <strong className="text-[#1b5e20] font-black">₹{subdAmt}</strong></span>
-                        <span>Rt Margin: <strong className="text-[#1b5e20] font-black">₹{rtAmt}</strong></span>
-                        <span className="border-l border-[#a5d6a7] pl-3 text-slate-900">Total Margin: <strong className="font-black text-slate-900">₹{totalAmt}</strong></span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
 
               {/* Direct Prices Section (Matching Image 3) */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
