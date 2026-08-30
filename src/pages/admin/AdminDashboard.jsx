@@ -299,6 +299,8 @@ export default function AdminDashboard() {
   const [showSetPriceModal, setShowSetPriceModal] = useState(false);
   const [priceTargetProduct, setPriceTargetProduct] = useState(null);
   const [priceForm, setPriceForm] = useState({
+    mrp: 120,
+    product_price: 100,
     sd_margin: 2,
     dist_margin: 5,
     subd_margin: 10,
@@ -648,9 +650,11 @@ export default function AdminDashboard() {
 
   const handleOpenSetPriceModal = (product) => {
     setPriceTargetProduct(product);
+    const mrpVal = product.mrp !== undefined && product.mrp !== null ? Number(product.mrp) : (product.price ? Number((product.price * 1.25).toFixed(2)) : 100);
     const endUser = product.end_user_price || product.mrp || (product.base_price ? Number((product.base_price * 8.6).toFixed(2)) : 86);
     const productPrice = product.product_price !== undefined && product.product_price !== null ? product.product_price : endUser;
     setPriceForm({
+      mrp: mrpVal,
       product_price: productPrice,
       level_1_commission: product.level_1_commission !== undefined ? product.level_1_commission : (assignTargetUser?.level_1_commission || 10),
       level_2_commission: product.level_2_commission !== undefined ? product.level_2_commission : (assignTargetUser?.level_2_commission || 5),
@@ -677,6 +681,7 @@ export default function AdminDashboard() {
     try {
       const payload = {
         product_id: priceTargetProduct.id,
+        mrp: parseFloat(priceForm.mrp) || 0,
         product_price: parseFloat(priceForm.product_price) || parseFloat(priceForm.end_user_price) || 0,
         level_1_commission: parseFloat(priceForm.level_1_commission) || 0,
         level_2_commission: parseFloat(priceForm.level_2_commission) || 0,
@@ -5455,18 +5460,69 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Product Selling Price Row */}
-              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <label className="text-xs font-black text-slate-800 block">Product Selling Price / End-User Rate (₹) *</label>
-                  <p className="text-[11px] text-slate-500">Retail price applicable for orders and dynamic 3-level referral calculations.</p>
-                </div>
-                <div className="w-full sm:w-56">
+              {/* Pricing Row: MRP & Product Selling Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* MRP Card */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 block">
+                      MRP (Maximum Retail Price) ₹ *
+                    </label>
+                    <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded">
+                      Printed MRP
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Official maximum printed retail price on packaging.
+                  </p>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm">₹</span>
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
+                      required
+                      placeholder="0.00"
+                      value={priceForm.mrp !== undefined ? priceForm.mrp : ''}
+                      onChange={(e) => setPriceForm({ ...priceForm, mrp: e.target.value })}
+                      className="w-full pl-8 pr-3.5 py-2.5 bg-white border border-slate-300 rounded-xl font-black text-sm text-slate-900 focus:border-[#ff5722] focus:ring-2 focus:ring-[#ff5722]/20 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Product Selling Price Card */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 block">
+                      Selling Price / Rate (₹) *
+                    </label>
+                    {(() => {
+                      const curMrp = parseFloat(priceForm.mrp) || 0;
+                      const curSale = parseFloat(priceForm.product_price !== undefined ? priceForm.product_price : priceForm.end_user_price) || 0;
+                      if (curMrp > curSale && curSale > 0) {
+                        const disc = Math.round(((curMrp - curSale) / curMrp) * 100);
+                        return (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded">
+                            {disc}% OFF
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="text-[10px] bg-blue-100 text-brand-blue-800 font-bold px-2 py-0.5 rounded">
+                          Order Rate
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Actual selling rate charged on orders &amp; referral payouts.
+                  </p>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm">₹</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
                       required
                       placeholder="0.00"
                       value={priceForm.product_price !== undefined ? priceForm.product_price : priceForm.end_user_price}
