@@ -32,7 +32,8 @@ import {
   getAdminBanners, storeAdminBanner, deleteAdminBanner,
   getAdminReports,
   getAdminEmployees, storeAdminEmployee, updateAdminEmployee,
-  getAdminSettings, updateAdminSettings
+  getAdminSettings, updateAdminSettings,
+  getHierarchyParents
 } from '../../services/api';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
 import DispatchModal from '../../components/orders/DispatchModal';
@@ -106,8 +107,13 @@ export default function AdminDashboard() {
     account_number: '',
     ifsc_code: '',
     upi_id: '',
+    parent_id: '',
+    sub_retailer_commission: 10,
+    customer_commission: 5,
     status: 'active',
   });
+  const [hierarchyParents, setHierarchyParents] = useState([]);
+  const [loadingHierarchyParents, setLoadingHierarchyParents] = useState(false);
 
   // Margins
   const [margins, setMargins] = useState({});
@@ -502,6 +508,26 @@ export default function AdminDashboard() {
     }
   };
 
+  // Fetch eligible parent users for strict hierarchy creation
+  const fetchHierarchyParentsForRole = async (targetRole, stateVal) => {
+    if (!targetRole || targetRole === 'super_distributor' || targetRole === 'super_admin' || targetRole === 'admin') {
+      setHierarchyParents([]);
+      return;
+    }
+    setLoadingHierarchyParents(true);
+    try {
+      const res = await getHierarchyParents({ role: targetRole, state: stateVal || '' });
+      if (res.data?.success) {
+        setHierarchyParents(res.data.parents || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch hierarchy parents:', e);
+      setHierarchyParents([]);
+    } finally {
+      setLoadingHierarchyParents(false);
+    }
+  };
+
   // Super Admin: State-Wise Wholesale Pricing Modal
   const handleOpenStatePriceModal = async (prod) => {
     setStatePriceProduct(prod);
@@ -606,7 +632,11 @@ export default function AdminDashboard() {
   const handleOpenSetPriceModal = (product) => {
     setPriceTargetProduct(product);
     const endUser = product.end_user_price || product.mrp || (product.base_price ? Number((product.base_price * 8.6).toFixed(2)) : 86);
+    const productPrice = product.product_price !== undefined && product.product_price !== null ? product.product_price : endUser;
     setPriceForm({
+      product_price: productPrice,
+      sub_retailer_commission: product.sub_retailer_commission !== undefined ? product.sub_retailer_commission : (assignTargetUser?.sub_retailer_commission || 10),
+      customer_commission: product.customer_commission !== undefined ? product.customer_commission : (assignTargetUser?.customer_commission || 5),
       sd_margin: product.sd_margin !== undefined ? product.sd_margin : 2,
       dist_margin: product.dist_margin !== undefined ? product.dist_margin : 5,
       subd_margin: product.subd_margin !== undefined ? product.subd_margin : 10,
@@ -627,6 +657,9 @@ export default function AdminDashboard() {
     try {
       const payload = {
         product_id: priceTargetProduct.id,
+        product_price: parseFloat(priceForm.product_price) || parseFloat(priceForm.end_user_price) || 0,
+        sub_retailer_commission: parseFloat(priceForm.sub_retailer_commission) || 0,
+        customer_commission: parseFloat(priceForm.customer_commission) || 0,
         sd_margin: parseFloat(priceForm.sd_margin) || 0,
         dist_margin: parseFloat(priceForm.dist_margin) || 0,
         subd_margin: parseFloat(priceForm.subd_margin) || 0,
@@ -643,7 +676,7 @@ export default function AdminDashboard() {
           prev.map((p) => (p.id === priceTargetProduct.id ? { ...p, ...payload, is_assigned: true } : p))
         );
         setShowSetPriceModal(false);
-        alert(res.data.message || 'Product prices and margins saved successfully!');
+        alert(res.data.message || 'Product prices, rates, and commissions saved successfully!');
       }
     } catch (err) {
       alert(`Failed to save price: ${err.response?.data?.message || err.message}`);
@@ -1452,6 +1485,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() => {
                     setEditingUser(null);
+                    const targetRole = currentMenuItem.roleType?.startsWith('customer') ? 'customer' : (currentMenuItem.roleType || 'super_distributor');
                     setUserForm({
                       name: '',
                       business_name: '',
@@ -1459,7 +1493,8 @@ export default function AdminDashboard() {
                       mobile: '',
                       phone: '',
                       password: '',
-                      role: currentMenuItem.roleType?.startsWith('customer') ? 'customer' : (currentMenuItem.roleType || 'super_distributor'),
+                      role: targetRole,
+                      parent_id: '',
                       sponsor_code: '',
                       address: '',
                       state: 'GUJRAT',
@@ -1471,8 +1506,11 @@ export default function AdminDashboard() {
                       account_number: '',
                       ifsc_code: '',
                       upi_id: '',
+                      sub_retailer_commission: 10,
+                      customer_commission: 5,
                       status: 'active',
                     });
+                    fetchHierarchyParentsForRole(targetRole, 'GUJRAT');
                     setShowAddUserModal(true);
                   }}
                   className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-[#ff5722]/25 transition-all w-fit"
@@ -3997,6 +4035,97 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleSaveUser} className="space-y-3.5 text-xs">
+              {/* Hierarchy Belongs To / Parent Selection */}
+              {userForm.role !== 'super_distributor' && (
+                <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-black text-orange-950 flex items-center space-x-1.5 text-xs">
+                      <FolderTree className="w-4 h-4 text-[#ff5722]" />
+                      <span>
+                        {userForm.role === 'distributor' && 'Belongs To: Select Super Distributor *'}
+                        {userForm.role === 'sub_distributor' && 'Belongs To: Select Distributor *'}
+                        {userForm.role === 'retailer' && 'Belongs To: Select Sub Distributor *'}
+                        {userForm.role === 'sub_retailer' && 'Belongs To: Select Retailer / Chemist *'}
+                        {userForm.role === 'customer' && 'Linked To: Select Sub-Retailer / Sponsor'}
+                      </span>
+                    </label>
+                    <span className="text-[10px] bg-[#ff5722] text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Hierarchy Chain
+                    </span>
+                  </div>
+
+                  {loadingHierarchyParents ? (
+                    <div className="flex items-center space-x-2 text-slate-500 py-2">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Loading available parent partners...</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        value={userForm.parent_id || ''}
+                        onChange={(e) => setUserForm({ ...userForm, parent_id: e.target.value })}
+                        required={userForm.role !== 'customer'}
+                        className="w-full px-3 py-2.5 bg-white border border-orange-200 rounded-xl font-bold text-slate-800 text-xs focus:ring-2 focus:ring-[#ff5722] outline-none"
+                      >
+                        <option value="">-- Select Parent ({
+                          userForm.role === 'distributor' ? 'Super Distributor' :
+                          userForm.role === 'sub_distributor' ? 'Distributor' :
+                          userForm.role === 'retailer' ? 'Sub Distributor' :
+                          userForm.role === 'sub_retailer' ? 'Retailer' : 'Sub Retailer'
+                        }) * --</option>
+                        {hierarchyParents.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} {p.business_name ? `(${p.business_name})` : ''} • Ref: {p.referral_code} • {p.city || p.state}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] text-orange-800/80 mt-1">
+                        All product rates, wholesale margins, and referral commissions configured for this parent's Super Distributor will automatically apply to this partner.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {userForm.role === 'super_distributor' && (
+                <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-blue-900 flex items-center space-x-1.5">
+                      <ShieldCheck className="w-4 h-4 text-blue-600" />
+                      <span>Top-Level Super Distributor</span>
+                    </span>
+                    <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full">
+                      Root Partner
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-blue-700">
+                    This Super Distributor operates directly under Company / Super Admin. Product rates and dynamic referral commissions can be configured separately in the "Assign Products & Set Price" tab.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Default Sub-Retailer Commission (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={userForm.sub_retailer_commission || 10}
+                        onChange={(e) => setUserForm({ ...userForm, sub_retailer_commission: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Default Customer Commission (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={userForm.customer_commission || 5}
+                        onChange={(e) => setUserForm({ ...userForm, customer_commission: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
@@ -5057,10 +5186,19 @@ export default function AdminDashboard() {
 
                           <div className="text-right">
                             <div className="text-xs sm:text-sm font-black text-[#ff5722]">
-                              ₹{Number(product.base_price || 10).toFixed(2)}
+                              ₹{Number(product.product_price || product.end_user_price || product.base_price || 10).toFixed(2)}
                             </div>
-                            <div className="text-[10px] text-slate-500 font-bold">Base Price</div>
+                            <div className="text-[10px] text-slate-500 font-bold">Configured Rate</div>
                             <div className="text-[10px] text-slate-400">MRP: ₹{Number(product.mrp || 124).toFixed(2)}</div>
+                          </div>
+
+                          <div className="text-left hidden md:block">
+                            <div className="flex items-center space-x-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                              <span>SR: {product.sub_retailer_commission || 10}%</span>
+                              <span>•</span>
+                              <span>Cust: {product.customer_commission || 5}%</span>
+                            </div>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">Dynamic Commission</span>
                           </div>
 
                           <div>
@@ -5196,15 +5334,91 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">End User Price (₹)</label>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Product Price / Rate (₹)</label>
                     <input
                       type="number"
                       step="0.01"
-                      value={priceForm.end_user_price}
-                      onChange={(e) => setPriceForm({ ...priceForm, end_user_price: e.target.value })}
+                      value={priceForm.product_price !== undefined ? priceForm.product_price : priceForm.end_user_price}
+                      onChange={(e) => setPriceForm({ ...priceForm, product_price: e.target.value, end_user_price: e.target.value })}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:border-[#ff5722] outline-none"
                     />
                   </div>
+                </div>
+
+                {/* Dynamic Referral Commissions (Configurable per Super Distributor) */}
+                <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5 font-black text-amber-950 text-xs">
+                      <Calculator className="w-4 h-4 text-amber-600" />
+                      <span>Dynamic Referral Commissions ({assignTargetUser.name})</span>
+                    </div>
+                    <span className="text-[10px] bg-amber-600 text-white font-black px-2 py-0.5 rounded-full">
+                      Auto-Inherited by Downline
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-amber-800">
+                    Configure dynamic commission percentages for users created under this Super Distributor. No hardcoded rates are used.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Sub-Retailer Commission (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={priceForm.sub_retailer_commission !== undefined ? priceForm.sub_retailer_commission : 10}
+                        onChange={(e) => setPriceForm({ ...priceForm, sub_retailer_commission: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        Earned by local Sub-Retailer for doorstep order fulfillment.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                        Customer Referral Commission (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={priceForm.customer_commission !== undefined ? priceForm.customer_commission : 5}
+                        onChange={(e) => setPriceForm({ ...priceForm, customer_commission: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none"
+                      />
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        Earned by direct sponsor / customer who referred the buyer.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Live Commission Amounts Badge */}
+                  {(() => {
+                    const pPrice = Number(priceForm.product_price || priceForm.end_user_price) || 0;
+                    const srCommissionAmt = ((pPrice * Number(priceForm.sub_retailer_commission || 0)) / 100).toFixed(2);
+                    const custCommissionAmt = ((pPrice * Number(priceForm.customer_commission || 0)) / 100).toFixed(2);
+
+                    return (
+                      <div className="bg-white border border-amber-200 rounded-xl p-2.5 text-[11px] flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-amber-900 font-bold">
+                          Calculated on Rate <strong className="font-black">₹{pPrice.toFixed(2)}</strong>:
+                        </span>
+                        <div className="flex items-center space-x-3">
+                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold">
+                            Sub-Retailer: <strong className="font-black">₹{srCommissionAmt}</strong> ({priceForm.sub_retailer_commission || 10}%)
+                          </span>
+                          <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-lg font-bold">
+                            Customer: <strong className="font-black">₹{custCommissionAmt}</strong> ({priceForm.customer_commission || 5}%)
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Margin Amounts Live Green Box (Matching Image 3) */}

@@ -107,6 +107,7 @@ export const createHierarchyUser = (data) => api.post('/hierarchy/users', data);
 export const updateHierarchyUser = (id, data) => api.put(`/hierarchy/users/${id}`, data);
 export const getHierarchyStats = () => api.get('/hierarchy/stats');
 export const getHierarchyOrders = (params) => api.get('/hierarchy/orders', { params });
+export const getHierarchyParents = (params) => api.get('/admin/hierarchy-parents', { params });
 
 // Super Admin User Controls & Approvals
 export const resetAdminUserPassword = (id, data) => api.post(`/admin/users/${id}/reset-password`, data);
