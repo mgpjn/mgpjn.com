@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet, ArrowDownRight, ArrowUpRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  Wallet, ArrowDownRight, ArrowUpRight, CheckCircle2, AlertCircle,
+  Building2, QrCode, CreditCard, Filter, RefreshCw, Sparkles, ArrowLeft
+} from 'lucide-react';
 import { getWalletTransactions, requestPayout } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function WalletPayouts() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
-  const [balance, setBalance] = useState(0);
+  const [balance, setBalance] = useState(user?.wallet_balance || 0);
   const [loading, setLoading] = useState(true);
+  const [filterCategory, setFilterCategory] = useState('all');
 
   // Payout Form
   const [amount, setAmount] = useState('');
@@ -18,15 +22,29 @@ export default function WalletPayouts() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  // Prefill default account details from profile if empty
+  useEffect(() => {
+    if (!accountDetails && user) {
+      if (paymentMethod === 'bank_transfer' && (user.account_number || user.bank_name)) {
+        setAccountDetails(
+          `Bank: ${user.bank_name || 'N/A'}\nA/C: ${user.account_number || ''}\nIFSC: ${user.ifsc_code || ''}\nName: ${user.name || ''}`.trim()
+        );
+      } else if (paymentMethod === 'upi' && user.upi_id) {
+        setAccountDetails(user.upi_id);
+      }
+    }
+  }, [user, paymentMethod]);
+
   const loadWallet = () => {
+    setLoading(true);
     getWalletTransactions()
       .then((res) => {
-        if (res.data.success) {
-          setTransactions(res.data.transactions?.data || []);
-          setBalance(res.data.balance || 0);
+        if (res.data?.success) {
+          setTransactions(res.data.transactions?.data || res.data.transactions || []);
+          setBalance(res.data.balance !== undefined ? parseFloat(res.data.balance) : 0);
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => console.error('Failed to load wallet transactions:', err))
       .finally(() => setLoading(false));
   };
 
@@ -36,12 +54,14 @@ export default function WalletPayouts() {
 
   const handleRequestPayout = async (e) => {
     e.preventDefault();
-    if (parseFloat(amount) < 500) {
-      setError('Minimum payout amount is ₹500.');
+    const withdrawAmount = parseFloat(amount);
+
+    if (isNaN(withdrawAmount) || withdrawAmount < 500) {
+      setError('Minimum withdrawal amount is ₹500. Amounts less than ₹500 cannot be requested.');
       return;
     }
-    if (parseFloat(amount) > balance) {
-      setError('Amount exceeds your current wallet balance.');
+    if (withdrawAmount > balance) {
+      setError(`Requested amount (₹${withdrawAmount}) exceeds your available wallet balance (₹${balance.toFixed(2)}).`);
       return;
     }
 
@@ -51,121 +71,217 @@ export default function WalletPayouts() {
 
     try {
       const res = await requestPayout({
-        amount: parseFloat(amount),
+        amount: withdrawAmount,
         payment_method: paymentMethod,
         account_details: accountDetails,
       });
 
-      if (res.data.success) {
-        setMessage('Payout withdrawal request submitted successfully!');
+      if (res.data?.success) {
+        setMessage('Withdrawal request of ₹' + withdrawAmount.toFixed(2) + ' submitted successfully! Funds will be credited after admin review.');
         setAmount('');
-        setAccountDetails('');
         loadWallet();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit payout request.');
+      setError(err.response?.data?.message || 'Failed to submit withdrawal request.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Filtered transactions
+  const filteredTransactions = transactions.filter((tx) => {
+    if (filterCategory === 'all') return true;
+    if (filterCategory === 'credit') return tx.type === 'credit';
+    if (filterCategory === 'debit') return tx.type === 'debit';
+    if (filterCategory === 'order_payment') return tx.category === 'order_payment' || tx.description?.toLowerCase().includes('order');
+    if (filterCategory === 'payout') return tx.category === 'payout_withdrawal' || tx.description?.toLowerCase().includes('payout');
+    return true;
+  });
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Distributor Wallet &amp; Payouts</h1>
-          <p className="text-xs text-slate-500">Manage earnings, view commission ledgers and request bank withdrawals.</p>
+          <div className="flex items-center space-x-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              My Wallet &amp; Passbook
+            </h1>
+            <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-brand-blue-50 text-brand-blue-800 border border-brand-blue-200">
+              {user?.role?.replace('_', ' ') || 'Partner'}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Real-time wallet balance, detailed transaction ledger, and instant bank/UPI withdrawal desk (Min ₹500).
+          </p>
         </div>
-        <Link to="/mlm" className="text-xs font-bold text-brand-blue-800 hover:underline">
-          Back to Overview
-        </Link>
+
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={loadWallet}
+            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center space-x-1.5 shadow-2xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+          <Link
+            to="/shop"
+            className="px-4 py-2 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center space-x-1"
+          >
+            <span>Shop with Wallet</span>
+          </Link>
+        </div>
       </div>
 
+      {/* Top Metrics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="bg-gradient-to-tr from-brand-blue-950 via-brand-blue-900 to-brand-blue-800 rounded-3xl p-6 text-white space-y-3 shadow-lg shadow-brand-blue-900/20 relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-blue-200 uppercase font-bold tracking-wider">Available Wallet Balance</span>
+            <Wallet className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            ₹{balance.toFixed(2)}
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-blue-200 pt-2 border-t border-white/10">
+            <span>Usable at Checkout &amp; Withdrawable</span>
+            <span className="font-bold text-emerald-300">Active</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs uppercase font-bold tracking-wider">Total Earnings / Turnover</span>
+            <Sparkles className="w-5 h-5 text-amber-500" />
+          </div>
+          <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            ₹{(user?.total_earned || balance).toFixed(2)}
+          </div>
+          <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span>Referral commissions + network profit</span>
+            <span className="font-bold text-slate-600">{user?.rank || 'Associate'}</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3 sm:col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between text-slate-500">
+            <span className="text-xs uppercase font-bold tracking-wider">Withdrawal Policy</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">
+            Minimum ₹500
+          </div>
+          <p className="text-[11px] text-slate-500 leading-relaxed pt-2 border-t border-slate-100">
+            Withdrawal requests of ₹500 or more are processed via NEFT / IMPS or direct UPI transfer.
+          </p>
+        </div>
+      </div>
+
+      {/* Main Grid: Left Request Form, Right Ledger */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: Request Payout Box */}
+        {/* Left: Request Withdrawal */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-6">
-          <div className="bg-gradient-to-tr from-brand-blue-900 to-brand-blue-700 rounded-2xl p-6 text-white space-y-2">
-            <span className="text-xs text-blue-200 uppercase font-bold">Current Withdrawable Balance</span>
-            <div className="text-3xl font-black">₹{balance.toFixed(2)}</div>
-            <p className="text-[11px] text-blue-100">Directly withdrawable to any Indian Bank Account or UPI.</p>
+          <div>
+            <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+              <Building2 className="w-5 h-5 text-brand-blue-800" />
+              <span>Request Payout / Withdrawal</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Minimum withdrawal amount is <strong>₹500</strong>. Enter your desired amount and payout details.
+            </p>
           </div>
 
           {message && (
-            <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold">
-              {message}
+            <div className="p-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-bold flex items-start space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <span>{message}</span>
             </div>
           )}
 
           {error && (
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold">
-              {error}
+            <div className="p-3.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold flex items-start space-x-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {balance < 500 && (
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start space-x-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-bold">Minimum Balance Notice:</strong>
+                <span>You currently have ₹{balance.toFixed(2)}. You can request a withdrawal once your balance reaches ₹500 or more.</span>
+              </div>
             </div>
           )}
 
           <form onSubmit={handleRequestPayout} className="space-y-4">
-            <h3 className="font-extrabold text-sm text-slate-900">Request Payout / Withdrawal</h3>
-
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Withdrawal Amount (₹) *</label>
-              <input
-                type="number"
-                min="500"
-                step="1"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Min ₹500"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-600"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">5% TDS/Processing fee applies.</span>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
+                <input
+                  type="number"
+                  min="500"
+                  max={Math.floor(balance)}
+                  step="1"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Enter amount (min ₹500)"
+                  className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:outline-none focus:border-brand-blue-600"
+                />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                <span>Minimum: ₹500</span>
+                <span>Max Available: ₹{balance.toFixed(2)}</span>
+              </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Transfer Mode</label>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Transfer Destination *</label>
               <div className="grid grid-cols-2 gap-3">
-                <label className={`p-2.5 rounded-xl border text-center cursor-pointer text-xs font-bold ${
-                  paymentMethod === 'bank_transfer' ? 'bg-brand-blue-800 text-white' : 'bg-slate-50 text-slate-700'
-                }`}>
-                  <input
-                    type="radio"
-                    name="pm"
-                    value="bank_transfer"
-                    checked={paymentMethod === 'bank_transfer'}
-                    onChange={() => setPaymentMethod('bank_transfer')}
-                    className="hidden"
-                  />
-                  Bank Transfer (NEFT/IMPS)
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('bank_transfer')}
+                  className={`p-2.5 rounded-xl border text-center text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                    paymentMethod === 'bank_transfer'
+                      ? 'bg-brand-blue-800 text-white border-brand-blue-800 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Bank Account</span>
+                </button>
 
-                <label className={`p-2.5 rounded-xl border text-center cursor-pointer text-xs font-bold ${
-                  paymentMethod === 'upi' ? 'bg-brand-blue-800 text-white' : 'bg-slate-50 text-slate-700'
-                }`}>
-                  <input
-                    type="radio"
-                    name="pm"
-                    value="upi"
-                    checked={paymentMethod === 'upi'}
-                    onChange={() => setPaymentMethod('upi')}
-                    className="hidden"
-                  />
-                  UPI ID (VPA)
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('upi')}
+                  className={`p-2.5 rounded-xl border text-center text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                    paymentMethod === 'upi'
+                      ? 'bg-brand-blue-800 text-white border-brand-blue-800 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>UPI ID (VPA)</span>
+                </button>
               </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                {paymentMethod === 'bank_transfer' ? 'Bank Account Details *' : 'UPI ID (e.g. name@okhdfcbank) *'}
+                {paymentMethod === 'bank_transfer' ? 'Bank Account Details *' : 'UPI ID (e.g. yourname@okhdfcbank) *'}
               </label>
               <textarea
                 required
-                rows="3"
+                rows="4"
                 value={accountDetails}
                 onChange={(e) => setAccountDetails(e.target.value)}
                 placeholder={
                   paymentMethod === 'bank_transfer'
-                    ? 'Bank Name:\nA/C Number:\nIFSC Code:\nA/C Holder Name:'
-                    : 'yourname@upi'
+                    ? 'Bank Name:\nAccount Number:\nIFSC Code:\nAccount Holder Name:'
+                    : 'e.g. 9876543210@paytm or rahul@oksbi'
                 }
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-600 font-mono"
               ></textarea>
@@ -173,44 +289,107 @@ export default function WalletPayouts() {
 
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 disabled:opacity-50 transition-all"
+              disabled={submitting || balance < 500}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {submitting ? 'Submitting Request...' : 'Submit Withdrawal Request'}
+              {submitting ? 'Submitting Request...' : 'Submit Withdrawal Request (Min ₹500)'}
             </button>
           </form>
         </div>
 
-        {/* Right: Transaction History */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-4">
-          <h3 className="font-extrabold text-base text-slate-900">Wallet Transaction History</h3>
+        {/* Right: Passbook / Transaction History */}
+        <div className="lg:col-span-7 bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="font-extrabold text-base text-slate-900">Wallet Passbook &amp; Ledger</h3>
+              <p className="text-xs text-slate-400">Chronological history of all credits, order payments &amp; withdrawals.</p>
+            </div>
 
-          {transactions.length === 0 ? (
-            <p className="text-xs text-slate-400 py-12 text-center">No wallet transactions found.</p>
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold self-start sm:self-auto">
+              <button
+                onClick={() => setFilterCategory('all')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilterCategory('credit')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'credit' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600'}`}
+              >
+                Credits (+)
+              </button>
+              <button
+                onClick={() => setFilterCategory('debit')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'debit' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'}`}
+              >
+                Debits (-)
+              </button>
+              <button
+                onClick={() => setFilterCategory('order_payment')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'order_payment' ? 'bg-white text-brand-blue-800 shadow-2xs' : 'text-slate-600'}`}
+              >
+                Orders
+              </button>
+              <button
+                onClick={() => setFilterCategory('payout')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'payout' ? 'bg-white text-purple-800 shadow-2xs' : 'text-slate-600'}`}
+              >
+                Withdrawals
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="py-16 text-center text-slate-400 text-xs">Loading wallet ledger...</div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              No transactions found in this category.
+            </div>
           ) : (
-            <div className="divide-y divide-slate-100">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="py-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      tx.type === 'credit' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
-                    }`}>
-                      {tx.type === 'credit' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+            <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1">
+              {filteredTransactions.map((tx) => {
+                const isCredit = tx.type === 'credit';
+                return (
+                  <div key={tx.id} className="py-3.5 flex items-center justify-between text-xs hover:bg-slate-50/50 px-2 rounded-xl transition-colors">
+                    <div className="flex items-center space-x-3 min-w-0 pr-3">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        isCredit ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {isCredit ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-bold text-slate-800 truncate block">{tx.description}</span>
+                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                            tx.category === 'order_payment' ? 'bg-blue-100 text-blue-800' :
+                            tx.category === 'payout_withdrawal' ? 'bg-purple-100 text-purple-800' :
+                            tx.category === 'wallet_refund' ? 'bg-amber-100 text-amber-800' :
+                            isCredit ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {tx.category?.replace('_', ' ') || tx.type}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          {new Date(tx.created_at).toLocaleString('en-IN', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          })}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-slate-800 block">{tx.description}</span>
-                      <span className="text-[10px] text-slate-400">{new Date(tx.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
 
-                  <div className="text-right">
-                    <span className={`font-black text-sm ${tx.type === 'credit' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {tx.type === 'credit' ? '+' : '-'}₹{tx.amount.toFixed(2)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 block">Bal: ₹{tx.balance_after.toFixed(2)}</span>
+                    <div className="text-right flex-shrink-0">
+                      <span className={`font-black text-sm block ${isCredit ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toFixed(2)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block">
+                        Bal: ₹{Number(tx.balance_after || 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

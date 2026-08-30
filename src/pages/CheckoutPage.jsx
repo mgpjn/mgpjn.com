@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, CreditCard, QrCode, Banknote, ArrowRight,
-  Truck, CheckCircle2, Lock, Sparkles, Store
+  Truck, CheckCircle2, Lock, Sparkles, Store, Wallet
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { createOrder } from '../services/api';
+import { createOrder, getWalletTransactions } from '../services/api';
 
 export default function CheckoutPage() {
   const { cartItems, subtotal, deliveryCharge, finalTotal, clearCart } = useCart();
@@ -27,10 +27,32 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [walletBalance, setWalletBalance] = useState(user?.wallet_balance || 0);
+  const [useWallet, setUseWallet] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      getWalletTransactions()
+        .then((res) => {
+          if (res.data?.success && res.data?.balance !== undefined) {
+            const bal = parseFloat(res.data.balance) || 0;
+            setWalletBalance(bal);
+            if (bal > 0) {
+              setUseWallet(true);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   const isTakeaway = formData.payment_method === 'takeaway';
   const effectiveDeliveryCharge = isTakeaway ? 0 : deliveryCharge;
   const payableTotal = subtotal + effectiveDeliveryCharge;
+
+  const walletAmountUsed = useWallet ? Math.min(payableTotal, walletBalance) : 0;
+  const remainingPayable = Math.max(0, payableTotal - walletAmountUsed);
+  const isFullWallet = useWallet && walletAmountUsed >= payableTotal;
 
   if (cartItems.length === 0) {
     navigate('/shop');
@@ -55,7 +77,9 @@ export default function CheckoutPage() {
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
-        payment_method: formData.payment_method,
+        payment_method: isFullWallet ? 'wallet' : (walletAmountUsed > 0 ? 'wallet_split' : formData.payment_method),
+        other_payment_method: (walletAmountUsed > 0 && !isFullWallet) ? formData.payment_method : null,
+        wallet_amount_used: walletAmountUsed,
         delivery_type: isTakeaway ? 'takeaway' : 'home_delivery',
         notes: isTakeaway
           ? `[STORE TAKEAWAY / SELF PICKUP] ${formData.notes || ''}`.trim()
@@ -185,11 +209,86 @@ export default function CheckoutPage() {
           </div>
 
           {/* 2. Payment Method */}
-          <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-5">
             <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
               <Lock className="w-5 h-5 text-brand-blue-800" />
               <span>2. Select Payment &amp; Delivery Mode</span>
             </h3>
+
+            {/* Wallet Balance & Combined Payment Card */}
+            {user && (
+              <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+                useWallet && walletAmountUsed > 0
+                  ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/70 border-emerald-300 shadow-sm'
+                  : 'bg-slate-50/80 border-slate-200'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start sm:items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      useWallet && walletAmountUsed > 0 ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-extrabold text-xs sm:text-sm text-slate-900">
+                          MediGlaxo Wallet Balance
+                        </h4>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          ₹{walletBalance.toFixed(2)} Available
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {walletBalance > 0
+                          ? 'Use your earned wallet commissions towards this purchase.'
+                          : 'Your wallet balance is ₹0.00. Earn commissions on downline orders to pay via wallet.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {walletBalance > 0 && (
+                    <label className="flex items-center space-x-2.5 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-2xs cursor-pointer hover:border-emerald-500 transition-all select-none self-start sm:self-auto">
+                      <input
+                        type="checkbox"
+                        checked={useWallet}
+                        onChange={(e) => setUseWallet(e.target.checked)}
+                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-slate-800">
+                        {useWallet ? 'Using Wallet Balance' : 'Pay with Wallet'}
+                      </span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Live Split/Full Calculation Banner */}
+                {useWallet && walletAmountUsed > 0 && (
+                  <div className="mt-3 pt-3 border-t border-emerald-200/70">
+                    {isFullWallet ? (
+                      <div className="p-3 bg-emerald-100/70 border border-emerald-300 rounded-xl text-xs flex items-center space-x-2 text-emerald-950 font-medium">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                        <span>
+                          <strong>100% Wallet Paid:</strong> Full ₹{payableTotal.toFixed(2)} will be debited directly from your MediGlaxo Wallet. No cash or card payment needed!
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs flex items-start space-x-2.5 text-amber-950">
+                        <Sparkles className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                        <div className="text-[11px] leading-relaxed">
+                          <strong className="block text-amber-900 font-bold">
+                            ⚡ Combined Split Payment Applied:
+                          </strong>
+                          <span>
+                            <strong>₹{walletAmountUsed.toFixed(2)}</strong> will be deducted from your Wallet balance.
+                            Please select any payment mode below to pay the remaining <strong>₹{remainingPayable.toFixed(2)}</strong>:
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {isTakeaway && (
               <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs flex items-center space-x-2.5 text-emerald-900 shadow-2xs">
@@ -203,102 +302,120 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <label
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  formData.payment_method === 'cod'
-                    ? 'border-brand-blue-800 bg-brand-blue-50/50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Banknote className="w-6 h-6 text-brand-blue-800" />
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="cod"
-                    checked={formData.payment_method === 'cod'}
-                    onChange={handleChange}
-                  />
+            {/* If 100% wallet paid, inform user that secondary payment is not needed */}
+            {isFullWallet ? (
+              <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500 font-medium">
+                ✨ Your wallet balance is paying the full amount of ₹{payableTotal.toFixed(2)}. Secondary payment options are bypassed.
+              </div>
+            ) : (
+              <div>
+                <div className="text-xs font-bold text-slate-700 mb-2.5">
+                  {walletAmountUsed > 0
+                    ? `Select Payment Mode for Remaining Balance (₹${remainingPayable.toFixed(2)})`
+                    : 'Select Payment Mode'}
                 </div>
-                <div>
-                  <h4 className="font-bold text-xs text-slate-800">Cash on Delivery</h4>
-                  <p className="text-[10px] text-slate-500">Pay cash upon home delivery.</p>
-                </div>
-              </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <label
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      formData.payment_method === 'cod'
+                        ? 'border-brand-blue-800 bg-brand-blue-50/50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <Banknote className="w-6 h-6 text-brand-blue-800" />
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value="cod"
+                        checked={formData.payment_method === 'cod'}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-800">Cash on Delivery</h4>
+                      <p className="text-[10px] text-slate-500">
+                        {walletAmountUsed > 0 ? `Pay remaining ₹${remainingPayable.toFixed(2)} cash.` : 'Pay cash upon home delivery.'}
+                      </p>
+                    </div>
+                  </label>
 
-              <label
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  formData.payment_method === 'upi_qr'
-                    ? 'border-brand-blue-800 bg-brand-blue-50/50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <QrCode className="w-6 h-6 text-emerald-600" />
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="upi_qr"
-                    checked={formData.payment_method === 'upi_qr'}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs text-slate-800">Instant UPI QR</h4>
-                  <p className="text-[10px] text-slate-500">Google Pay, PhonePe, Paytm QR.</p>
-                </div>
-              </label>
+                  <label
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      formData.payment_method === 'upi_qr'
+                        ? 'border-brand-blue-800 bg-brand-blue-50/50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <QrCode className="w-6 h-6 text-emerald-600" />
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value="upi_qr"
+                        checked={formData.payment_method === 'upi_qr'}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-800">Instant UPI QR</h4>
+                      <p className="text-[10px] text-slate-500">Google Pay, PhonePe, Paytm QR.</p>
+                    </div>
+                  </label>
 
-              <label
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  formData.payment_method === 'online'
-                    ? 'border-brand-blue-800 bg-brand-blue-50/50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <CreditCard className="w-6 h-6 text-brand-orange-500" />
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="online"
-                    checked={formData.payment_method === 'online'}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs text-slate-800">Net Banking / Card</h4>
-                  <p className="text-[10px] text-slate-500">Credit / Debit card & NetBanking.</p>
-                </div>
-              </label>
+                  <label
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      formData.payment_method === 'online'
+                        ? 'border-brand-blue-800 bg-brand-blue-50/50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <CreditCard className="w-6 h-6 text-brand-orange-500" />
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value="online"
+                        checked={formData.payment_method === 'online'}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-slate-800">Net Banking / Card</h4>
+                      <p className="text-[10px] text-slate-500">Credit / Debit card & NetBanking.</p>
+                    </div>
+                  </label>
 
-              <label
-                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                  formData.payment_method === 'takeaway'
-                    ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <Store className="w-6 h-6 text-emerald-700" />
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="takeaway"
-                    checked={formData.payment_method === 'takeaway'}
-                    onChange={handleChange}
-                  />
+                  <label
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      formData.payment_method === 'takeaway'
+                        ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <Store className="w-6 h-6 text-emerald-700" />
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value="takeaway"
+                        checked={formData.payment_method === 'takeaway'}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-1.5 mb-0.5">
+                        <h4 className="font-bold text-xs text-slate-800">Store Takeaway</h4>
+                        <span className="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">FREE</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        {walletAmountUsed > 0 ? `Pay remaining ₹${remainingPayable.toFixed(2)} at counter.` : 'Self pickup & pay at local pharmacy counter.'}
+                      </p>
+                    </div>
+                  </label>
                 </div>
-                <div>
-                  <div className="flex items-center space-x-1.5 mb-0.5">
-                    <h4 className="font-bold text-xs text-slate-800">Store Takeaway</h4>
-                    <span className="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">FREE</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500">Self pickup &amp; pay at nearest local pharmacy counter.</p>
-                </div>
-              </label>
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -337,9 +454,20 @@ export default function CheckoutPage() {
                 )}
               </span>
             </div>
+
+            {walletAmountUsed > 0 && (
+              <div className="flex justify-between text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                <span className="flex items-center space-x-1">
+                  <Wallet className="w-3.5 h-3.5" />
+                  <span>Wallet Balance Used</span>
+                </span>
+                <span>- ₹{walletAmountUsed.toFixed(2)}</span>
+              </div>
+            )}
+
             <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t">
-              <span>Total Amount</span>
-              <span className="text-brand-blue-800">₹{payableTotal.toFixed(2)}</span>
+              <span>Total Payable Now</span>
+              <span className="text-brand-blue-800">₹{remainingPayable.toFixed(2)}</span>
             </div>
           </div>
 
@@ -353,7 +481,11 @@ export default function CheckoutPage() {
             ) : (
               <>
                 <span>
-                  {isTakeaway
+                  {isFullWallet
+                    ? `Pay ₹${payableTotal.toFixed(2)} with Wallet Balance (100% Full Payment)`
+                    : walletAmountUsed > 0
+                    ? `Pay ₹${remainingPayable.toFixed(2)} via ${formData.payment_method.toUpperCase()} + ₹${walletAmountUsed.toFixed(2)} from Wallet`
+                    : isTakeaway
                     ? `Confirm Store Takeaway (Self Pickup) • ₹${payableTotal.toFixed(2)}`
                     : formData.payment_method === 'cod'
                     ? `Confirm Cash on Delivery (COD) Order • ₹${payableTotal.toFixed(2)}`

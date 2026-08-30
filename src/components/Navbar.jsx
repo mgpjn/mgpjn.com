@@ -4,7 +4,7 @@ import {
   Search, ShoppingCart, FileText, Phone, User as UserIcon,
   ChevronDown, Menu, X, ShieldCheck, HeartPulse, LogOut,
   Network, LayoutDashboard, Sparkles, Plus, AlertCircle, Users,
-  Loader2, Pill, Package, Award, ChevronRight, ArrowRight, Truck
+  Loader2, Pill, Package, Award, ChevronRight, ArrowRight, Truck, Wallet
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -278,6 +278,19 @@ export default function Navbar({ onOpenPrescriptionModal }) {
 
           {/* Action CTAs */}
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+            {/* Wallet Quick Pill */}
+            {user && (
+              <Link
+                to="/wallet"
+                title="MediGlaxo Wallet Balance & Passbook"
+                className="flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs group"
+              >
+                <Wallet className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform flex-shrink-0" />
+                <span className="hidden xs:inline text-[10px] font-bold text-emerald-700">Wallet:</span>
+                <span>₹{(user.wallet_balance || 0).toFixed(2)}</span>
+              </Link>
+            )}
+
             {/* Cart Button */}
             <button
               onClick={() => setIsDrawerOpen(true)}
@@ -355,6 +368,20 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                       >
                         <Network className="w-4 h-4 text-brand-orange-500" />
                         <span>Refer &amp; Earn Portal</span>
+                      </Link>
+
+                      <Link
+                        to="/wallet"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center justify-between px-4 py-2 text-xs text-slate-700 hover:bg-brand-blue-50 font-semibold"
+                      >
+                        <div className="flex items-center space-x-2.5">
+                          <Wallet className="w-4 h-4 text-emerald-600" />
+                          <span>My Wallet &amp; Passbook</span>
+                        </div>
+                        <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          ₹{(user.wallet_balance || 0).toFixed(2)}
+                        </span>
                       </Link>
 
                       <Link
@@ -716,6 +743,20 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                 <FileText className="w-4 h-4" />
                 <span>Upload Doctor's Rx</span>
               </button>
+
+              {user && (
+                <Link
+                  to="/wallet"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full bg-emerald-50 border border-emerald-200 text-emerald-900 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-between shadow-2xs"
+                >
+                  <div className="flex items-center space-x-2">
+                    <Wallet className="w-4 h-4 text-emerald-600" />
+                    <span>My Wallet &amp; Passbook</span>
+                  </div>
+                  <span className="font-black text-emerald-800">₹{(user.wallet_balance || 0).toFixed(2)}</span>
+                </Link>
+              )}
 
               <Link
                 to="/track-order"

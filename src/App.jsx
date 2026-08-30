@@ -242,6 +242,14 @@ export default function App() {
             }
           />
           <Route
+            path="/wallet"
+            element={
+              <ProtectedRoute>
+                <WalletPayouts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/mlm/referrals"
             element={
               <ProtectedRoute>

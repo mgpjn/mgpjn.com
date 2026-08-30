@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Phone, Mail, MapPin, Building, CreditCard, Lock, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User, Shield, Phone, Mail, MapPin, Building, CreditCard, Lock, CheckCircle2, Wallet, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getProfile, updateProfile } from '../../services/api';
 
@@ -90,6 +91,31 @@ export default function ProfilePage() {
       {error && (
         <div className="p-3.5 bg-rose-50 text-rose-600 rounded-2xl text-xs font-bold">
           {error}
+        </div>
+      )}
+
+      {/* Wallet Overview Card */}
+      {user && (
+        <div className="bg-gradient-to-r from-emerald-900 to-teal-800 text-white rounded-3xl p-6 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white flex-shrink-0">
+              <Wallet className="w-6 h-6 text-emerald-300" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-emerald-200 uppercase tracking-wider block">MediGlaxo Wallet Balance</span>
+              <div className="text-2xl sm:text-3xl font-black text-white">₹{(user.wallet_balance || 0).toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <Link
+              to="/wallet"
+              className="px-4 py-2.5 bg-white text-emerald-900 rounded-xl text-xs font-black hover:bg-emerald-50 transition-all flex items-center space-x-1.5 shadow-sm"
+            >
+              <span>Passbook &amp; Withdraw (Min ₹500)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       )}
 

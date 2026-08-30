@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users, UserPlus, Shield, Star, Briefcase, Building, Store,
   UserCheck, Search, Filter, RefreshCw, Edit, Lock, Unlock,
   ShoppingBag, CheckCircle, AlertCircle, Phone, Mail, MapPin, ChevronRight, X,
-  Plus, FileText, Printer, Trash2
+  Plus, FileText, Printer, Trash2, Wallet, ArrowRight
 } from 'lucide-react';
 import {
   getHierarchyUsers, getAllowedRoles, createHierarchyUser,
@@ -361,8 +362,17 @@ export default function HierarchyDashboard() {
           </div>
 
           <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
-              <Shield className="w-5 h-5" />
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                <Wallet className="w-5 h-5" />
+              </div>
+              <Link
+                to="/wallet"
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-200 transition-all flex items-center space-x-1"
+              >
+                <span>Passbook &amp; Withdraw (Min ₹500)</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-400">Current Wallet Balance</p>
