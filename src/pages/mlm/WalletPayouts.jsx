@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wallet, ArrowDownRight, ArrowUpRight, CheckCircle2, AlertCircle,
-  Building2, QrCode, CreditCard, Filter, RefreshCw, Sparkles, ArrowLeft
+  Building2, QrCode, CreditCard, Filter, RefreshCw, Sparkles, ArrowLeft, Download
 } from 'lucide-react';
+import { exportPassbookReport } from '../../utils/excelExport';
 import { getWalletTransactions, requestPayout } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -133,9 +134,9 @@ export default function WalletPayouts() {
         </div>
       </div>
 
-      {/* Top Metrics Cards */}
+      {/* Top Metrics Cards with Opening Animations */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <div className="bg-gradient-to-tr from-brand-blue-950 via-brand-blue-900 to-brand-blue-800 rounded-3xl p-6 text-white space-y-3 shadow-lg shadow-brand-blue-900/20 relative overflow-hidden">
+        <div className="bg-gradient-to-tr from-brand-blue-950 via-brand-blue-900 to-brand-blue-800 rounded-3xl p-6 text-white space-y-3 shadow-lg shadow-brand-blue-900/20 relative overflow-hidden animate-card-in-1">
           <div className="flex items-center justify-between">
             <span className="text-xs text-blue-200 uppercase font-bold tracking-wider">Available Wallet Balance</span>
             <Wallet className="w-5 h-5 text-emerald-400" />
@@ -149,7 +150,7 @@ export default function WalletPayouts() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3">
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3 animate-card-in-2">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs uppercase font-bold tracking-wider">Total Earnings / Turnover</span>
             <Sparkles className="w-5 h-5 text-amber-500" />
@@ -163,7 +164,7 @@ export default function WalletPayouts() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3 sm:col-span-2 lg:col-span-1">
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3 sm:col-span-2 lg:col-span-1 animate-card-in-3">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs uppercase font-bold tracking-wider">Withdrawal Policy</span>
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -218,81 +219,79 @@ export default function WalletPayouts() {
           <form onSubmit={handleRequestPayout} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Withdrawal Amount (₹) *</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₹</span>
-                <input
-                  type="number"
-                  min="500"
-                  max={Math.floor(balance)}
-                  step="1"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter amount (min ₹500)"
-                  className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:outline-none focus:border-brand-blue-600"
-                />
-              </div>
-              <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
-                <span>Minimum: ₹500</span>
-                <span>Max Available: ₹{balance.toFixed(2)}</span>
-              </div>
+              <input
+                type="number"
+                min="500"
+                step="1"
+                required
+                placeholder="Min. 500"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-black focus:outline-none focus:border-brand-blue-600"
+              />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Transfer Destination *</label>
-              <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs font-bold text-slate-700 block mb-2">Payout Transfer Method *</label>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('bank_transfer')}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                  className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
                     paymentMethod === 'bank_transfer'
-                      ? 'bg-brand-blue-800 text-white border-brand-blue-800 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'border-brand-blue-800 bg-brand-blue-50/50 text-brand-blue-900'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                   }`}
                 >
-                  <Building2 className="w-3.5 h-3.5" />
-                  <span>Bank Account</span>
+                  <Building2 className="w-4 h-4" />
+                  <span className="text-xs font-bold">Bank Transfer (NEFT/IMPS)</span>
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('upi')}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                  className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
                     paymentMethod === 'upi'
-                      ? 'bg-brand-blue-800 text-white border-brand-blue-800 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'border-brand-blue-800 bg-brand-blue-50/50 text-brand-blue-900'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
                   }`}
                 >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>UPI ID (VPA)</span>
+                  <QrCode className="w-4 h-4" />
+                  <span className="text-xs font-bold">UPI / VPA</span>
                 </button>
               </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                {paymentMethod === 'bank_transfer' ? 'Bank Account Details *' : 'UPI ID (e.g. yourname@okhdfcbank) *'}
+                {paymentMethod === 'bank_transfer' ? 'Bank Account Details *' : 'UPI ID / VPA *'}
               </label>
-              <textarea
-                required
-                rows="4"
-                value={accountDetails}
-                onChange={(e) => setAccountDetails(e.target.value)}
-                placeholder={
-                  paymentMethod === 'bank_transfer'
-                    ? 'Bank Name:\nAccount Number:\nIFSC Code:\nAccount Holder Name:'
-                    : 'e.g. 9876543210@paytm or rahul@oksbi'
-                }
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-600 font-mono"
-              ></textarea>
+              {paymentMethod === 'bank_transfer' ? (
+                <textarea
+                  rows="3"
+                  required
+                  placeholder="Bank Name, Account Number, IFSC Code, Account Holder Name"
+                  value={accountDetails}
+                  onChange={(e) => setAccountDetails(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-brand-blue-600 font-mono"
+                />
+              ) : (
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. mobile@upi, username@okhdfcbank"
+                  value={accountDetails}
+                  onChange={(e) => setAccountDetails(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:border-brand-blue-600"
+                />
+              )}
             </div>
 
             <button
               type="submit"
               disabled={submitting || balance < 500}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full py-3 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl text-xs font-black shadow-md shadow-brand-blue-800/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {submitting ? 'Submitting Request...' : 'Submit Withdrawal Request (Min ₹500)'}
+              {submitting ? 'Submitting Request...' : 'Submit Withdrawal Request'}
             </button>
           </form>
         </div>
@@ -305,38 +304,41 @@ export default function WalletPayouts() {
               <p className="text-xs text-slate-400">Chronological history of all credits, order payments &amp; withdrawals.</p>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold self-start sm:self-auto">
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
               <button
-                onClick={() => setFilterCategory('all')}
-                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'}`}
+                type="button"
+                onClick={() => exportPassbookReport(transactions, balance, user)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                title="Download Official MediGlaxo Passbook Statement in Excel"
               >
-                All
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Statement (Excel)</span>
               </button>
-              <button
-                onClick={() => setFilterCategory('credit')}
-                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'credit' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600'}`}
-              >
-                Credits (+)
-              </button>
-              <button
-                onClick={() => setFilterCategory('debit')}
-                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'debit' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'}`}
-              >
-                Debits (-)
-              </button>
-              <button
-                onClick={() => setFilterCategory('order_payment')}
-                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'order_payment' ? 'bg-white text-brand-blue-800 shadow-2xs' : 'text-slate-600'}`}
-              >
-                Orders
-              </button>
-              <button
-                onClick={() => setFilterCategory('payout')}
-                className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'payout' ? 'bg-white text-purple-800 shadow-2xs' : 'text-slate-600'}`}
-              >
-                Withdrawals
-              </button>
+
+              {/* Filter Tabs */}
+              <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setFilterCategory('all')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'}`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterCategory('credit')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'credit' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600'}`}
+                >
+                  Credits (+)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterCategory('debit')}
+                  className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'debit' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'}`}
+                >
+                  Debits (-)
+                </button>
+              </div>
             </div>
           </div>
 

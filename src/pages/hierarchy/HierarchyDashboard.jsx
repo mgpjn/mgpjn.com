@@ -4,8 +4,10 @@ import {
   Users, UserPlus, Shield, Star, Briefcase, Building, Store,
   UserCheck, Search, Filter, RefreshCw, Edit, Lock, Unlock,
   ShoppingBag, CheckCircle, AlertCircle, Phone, Mail, MapPin, ChevronRight, X,
-  Plus, FileText, Printer, Trash2, Wallet, ArrowRight
+  Plus, FileText, Printer, Trash2, Wallet, ArrowRight, Download
 } from 'lucide-react';
+import { EarningsSalesChart } from '../../components/common/DashboardCharts';
+import { exportMembersReport, exportSalesReport, exportPurchaseOrdersReport } from '../../utils/excelExport';
 import {
   getHierarchyUsers, getAllowedRoles, createHierarchyUser,
   updateHierarchyUser, getHierarchyStats, getHierarchyOrders,
@@ -328,57 +330,62 @@ export default function HierarchyDashboard() {
         </div>
       )}
 
-      {/* Stats Cards */}
+      {/* Stats Cards with Opening Entrance Animations */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400">Downline Team Members</p>
-              <h3 className="text-2xl font-black text-slate-900">{stats.total_team_members}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400">Downline Sales Volume</p>
-              <h3 className="text-2xl font-black text-slate-900">₹{stats.total_sales.toLocaleString('en-IN')}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
-              <Star className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400">Total Refer &amp; Earn Payout</p>
-              <h3 className="text-2xl font-black text-slate-900">₹{stats.total_earned.toLocaleString('en-IN')}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
-                <Wallet className="w-5 h-5" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2 animate-card-in-1">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                <Users className="w-5 h-5" />
               </div>
-              <Link
-                to="/wallet"
-                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-200 transition-all flex items-center space-x-1"
-              >
-                <span>Passbook &amp; Withdraw (Min ₹500)</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+              <div>
+                <p className="text-xs font-bold text-slate-400">Downline Team Members</p>
+                <h3 className="text-2xl font-black text-slate-900">{stats.total_team_members}</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-400">Current Wallet Balance</p>
-              <h3 className="text-2xl font-black text-brand-blue-800">₹{stats.wallet_balance.toLocaleString('en-IN')}</h3>
+
+            <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2 animate-card-in-2">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400">Downline Sales Volume</p>
+                <h3 className="text-2xl font-black text-slate-900">₹{stats.total_sales.toLocaleString('en-IN')}</h3>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2 animate-card-in-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                <Star className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400">Total Refer &amp; Earn Payout</p>
+                <h3 className="text-2xl font-black text-slate-900">₹{stats.total_earned.toLocaleString('en-IN')}</h3>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-2 animate-card-in-4">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <Link
+                  to="/wallet"
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-200 transition-all flex items-center space-x-1"
+                >
+                  <span>Passbook &amp; Withdraw (Min ₹500)</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400">Current Wallet Balance</p>
+                <h3 className="text-2xl font-black text-brand-blue-800">₹{stats.wallet_balance.toLocaleString('en-IN')}</h3>
+              </div>
             </div>
           </div>
+
+          {/* Network Earnings & Sales Performance Chart */}
+          <EarningsSalesChart orders={ordersData?.data || []} user={user} />
         </div>
       )}
 
@@ -453,6 +460,16 @@ export default function HierarchyDashboard() {
                 <option value="blocked">Blocked</option>
                 <option value="inactive">Inactive</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => exportMembersReport(usersData?.data || [], { userName: user?.name })}
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                title="Export Downline Team Directory to MediGlaxo Excel"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Team</span>
+              </button>
 
               <button
                 onClick={loadData}
@@ -568,7 +585,18 @@ export default function HierarchyDashboard() {
 
       {activeTab === 'orders' && (
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
-          <h3 className="font-extrabold text-sm text-slate-900">Downline Network Orders</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-extrabold text-sm text-slate-900">Downline Network Orders</h3>
+            <button
+              type="button"
+              onClick={() => exportSalesReport(ordersData?.data || [], { userName: user?.name })}
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+              title="Export Downline Network Orders to MediGlaxo Excel"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Orders (Excel)</span>
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -618,13 +646,25 @@ export default function HierarchyDashboard() {
                 Submit bulk medicine stock requests to Super Admin with state wholesale rates. Approved POs generate official GST Tax Invoices.
               </p>
             </div>
-            <button
-              onClick={handleOpenPoModal}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Create Medicine PO</span>
-            </button>
+            <div className="flex items-center space-x-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => exportPurchaseOrdersReport(purchaseOrdersData?.data || [], { userName: user?.name })}
+                className="px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-700/20 transition-all cursor-pointer"
+                title="Export Purchase Orders to MediGlaxo Excel"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export POs (Excel)</span>
+              </button>
+
+              <button
+                onClick={handleOpenPoModal}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Create Medicine PO</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">

@@ -9,8 +9,16 @@ import {
   ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
-  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu
+  CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download
 } from 'lucide-react';
+import { EarningsSalesChart, StockInventoryChart } from '../../components/common/DashboardCharts';
+import {
+  exportSalesReport,
+  exportStockReport,
+  exportCommissionsReport,
+  exportPurchaseOrdersReport,
+  exportMembersReport
+} from '../../utils/excelExport';
 import { useAuth } from '../../context/AuthContext';
 import { FALLBACK_NETWORK_USERS } from '../../data/fallbackUsers';
 import {
@@ -1273,9 +1281,78 @@ export default function AdminDashboard() {
           {/* 1. DASHBOARD OVERVIEW (MATCHING LIVE mgpjn.com EXACTLY)  */}
           {/* ======================================================== */}
           {currentSection === 'dashboard' && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-dashboard-fade">
+              {/* Quick MediGlaxo Reports Export Toolbar */}
+              <div className="bg-gradient-to-r from-slate-900 via-[#004e89] to-[#0284c7] rounded-3xl p-5 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 animate-card-in">
+                <div className="flex items-center space-x-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center flex-shrink-0 shadow-inner">
+                    <FileSpreadsheet className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-black text-white text-base">MediGlaxo Official Excel Reports</h3>
+                      <span className="text-[9px] bg-orange-500 text-white font-black uppercase px-2 py-0.5 rounded-full">
+                        Branded .XLSX
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-100/80">
+                      Download formal audited pharmaceutical reports with company headers, date stamps, and live ledger totals.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Export Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => exportSalesReport(ordersList?.data || [], { userName: user?.name })}
+                    className="px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 backdrop-blur-xs border border-white/20 transition-all cursor-pointer shadow-xs"
+                    title="Export All Sales & Orders in MediGlaxo Excel"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Sales Report</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportStockReport(productsList?.data || [], { userName: user?.name })}
+                    className="px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 backdrop-blur-xs border border-white/20 transition-all cursor-pointer shadow-xs"
+                    title="Export Central Inventory Stock Sheet in MediGlaxo Excel"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-300" />
+                    <span>Stock Report</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportCommissionsReport(transfersList?.data || [], { userName: user?.name })}
+                    className="px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 backdrop-blur-xs border border-white/20 transition-all cursor-pointer shadow-xs"
+                    title="Export 3-Level Referral Commissions in MediGlaxo Excel"
+                  >
+                    <Download className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Commissions</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => exportPurchaseOrdersReport(purchaseOrdersList?.data || [], { userName: user?.name })}
+                    className="px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 backdrop-blur-xs border border-white/20 transition-all cursor-pointer shadow-xs"
+                    title="Export B2B Purchase Orders in MediGlaxo Excel"
+                  >
+                    <Download className="w-3.5 h-3.5 text-purple-300" />
+                    <span>PO Register</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Visual Performance & Inventory Charts */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <EarningsSalesChart orders={ordersList?.data || []} user={user} />
+                <StockInventoryChart products={productsList?.data || []} user={user} />
+              </div>
+
               {/* Top 2 Live Product Cards (Left: Recent Products, Right: Low Stock Alert) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-card-in-3">
                 {/* Left: Recent Products Card */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3.5">
                   <div className="flex items-center justify-between pb-1">
@@ -1497,42 +1574,54 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setEditingUser(null);
-                    const targetRole = currentMenuItem.roleType?.startsWith('customer') ? 'customer' : (currentMenuItem.roleType || 'super_distributor');
-                    setUserForm({
-                      name: '',
-                      business_name: '',
-                      email: '',
-                      mobile: '',
-                      phone: '',
-                      password: '',
-                      role: targetRole,
-                      parent_id: '',
-                      sponsor_code: '',
-                      address: '',
-                      state: 'GUJRAT',
-                      city: 'Surat',
-                      pincode: '394230',
-                      pan_number: '',
-                      gst_number: '',
-                      bank_name: '',
-                      account_number: '',
-                      ifsc_code: '',
-                      upi_id: '',
-                      sub_retailer_commission: 10,
-                      customer_commission: 5,
-                      status: 'active',
-                    });
-                    fetchHierarchyParentsForRole(targetRole);
-                    setShowAddUserModal(true);
-                  }}
-                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-[#ff5722]/25 transition-all w-fit"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add {sectionTitle.replace(/\(.*?\)/g, '').trim()}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => exportMembersReport(roleUsers?.data || (Array.isArray(roleUsers) ? roleUsers : []), { userName: user?.name })}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                    title={`Export ${sectionTitle} Directory to MediGlaxo Excel`}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setEditingUser(null);
+                      const targetRole = currentMenuItem.roleType?.startsWith('customer') ? 'customer' : (currentMenuItem.roleType || 'super_distributor');
+                      setUserForm({
+                        name: '',
+                        business_name: '',
+                        email: '',
+                        mobile: '',
+                        phone: '',
+                        password: '',
+                        role: targetRole,
+                        parent_id: '',
+                        sponsor_code: '',
+                        address: '',
+                        state: 'GUJRAT',
+                        city: 'Surat',
+                        pincode: '394230',
+                        pan_number: '',
+                        gst_number: '',
+                        bank_name: '',
+                        account_number: '',
+                        ifsc_code: '',
+                        upi_id: '',
+                        sub_retailer_commission: 10,
+                        customer_commission: 5,
+                        status: 'active',
+                      });
+                      fetchHierarchyParentsForRole(targetRole);
+                      setShowAddUserModal(true);
+                    }}
+                    className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-[#ff5722]/25 transition-all w-fit"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add {sectionTitle.replace(/\(.*?\)/g, '').trim()}</span>
+                  </button>
+                </div>
               </div>
 
               {/* 4 Colored Left-Border Metric Cards */}
@@ -2162,44 +2251,56 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-500">Manage pharmaceutical inventory, wholesale/retail pricing, batch codes, and packaging units.</p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setEditingProduct(null);
-                    setProductForm({
-                      name: '',
-                      subtitle: '',
-                      category_id: categoriesList[0]?.id || 1,
-                      sub_category_id: '',
-                      batch_no: 'BT' + Date.now().toString().slice(-6),
-                      manufacturer: 'MEDIGLAXO PHARMA',
-                      description: '',
-                      mrp: '',
-                      base_price: '',
-                      retail_price: '',
-                      sd_price: '',
-                      dist_price: '',
-                      subd_price: '',
-                      retailer_price: '',
-                      wholesale_price: '',
-                      stock_quantity: 100,
-                      box_packing: '1 Box (10 Strips)',
-                      box_unit: 'Box',
-                      strip_packing: '1 Strip (10 Tablets)',
-                      strip_unit: 'Strip',
-                      expiry_date: '',
-                      status: 'Active',
-                      is_featured: false,
-                      is_trending: false,
-                      image: '',
-                      images: [],
-                    });
-                    setShowProductModal(true);
-                  }}
-                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-[#ff5722]/20"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Product</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => exportStockReport(productsList?.data || (Array.isArray(productsList) ? productsList : []), { userName: user?.name })}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                    title="Download Complete Warehouse Stock Sheet in MediGlaxo Excel"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export Stock (Excel)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setEditingProduct(null);
+                      setProductForm({
+                        name: '',
+                        subtitle: '',
+                        category_id: categoriesList[0]?.id || 1,
+                        sub_category_id: '',
+                        batch_no: 'BT' + Date.now().toString().slice(-6),
+                        manufacturer: 'MEDIGLAXO PHARMA',
+                        description: '',
+                        mrp: '',
+                        base_price: '',
+                        retail_price: '',
+                        sd_price: '',
+                        dist_price: '',
+                        subd_price: '',
+                        retailer_price: '',
+                        wholesale_price: '',
+                        stock_quantity: 100,
+                        box_packing: '1 Box (10 Strips)',
+                        box_unit: 'Box',
+                        strip_packing: '1 Strip (10 Tablets)',
+                        strip_unit: 'Strip',
+                        expiry_date: '',
+                        status: 'Active',
+                        is_featured: false,
+                        is_trending: false,
+                        image: '',
+                        images: [],
+                      });
+                      setShowProductModal(true);
+                    }}
+                    className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-[#ff5722]/20"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Product</span>
+                  </button>
+                </div>
               </div>
 
               {/* Section Filters & Category Tabs */}
@@ -2824,7 +2925,18 @@ export default function AdminDashboard() {
                   <h3 className="font-black text-slate-900 text-lg">Customer &amp; Wholesale Orders</h3>
                   <p className="text-xs text-slate-500">Live order fulfillment with Pincode Sub-Retailer Auto-Routing and GST Invoicing.</p>
                 </div>
-                <span className="text-xs font-bold text-slate-400">Total: {ordersList?.data?.length || 0} Orders</span>
+                <div className="flex items-center space-x-3">
+                  <span className="text-xs font-bold text-slate-400">Total: {ordersList?.data?.length || 0} Orders</span>
+                  <button
+                    type="button"
+                    onClick={() => exportSalesReport(ordersList?.data || [], { userName: user?.name })}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                    title="Export All Filtered Orders to MediGlaxo Branded Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Sales (Excel)</span>
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -2975,6 +3087,15 @@ export default function AdminDashboard() {
                     Review and verify wholesale medicine orders from State Distributors &amp; Retailers. Super Admin approves/adjusts requested batch quantities before issuing the official GST Tax Invoice.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => exportPurchaseOrdersReport(purchaseOrdersList?.data || [], { userName: user?.name })}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer self-start sm:self-auto"
+                  title="Export All B2B Purchase Orders to MediGlaxo Branded Excel"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export POs (Excel)</span>
+                </button>
               </div>
 
               {/* Top 4 PO Metric Cards */}
@@ -3207,6 +3328,17 @@ export default function AdminDashboard() {
                     <h3 className="font-black text-slate-900 text-base">Partner Commission Payouts &amp; Bank Transfers</h3>
                     <p className="text-xs text-slate-500">Review, verify and process downline distributor withdrawal requests.</p>
                   </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => exportCommissionsReport(payoutsList?.data || [], { userName: user?.name })}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                    title="Export Payouts & Commission History to MediGlaxo Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Payouts (Excel)</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setTransferMode('wallet_transfer');
@@ -3217,6 +3349,7 @@ export default function AdminDashboard() {
                     <Plus className="w-3.5 h-3.5" />
                     <span>Credit / Debit Wallet</span>
                   </button>
+                </div>
                 </div>
 
                 <div className="overflow-x-auto">
