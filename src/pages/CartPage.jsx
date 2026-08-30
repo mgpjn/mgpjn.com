@@ -82,7 +82,7 @@ export default function CartPage() {
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="text-xs font-extrabold text-slate-800 px-1 text-center">
-                    {item.quantity} {item.isWholesale ? (item.box_unit || 'Box') : (item.strip_unit || 'Strip')}
+                    {item.quantity} {item.isWholesale ? (item.box_unit || 'Unit') : (item.strip_unit || item.unit || 'Unit')}
                   </span>
                   <button
                     onClick={() => updateQuantity(item.id, item.quantity + 1)}

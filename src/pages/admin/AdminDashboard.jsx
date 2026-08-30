@@ -60,10 +60,10 @@ const INDIAN_STATES = [
 ];
 
 const PACKAGING_UNITS = [
-  "Tablet", "Capsule", "Strip", "Blister", "Box", "Carton", "Master Carton",
-  "Vial", "Ampoule", "Pre-filled Syringe", "Piece", "mL (Millilitre)", "Bottle",
-  "Jar", "Sachet", "Pouch", "Packet", "Gram (g)", "Tube", "Kit", "Set",
-  "Pack", "Piece (Pcs)", "Dozen"
+  "Strip", "Box", "Tablet", "Capsule", "Bottle", "Jar", "Tube", "Kg (Kilogram)", "Gram (g)",
+  "Litre (L)", "mL (Millilitre)", "Vial", "Ampoule", "Sachet", "Pouch", "Packet", "Carton",
+  "Master Carton", "Piece (Pcs)", "Blister", "Kit", "Set", "Pack", "Dozen",
+  "Pre-filled Syringe", "Roll"
 ];
 
 export default function AdminDashboard() {
@@ -2525,8 +2525,8 @@ export default function AdminDashboard() {
                       <th className="p-3.5">Category</th>
                       <th className="p-3.5">Batch / SHN</th>
                       <th className="p-3.5">MRP</th>
-                      <th className="p-3.5">Retail Rate (Strip)</th>
-                      <th className="p-3.5">Wholesale (Box)</th>
+                      <th className="p-3.5">Retail Rate</th>
+                      <th className="p-3.5">Wholesale Rate</th>
                       <th className="p-3.5">Stock</th>
                       <th className="p-3.5 text-center">Homepage Section</th>
                       <th className="p-3.5">Status</th>
@@ -2596,11 +2596,11 @@ export default function AdminDashboard() {
                           </td>
                           <td className="p-3.5 font-bold text-blue-700">
                             ₹{Number(p.retail_price || p.price || 0).toFixed(0)}
-                            <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || 'Strip'}</span>
+                            <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || p.unit || 'Unit'}</span>
                           </td>
                           <td className="p-3.5 font-bold text-emerald-700">
                             ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
-                            <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Box'}</span>
+                            <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Wholesale'}</span>
                           </td>
                           <td className="p-3.5 font-bold text-slate-800">
                             {p.stock}
@@ -4061,15 +4061,15 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-blue-50/40 border border-blue-300 rounded-xl font-black text-xs text-blue-900 outline-none focus:bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Per Strip sale rate for patient &amp; sub-retailer
+                      Per {productForm.strip_unit || 'Unit'} sale rate for patient &amp; sub-retailer
                     </span>
                   </div>
 
-                  {/* 2. Super Distributor Purchase Rate (Box) */}
+                  {/* 2. Super Distributor Purchase Rate */}
                   <div className="p-3 bg-white rounded-2xl border-2 border-emerald-200 shadow-2xs">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-black text-emerald-950">
-                        Super Dist. Purchase Rate (₹ / Box)
+                        Super Dist. Purchase Rate (₹ / {productForm.box_unit || 'Wholesale Unit'})
                       </label>
                       <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
                         Super Dist.
@@ -4084,15 +4084,15 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-emerald-50/40 border border-emerald-300 rounded-xl font-black text-xs text-emerald-900 outline-none focus:bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Super Distributor purchase rate per box
+                      Super Distributor purchase rate per {productForm.box_unit || 'unit'}
                     </span>
                   </div>
 
-                  {/* 3. Distributor Sale Rate (Box) */}
+                  {/* 3. Distributor Sale Rate */}
                   <div className="p-3 bg-white rounded-2xl border-2 border-teal-200 shadow-2xs">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-black text-teal-950">
-                        Distributor Sale Rate (₹ / Box)
+                        Distributor Sale Rate (₹ / {productForm.box_unit || 'Wholesale Unit'})
                       </label>
                       <span className="text-[9px] font-bold bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded">
                         Distributor
@@ -4107,15 +4107,15 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-teal-50/40 border border-teal-300 rounded-xl font-black text-xs text-teal-900 outline-none focus:bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Sale rate for Distributor per box
+                      Sale rate for Distributor per {productForm.box_unit || 'unit'}
                     </span>
                   </div>
 
-                  {/* 4. Sub-Distributor Sale Rate (Box) */}
+                  {/* 4. Sub-Distributor Sale Rate */}
                   <div className="p-3 bg-white rounded-2xl border-2 border-sky-200 shadow-2xs">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-black text-sky-950">
-                        Sub-Dist. Sale Rate (₹ / Box)
+                        Sub-Dist. Sale Rate (₹ / {productForm.box_unit || 'Wholesale Unit'})
                       </label>
                       <span className="text-[9px] font-bold bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded">
                         Sub-Distributor
@@ -4130,15 +4130,15 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-sky-50/40 border border-sky-300 rounded-xl font-black text-xs text-sky-900 outline-none focus:bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Sale rate for Sub-Distributor per box
+                      Sale rate for Sub-Distributor per {productForm.box_unit || 'unit'}
                     </span>
                   </div>
 
-                  {/* 5. Retailer Sale Rate (Box) */}
+                  {/* 5. Retailer Sale Rate */}
                   <div className="p-3 bg-white rounded-2xl border-2 border-indigo-200 shadow-2xs">
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-black text-indigo-950">
-                        Retailer Sale Rate (₹ / Box)
+                        Retailer Sale Rate (₹ / {productForm.box_unit || 'Wholesale Unit'})
                       </label>
                       <span className="text-[9px] font-bold bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">
                         Retailer / Chemist
@@ -4153,7 +4153,7 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 bg-indigo-50/40 border border-indigo-300 rounded-xl font-black text-xs text-indigo-900 outline-none focus:bg-white"
                     />
                     <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Wholesale rate for Retailer (Chemist) per box
+                      Wholesale rate for Retailer (Chemist) per {productForm.box_unit || 'unit'}
                     </span>
                   </div>
 
@@ -4195,62 +4195,103 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* Packaging Specifications (Wholesaler & Retailer) */}
               <div className="space-y-3 pt-3 border-t">
-                <h4 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Packaging Specifications</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Box Packaging for Wholesaler */}
-                  <div className="p-3 bg-slate-50 rounded-xl border space-y-2">
-                    <span className="font-bold text-slate-700 block">Box Packaging for Wholesaler</span>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">
+                    Packaging &amp; Unit Metric Specifications
+                  </h4>
+                  <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">
+                    Tablet, Strip, Box, Bottle, Tube, Jar, Kg, Litre, etc.
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Bulk / Wholesale Packaging */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5">
+                    <span className="font-bold text-slate-800 text-xs block">
+                      📦 Wholesale / Bulk Packaging Metric
+                    </span>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Packing *</label>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Packing Description *</label>
                       <input
                         type="text"
-                        placeholder="e.g., 1 Box (10 Strips)"
+                        placeholder="e.g., 1 Box (10 Strips), 1 Carton (24 Jars), 1 Bag (25 Kg)"
                         value={productForm.box_packing}
                         onChange={(e) => setProductForm({ ...productForm, box_packing: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-white border rounded-lg"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
-                      <select
-                        value={productForm.box_unit}
-                        onChange={(e) => setProductForm({ ...productForm, box_unit: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-white border rounded-lg font-medium"
-                      >
-                        {PACKAGING_UNITS.map(u => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
-                      </select>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Wholesale Unit Metric *</label>
+                      <div className="flex gap-1.5">
+                        <select
+                          value={PACKAGING_UNITS.includes(productForm.box_unit) ? productForm.box_unit : 'custom'}
+                          onChange={(e) => {
+                            if (e.target.value !== 'custom') {
+                              setProductForm({ ...productForm, box_unit: e.target.value });
+                            }
+                          }}
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-bold text-xs"
+                        >
+                          {PACKAGING_UNITS.map(u => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                          <option value="custom">Other / Custom</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Type unit"
+                          value={productForm.box_unit}
+                          onChange={(e) => setProductForm({ ...productForm, box_unit: e.target.value })}
+                          className="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-900"
+                          title="Type or edit wholesale unit metric directly"
+                        />
+                      </div>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">Dropdown se select karein ya bagal me custom unit type karein</span>
                     </div>
                   </div>
 
-                  {/* Strip Packaging for Customer */}
-                  <div className="p-3 bg-slate-50 rounded-xl border space-y-2">
-                    <span className="font-bold text-slate-700 block">Strip Packaging for Customer</span>
+                  {/* Retail / Consumer Packaging */}
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5">
+                    <span className="font-bold text-slate-800 text-xs block">
+                      💊 Retail / Consumer Unit Packaging Metric
+                    </span>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Packing *</label>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Packing Description *</label>
                       <input
                         type="text"
-                        placeholder="e.g., 1 Strip (10 Tablets)"
+                        placeholder="e.g., 1 Strip (10 Tablets), 1 Bottle (100ml), 1 Jar (200g), 1 Tube (30g), 1 Kg"
                         value={productForm.strip_packing}
                         onChange={(e) => setProductForm({ ...productForm, strip_packing: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-white border rounded-lg"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Unit</label>
-                      <select
-                        value={productForm.strip_unit}
-                        onChange={(e) => setProductForm({ ...productForm, strip_unit: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-white border rounded-lg font-medium"
-                      >
-                        {PACKAGING_UNITS.map(u => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
-                      </select>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Retail Unit Metric *</label>
+                      <div className="flex gap-1.5">
+                        <select
+                          value={PACKAGING_UNITS.includes(productForm.strip_unit) ? productForm.strip_unit : 'custom'}
+                          onChange={(e) => {
+                            if (e.target.value !== 'custom') {
+                              setProductForm({ ...productForm, strip_unit: e.target.value });
+                            }
+                          }}
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-bold text-xs"
+                        >
+                          {PACKAGING_UNITS.map(u => (
+                            <option key={u} value={u}>{u}</option>
+                          ))}
+                          <option value="custom">Other / Custom</option>
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Type unit"
+                          value={productForm.strip_unit}
+                          onChange={(e) => setProductForm({ ...productForm, strip_unit: e.target.value })}
+                          className="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-900"
+                          title="Type or edit retail unit metric directly"
+                        />
+                      </div>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">Dropdown se select karein ya bagal me custom unit type karein</span>
                     </div>
                   </div>
                 </div>
@@ -6924,17 +6965,17 @@ export default function AdminDashboard() {
               {/* Direct Prices Section (Matching Image 3) */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-800 text-xs">For Wholesaler - Set Direct Prices (Per Box Rate)</h4>
+                  <h4 className="font-bold text-slate-800 text-xs">For Wholesaler - Set Direct Prices (Per {priceTargetProduct?.box_unit || 'Wholesale Unit'} Rate)</h4>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    📦 Box Unit: {priceTargetProduct?.box_packing || '1 Box (10 Strips)'}
+                    📦 Unit: {priceTargetProduct?.box_packing || (priceTargetProduct?.box_unit ? `1 ${priceTargetProduct.box_unit}` : 'Wholesale Unit')}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-500">
-                  Wholesale price applies strictly to complete Box packaging (not loose strips).
+                  Wholesale price applies strictly to complete {priceTargetProduct?.box_unit || 'wholesale pack'} packaging.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">SD Price (₹ / Box)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">SD Price (₹ / {priceTargetProduct?.box_unit || 'Unit'})</label>
                     <input
                       type="number"
                       step="0.01"
@@ -6945,7 +6986,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Dist Price (₹ / Box)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Dist Price (₹ / {priceTargetProduct?.box_unit || 'Unit'})</label>
                     <input
                       type="number"
                       step="0.01"
@@ -6956,7 +6997,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Sub D Price (₹ / Box)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Sub D Price (₹ / {priceTargetProduct?.box_unit || 'Unit'})</label>
                     <input
                       type="number"
                       step="0.01"
@@ -6967,7 +7008,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Retailer Price (₹ / Box)</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Retailer Price (₹ / {priceTargetProduct?.box_unit || 'Unit'})</label>
                     <input
                       type="number"
                       step="0.01"

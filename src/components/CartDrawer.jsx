@@ -84,14 +84,18 @@ export default function CartDrawer() {
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-xs text-slate-800 truncate">{item.name}</h4>
-                    <p className="text-[11px] text-slate-400">{item.dosage_form} • {item.pack_size}</p>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {item.isWholesale
+                        ? (item.box_packing || (item.box_unit ? `1 ${item.box_unit}` : 'Wholesale Pack'))
+                        : (item.strip_packing || item.pack_size || item.subtitle || (item.strip_unit ? `1 ${item.strip_unit}` : '1 Unit'))}
+                    </p>
                     <div className="mt-2 flex items-center justify-between">
                       <div>
                         <div className="text-sm font-black text-brand-blue-900">
                           ₹{item.itemTotal.toFixed(2)}
                         </div>
                         <div className="text-[10px] text-slate-400 font-normal">
-                          ₹{item.effectiveUnitPrice.toFixed(2)} each
+                          ₹{item.effectiveUnitPrice.toFixed(2)} / {item.isWholesale ? (item.box_unit || 'Unit') : (item.strip_unit || item.unit || 'Unit')}
                         </div>
                         {item.isWholesale && (
                           <span className="inline-block text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5">
@@ -101,14 +105,16 @@ export default function CartDrawer() {
                       </div>
 
                       {/* Quantity Controls */}
-                      <div className="flex items-center space-x-2 bg-slate-100 rounded-lg p-1">
+                      <div className="flex items-center space-x-1.5 bg-slate-100 rounded-lg p-1">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="w-5 h-5 rounded bg-white flex items-center justify-center text-slate-600 shadow-sm"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-xs font-bold text-slate-800 w-4 text-center">{item.quantity}</span>
+                        <span className="text-xs font-bold text-slate-800 px-1 text-center whitespace-nowrap">
+                          {item.quantity} {item.isWholesale ? (item.box_unit || 'Unit') : (item.strip_unit || item.unit || 'Unit')}
+                        </span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           className="w-5 h-5 rounded bg-white flex items-center justify-center text-slate-600 shadow-sm"

@@ -285,21 +285,21 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-slate-800 flex items-center space-x-1.5">
                       <Tag className="w-3.5 h-3.5 text-brand-blue-800" />
-                      <span>Retail Rate (per Strip)</span>
+                      <span>Retail Rate (per {product.strip_unit || product.unit || 'Unit'})</span>
                     </span>
                     <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                      {product.strip_unit || 'Strip'}
+                      {product.strip_unit || product.unit || 'Unit'}
                     </span>
                   </div>
                   <div className="mt-2 flex items-baseline space-x-2">
                     <span className="text-2xl font-black text-slate-900">₹{retailPrice.toFixed(2)}</span>
-                    <span className="text-xs text-slate-500 font-bold">/ {product.strip_unit || 'Strip'}</span>
+                    <span className="text-xs text-slate-500 font-bold">/ {product.strip_unit || product.unit || 'Unit'}</span>
                     {mrp > retailPrice && (
                       <span className="text-xs text-slate-400 line-through">MRP ₹{mrp.toFixed(2)}</span>
                     )}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">
-                    💊 Packing: {product.strip_packing || '1 Strip (10 Tablets)'} (Patient consumption)
+                    💊 Packing: {product.strip_packing || product.pack_size || product.packaging_size || (`1 ${product.strip_unit || 'Unit'}`)}
                   </p>
                 </div>
 
@@ -315,24 +315,24 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-extrabold text-emerald-800 flex items-center space-x-1.5">
                       <Package className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Wholesale Rate (per Box)</span>
+                      <span>Wholesale Rate (per {product.box_unit || 'Wholesale Unit'})</span>
                     </span>
                     <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shadow-sm">
-                      {product.box_unit || 'Box'} Packing
+                      {product.box_unit || 'Wholesale'} Packing
                     </span>
                   </div>
                   <div className="mt-2 flex items-baseline space-x-2">
                     <span className="text-2xl font-black text-emerald-800">₹{wholesalePrice.toFixed(2)}</span>
-                    <span className="text-xs text-emerald-700 font-extrabold">/ {product.box_unit || 'Box'}</span>
+                    <span className="text-xs text-emerald-700 font-extrabold">/ {product.box_unit || 'Wholesale'}</span>
                     <span className="text-xs text-emerald-600 font-bold">
                       (Wholesale Trade)
                     </span>
                   </div>
                   <p className="text-[10px] text-emerald-800 font-bold mt-1">
-                    📦 Packing: {product.box_packing || '1 Box (10 Strips)'}
+                    📦 Packing: {product.box_packing || (`1 ${product.box_unit || 'Wholesale Pack'}`)}
                   </p>
                   <p className="text-[10px] text-emerald-600 mt-0.5">
-                    B2B Trade Rate for stockists, chemists &amp; bulk buyers (Box packaging)
+                    B2B Trade Rate for stockists, chemists &amp; bulk buyers
                   </p>
                 </div>
               </div>
@@ -373,16 +373,16 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           )}
 
           {/* Quantity and Actions */}
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-4">
+            <div className="flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-slate-700 block">
-                  Quantity ({isWholesaleSelected ? 'Boxes' : 'Strips'}):
+                  Quantity ({isWholesaleSelected ? (product.box_unit || 'Wholesale Unit') : (product.strip_unit || product.unit || 'Unit')}):
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium">
                   {isWholesaleSelected
-                    ? `📦 Box Rate: ${product.box_packing || '1 Box (10 Strips)'}`
-                    : `💊 Strip Rate: ${product.strip_packing || '1 Strip (10 Tablets)'}`}
+                    ? `📦 Wholesale: ${product.box_packing || (product.box_unit ? '1 ' + product.box_unit : 'Bulk Pack')}`
+                    : `💊 Retail: ${product.strip_packing || product.pack_size || (product.strip_unit ? '1 ' + product.strip_unit : '1 Unit')}`}
                 </span>
               </div>
 
@@ -394,7 +394,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                   <Minus className="w-3.5 h-3.5" />
                 </button>
                 <span className="text-sm font-extrabold text-slate-800 px-1 text-center">
-                  {quantity} {isWholesaleSelected ? (product.box_unit || 'Box') : (product.strip_unit || 'Strip')}
+                  {quantity} {isWholesaleSelected ? (product.box_unit || 'Unit') : (product.strip_unit || product.unit || 'Unit')}
                 </span>
                 <button
                   onClick={() => setQuantity(Math.min(product.stock || 500, quantity + 1))}

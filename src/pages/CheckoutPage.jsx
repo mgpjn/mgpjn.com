@@ -442,7 +442,7 @@ export default function CheckoutPage() {
               <div key={item.id} className="pt-2 flex items-center justify-between text-xs">
                 <div>
                   <span className="font-bold text-slate-800 block truncate max-w-[180px]">{item.name}</span>
-                  <span className="text-slate-400">Qty: {item.quantity} × ₹{item.price}</span>
+                  <span className="text-slate-400">Qty: {item.quantity} {item.isWholesale ? (item.box_unit || 'Unit') : (item.strip_unit || item.unit || 'Unit')} × ₹{item.price}</span>
                 </div>
                 <span className="font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>

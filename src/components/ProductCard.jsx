@@ -42,10 +42,14 @@ export default function ProductCard({ product }) {
   const rating = ((4.2 + (idNum % 7) * 0.1)).toFixed(1);
   const reviewCount = ((idNum * 173) % 2200) + 180;
 
-  // Clean pack format (e.g., jar of 400 gm Powder, bottle of 30 tablets)
+  // Dynamic packaging format based on configured product metric
   const getPackSubtitle = (p) => {
-    if (p.packaging_size) return p.packaging_size;
-    const form = (p.dosage_form || 'Tablets').toLowerCase();
+    if (p.strip_packing && p.strip_packing.trim()) return p.strip_packing;
+    if (p.packaging_size && p.packaging_size.trim()) return p.packaging_size;
+    if (p.pack_size && p.pack_size.trim()) return p.pack_size;
+    if (p.subtitle && p.subtitle.trim()) return p.subtitle;
+    if (p.strip_unit && p.strip_unit.trim()) return `1 ${p.strip_unit}`;
+    const form = (p.dosage_form || '').toLowerCase();
     if (form.includes('tablet')) return 'strip of 10 tablets';
     if (form.includes('capsule')) return 'strip of 10 capsules';
     if (form.includes('syrup')) return 'bottle of 100 ml Syrup';
@@ -53,7 +57,7 @@ export default function ProductCard({ product }) {
     if (form.includes('ointment') || form.includes('cream')) return 'tube of 30 gm Cream';
     if (form.includes('powder')) return 'jar of 400 gm Powder';
     if (form.includes('drop')) return 'bottle of 10 ml Drops';
-    return p.subtitle || 'pack of 1 unit';
+    return p.unit ? `1 ${p.unit}` : '1 Unit';
   };
 
   const handleAdd = (e) => {
@@ -144,11 +148,11 @@ export default function ProductCard({ product }) {
             )}
           </div>
           <span className="text-[10px] text-slate-500 font-semibold">
-            Retail: / {product.strip_unit || 'Strip'}
+            Retail: / {product.strip_unit || product.unit || 'Unit'}
           </span>
         </div>
 
-        {/* Wholesale Rate (Explicitly per Box packaging, strictly for Retailer and above roles) */}
+        {/* Wholesale Rate (Role-specific B2B packaging rate) */}
         {isWholesaleAllowed && (
           <div className="flex items-center justify-between bg-emerald-50/95 border border-emerald-300/80 px-2 py-1 rounded-xl text-[10px] shadow-2xs">
             <div className="flex flex-col">
@@ -156,8 +160,8 @@ export default function ProductCard({ product }) {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                 <span>Wholesale:</span>
               </span>
-              <span className="text-[9px] text-emerald-700 font-medium truncate max-w-[90px]">
-                {product.box_packing || '1 Box (10 Strips)'}
+              <span className="text-[9px] text-emerald-700 font-medium truncate max-w-[100px]" title={product.box_packing || product.pack_size || product.box_unit || 'Wholesale Unit'}>
+                {product.box_packing || (product.box_unit ? `1 ${product.box_unit}` : 'Wholesale Pack')}
               </span>
             </div>
             <div className="text-right">
@@ -165,7 +169,7 @@ export default function ProductCard({ product }) {
                 ₹{wholesalePrice.toFixed(0)}
               </span>
               <span className="text-[9px] text-emerald-600 font-bold block">
-                / {product.box_unit || 'Box'}
+                / {product.box_unit || 'Wholesale'}
               </span>
             </div>
           </div>
