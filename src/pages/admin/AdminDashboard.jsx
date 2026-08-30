@@ -509,14 +509,14 @@ export default function AdminDashboard() {
   };
 
   // Fetch eligible parent users for strict hierarchy creation
-  const fetchHierarchyParentsForRole = async (targetRole, stateVal) => {
+  const fetchHierarchyParentsForRole = async (targetRole) => {
     if (!targetRole || targetRole === 'super_distributor' || targetRole === 'super_admin' || targetRole === 'admin') {
       setHierarchyParents([]);
       return;
     }
     setLoadingHierarchyParents(true);
     try {
-      const res = await getHierarchyParents({ role: targetRole, state: stateVal || '' });
+      const res = await getHierarchyParents({ role: targetRole });
       if (res.data?.success) {
         setHierarchyParents(res.data.parents || []);
       }
@@ -527,6 +527,12 @@ export default function AdminDashboard() {
       setLoadingHierarchyParents(false);
     }
   };
+
+  useEffect(() => {
+    if (showAddUserModal && userForm.role) {
+      fetchHierarchyParentsForRole(userForm.role);
+    }
+  }, [showAddUserModal, userForm.role]);
 
   // Super Admin: State-Wise Wholesale Pricing Modal
   const handleOpenStatePriceModal = async (prod) => {
@@ -1510,7 +1516,7 @@ export default function AdminDashboard() {
                       customer_commission: 5,
                       status: 'active',
                     });
-                    fetchHierarchyParentsForRole(targetRole, 'GUJRAT');
+                    fetchHierarchyParentsForRole(targetRole);
                     setShowAddUserModal(true);
                   }}
                   className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 shadow-md shadow-[#ff5722]/25 transition-all w-fit"
