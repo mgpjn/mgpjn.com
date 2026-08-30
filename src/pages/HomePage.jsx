@@ -121,8 +121,8 @@ export default function HomePage({ onOpenPrescriptionModal }) {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-            {hotSellingList.slice(0, 8).map((prod) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3.5 sm:gap-4">
+            {hotSellingList.slice(0, 10).map((prod) => (
               <ProductCard key={prod.id} product={prod} />
             ))}
           </div>
@@ -147,8 +147,8 @@ export default function HomePage({ onOpenPrescriptionModal }) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {featuredList.map((prod) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3.5 sm:gap-4">
+          {featuredList.slice(0, 10).map((prod) => (
             <ProductCard key={prod.id} product={prod} />
           ))}
         </div>
@@ -171,8 +171,8 @@ export default function HomePage({ onOpenPrescriptionModal }) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-          {topDiscountsList.map((prod) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-3.5 sm:gap-4">
+          {topDiscountsList.slice(0, 10).map((prod) => (
             <ProductCard key={prod.id} product={prod} />
           ))}
         </div>

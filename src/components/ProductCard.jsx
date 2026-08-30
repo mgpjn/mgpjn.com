@@ -56,13 +56,28 @@ export default function ProductCard({ product }) {
     return p.subtitle || 'pack of 1 unit';
   };
 
+  const handleAdd = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product, 1);
+    if (setIsDrawerOpen) setIsDrawerOpen(true);
+  };
+
+  const handleBuyNow = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product, 1);
+    navigate('/checkout');
+  };
+
   return (
-    <div className="group bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 hover:shadow-lg transition-all duration-200 p-3 sm:p-4 flex flex-col justify-between h-full relative">
-      <div>
+    <div className="group bg-white rounded-2xl border border-slate-200/85 hover:border-teal-400 hover:shadow-lg transition-all duration-200 p-3 sm:p-3.5 flex flex-col justify-between h-full relative">
+      {/* Upper Content Section */}
+      <div className="flex-1 flex flex-col">
         {/* Product Image Area */}
         <Link
           to={`/product/${product.slug || product.id}`}
-          className="block relative h-36 sm:h-44 w-full flex items-center justify-center p-2 mb-2 bg-white rounded-xl overflow-hidden"
+          className="block relative h-36 sm:h-40 w-full flex items-center justify-center p-2 mb-2 bg-slate-50/70 rounded-xl overflow-hidden group-hover:bg-slate-50 transition-colors"
         >
           <img
             src={product.image || (Array.isArray(product.images) ? product.images[0] : null) || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600'}
@@ -73,28 +88,35 @@ export default function ProductCard({ product }) {
             }}
           />
 
-          {/* Rx Badge if required */}
+          {/* Rx Badge if prescription required */}
           {product.is_prescription_required && (
-            <span className="absolute top-1.5 left-1.5 bg-amber-500 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+            <span className="absolute top-2 left-2 bg-[#ff9800] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
               Rx
+            </span>
+          )}
+
+          {/* Discount Pill on Top Right if discount > 0 */}
+          {discount > 0 && (
+            <span className="absolute top-2 right-2 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-xs">
+              {discount}% OFF
             </span>
           )}
         </Link>
 
         {/* Product Name */}
         <Link to={`/product/${product.slug || product.id}`} className="block">
-          <h3 className="font-semibold text-slate-900 text-xs sm:text-sm line-clamp-2 leading-snug group-hover:text-teal-700 transition-colors min-h-[2.4rem]">
+          <h3 className="font-bold text-slate-900 text-xs sm:text-[13px] line-clamp-2 leading-snug group-hover:text-teal-700 transition-colors min-h-[2.4rem]">
             {product.name}
           </h3>
         </Link>
 
         {/* Pack Size / Subtitle */}
-        <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-1 mb-1.5">
+        <p className="text-[11px] text-slate-400 truncate mt-0.5 mb-1.5 font-medium">
           {getPackSubtitle(product)}
         </p>
 
-        {/* Ratings & Reviews (1mg Style 5-Star) */}
-        <div className="flex items-center space-x-1 text-xs text-teal-800 font-semibold mb-1">
+        {/* Ratings & Reviews */}
+        <div className="flex items-center space-x-1 text-xs text-teal-800 font-semibold mb-2">
           <div className="flex items-center text-teal-700 space-x-0.5">
             <Star className="w-3 h-3 fill-teal-700 text-teal-700" />
             <Star className="w-3 h-3 fill-teal-700 text-teal-700" />
@@ -107,129 +129,106 @@ export default function ProductCard({ product }) {
         </div>
       </div>
 
-      {/* Pricing & Cart Action Row */}
-      <div className="pt-2 border-t border-slate-100/80 space-y-1.5">
-        <div className="flex items-center justify-between gap-2">
-          {/* Price & Discount */}
-          <div>
-            <div className="flex items-baseline space-x-1.5 flex-wrap">
-              <span className="text-sm sm:text-base font-bold text-slate-900">
-                ₹{retailPrice.toFixed(0)}
-              </span>
-              {mrp > retailPrice && (
-                <span className="text-[11px] sm:text-xs text-slate-400 line-through">
-                  ₹{mrp.toFixed(0)}
-                </span>
-              )}
-              {discount > 0 && (
-                <span className="text-[11px] sm:text-xs font-bold text-teal-600">
-                  {discount}% off
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] text-slate-500 block font-semibold">
-              Retail: / {product.strip_unit || 'Strip'}
+      {/* Pricing & Cart Action Area */}
+      <div className="pt-2 border-t border-slate-100/90 space-y-2 mt-auto">
+        {/* Price & Unit Line */}
+        <div className="flex items-baseline justify-between gap-1 flex-wrap">
+          <div className="flex items-baseline space-x-1.5">
+            <span className="text-base sm:text-lg font-black text-slate-900">
+              ₹{retailPrice.toFixed(0)}
             </span>
-          </div>
-
-          {/* Add / Quantity Button & Buy Now */}
-          <div className="flex items-center space-x-1.5">
-            {!cartItem ? (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    addToCart(product, 1);
-                    if (setIsDrawerOpen) setIsDrawerOpen(true);
-                  }}
-                  className="bg-teal-700 hover:bg-teal-800 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1 cursor-pointer"
-                  title="Add to Cart"
-                >
-                  <ShoppingCart className="w-3 h-3" />
-                  <span>ADD</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    addToCart(product, 1);
-                    navigate('/checkout');
-                  }}
-                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1 cursor-pointer"
-                  title="Buy Now (Instant Checkout)"
-                >
-                  <Zap className="w-3 h-3" />
-                  <span>BUY</span>
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center space-x-1.5">
-                <div className="flex items-center bg-teal-50 border border-teal-200 rounded-lg p-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      updateQuantity(product.id, cartItem.quantity - 1);
-                    }}
-                    className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
-                  >
-                    <Minus className="w-2.5 h-2.5" />
-                  </button>
-                  <span className="text-xs font-bold text-teal-900 px-1.5">{cartItem.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      updateQuantity(product.id, cartItem.quantity + 1);
-                    }}
-                    className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
-                  >
-                    <Plus className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigate('/checkout');
-                  }}
-                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-2 py-1 rounded-lg text-[11px] font-bold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center space-x-0.5"
-                  title="Proceed to Checkout"
-                >
-                  <Zap className="w-2.5 h-2.5" />
-                  <span>Buy</span>
-                </button>
-              </div>
+            {mrp > retailPrice && (
+              <span className="text-[11px] text-slate-400 line-through">
+                ₹{mrp.toFixed(0)}
+              </span>
             )}
           </div>
+          <span className="text-[10px] text-slate-500 font-semibold">
+            Retail: / {product.strip_unit || 'Strip'}
+          </span>
         </div>
 
         {/* Wholesale Rate (Explicitly per Box packaging, strictly for Retailer and above roles) */}
         {isWholesaleAllowed && (
-          <div className="flex items-center justify-between bg-emerald-50/95 border border-emerald-300/80 px-2.5 py-1.5 rounded-xl text-[11px] shadow-2xs">
+          <div className="flex items-center justify-between bg-emerald-50/95 border border-emerald-300/80 px-2 py-1 rounded-xl text-[10px] shadow-2xs">
             <div className="flex flex-col">
               <span className="font-extrabold text-emerald-950 flex items-center space-x-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                <span>Wholesale (Box Rate):</span>
+                <span>Wholesale:</span>
               </span>
-              <span className="text-[10px] text-emerald-700 font-bold">
+              <span className="text-[9px] text-emerald-700 font-medium truncate max-w-[90px]">
                 {product.box_packing || '1 Box (10 Strips)'}
               </span>
             </div>
             <div className="text-right">
-              <span className="font-black text-emerald-800 text-sm">
+              <span className="font-black text-emerald-800 text-xs">
                 ₹{wholesalePrice.toFixed(0)}
               </span>
-              <span className="text-[10px] text-emerald-600 font-bold block">
+              <span className="text-[9px] text-emerald-600 font-bold block">
                 / {product.box_unit || 'Box'}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Action Buttons Row */}
+        {!cartItem ? (
+          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="bg-teal-700 hover:bg-teal-800 text-white py-2 px-2 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center justify-center space-x-1 cursor-pointer"
+              title="Add to Cart"
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>ADD</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="bg-[#ff5722] hover:bg-[#f4511e] text-white py-2 px-2 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center justify-center space-x-1 cursor-pointer"
+              title="Buy Now (Instant Checkout)"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>BUY</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+            <div className="flex items-center justify-between bg-teal-50 border border-teal-200 rounded-xl px-1 py-0.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateQuantity(product.id, cartItem.quantity - 1);
+                }}
+                className="w-6 h-6 rounded-lg bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="text-xs font-extrabold text-teal-900 px-1">{cartItem.quantity}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  updateQuantity(product.id, cartItem.quantity + 1);
+                }}
+                className="w-6 h-6 rounded-lg bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="bg-[#ff5722] hover:bg-[#f4511e] text-white py-1.5 px-2 rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center justify-center space-x-1 cursor-pointer"
+              title="Proceed to Checkout"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>BUY</span>
+            </button>
           </div>
         )}
       </div>

@@ -206,6 +206,8 @@ export default function AdminDashboard() {
     status: 'Active',
     is_featured: false,
     is_trending: false,
+    sort_order: 0,
+    show_on_homepage: true,
     image: '',
     images: [],
   });
@@ -1139,6 +1141,8 @@ export default function AdminDashboard() {
 
       const payload = {
         ...productForm,
+        sort_order: parseInt(productForm.sort_order, 10) || 0,
+        show_on_homepage: Boolean(productForm.show_on_homepage !== false),
         images: imagesArr,
         image: imagesArr[0] || productForm.image || '',
       };
@@ -2516,6 +2520,7 @@ export default function AdminDashboard() {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
                     <tr>
+                      <th className="p-3.5 text-center w-16">Index</th>
                       <th className="p-3.5">Medicine</th>
                       <th className="p-3.5">Category</th>
                       <th className="p-3.5">Batch / SHN</th>
@@ -2551,6 +2556,28 @@ export default function AdminDashboard() {
 
                       return filtered.map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50/60">
+                          {/* Index Sequence Input */}
+                          <td className="p-3.5 text-center">
+                            <input
+                              type="number"
+                              defaultValue={p.sort_order ?? 0}
+                              key={`sort-${p.id}-${p.sort_order}`}
+                              onBlur={async (e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val !== p.sort_order) {
+                                  await toggleAdminProductSection(p.id, { section: 'sort_order', value: val });
+                                  fetchData();
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.target.blur();
+                                }
+                              }}
+                              className="w-12 text-center py-1 px-1 text-xs font-black border border-slate-200 rounded-lg focus:border-brand-blue-600 focus:outline-none bg-slate-50 focus:bg-white"
+                              title="Display Sequence Index. Lower numbers appear first on storefront. Press Enter or click away to save."
+                            />
+                          </td>
                           <td className="p-3.5 flex items-center space-x-3">
                             <img src={p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80'} alt={p.name} className="w-9 h-9 object-contain bg-white rounded-lg border p-1" />
                             <div>
@@ -2580,7 +2607,7 @@ export default function AdminDashboard() {
                           </td>
                           {/* Interactive Section Placement Badges */}
                           <td className="p-3.5 text-center">
-                            <div className="flex items-center justify-center space-x-1.5">
+                            <div className="flex items-center justify-center space-x-1.5 flex-wrap gap-y-1">
                               {/* 1. Featured Section Toggle */}
                               <button
                                 type="button"
@@ -2607,6 +2634,20 @@ export default function AdminDashboard() {
                                 title={p.is_trending ? 'Click to remove from Hot Selling Fast-Moving section' : 'Click to show in Hot Selling Fast-Moving section'}
                               >
                                 <span>{p.is_trending ? '🔥 Hot' : '+ Hot'}</span>
+                              </button>
+
+                              {/* 3. Homepage Grid Visibility Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleProductSection(p.id, 'show_on_homepage', p.show_on_homepage !== false)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                                  p.show_on_homepage !== false
+                                    ? 'bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs hover:bg-blue-200'
+                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
+                                }`}
+                                title={p.show_on_homepage !== false ? 'Shown on Homepage Grid (Click to Hide)' : 'Hidden from Homepage Grid (Click to Show)'}
+                              >
+                                <span>{p.show_on_homepage !== false ? '🏠 Home: On' : '🏠 Home: Off'}</span>
                               </button>
                             </div>
                           </td>
@@ -2654,6 +2695,8 @@ export default function AdminDashboard() {
                                 status: p.status || 'Active',
                                 is_featured: Boolean(p.is_featured),
                                 is_trending: Boolean(p.is_trending),
+                                sort_order: p.sort_order ?? 0,
+                                show_on_homepage: p.show_on_homepage !== false,
                                 image: p.image || '',
                                 images: Array.isArray(p.images) && p.images.length > 0
                                   ? p.images
@@ -4239,16 +4282,59 @@ export default function AdminDashboard() {
               </div>
 
               {/* STORE HOMEPAGE SECTIONS & VISIBILITY */}
-              <div className="p-4 bg-gradient-to-r from-amber-50/60 via-rose-50/60 to-orange-50/60 rounded-2xl border border-amber-200/90 space-y-3">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                  <h4 className="font-black text-slate-900 uppercase tracking-wider text-xs">
-                    Homepage &amp; Store Section Placement
-                  </h4>
+              <div className="p-4 bg-gradient-to-r from-amber-50/60 via-rose-50/60 to-blue-50/60 rounded-2xl border border-blue-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                    <h4 className="font-black text-slate-900 uppercase tracking-wider text-xs">
+                      Homepage Grid Placement &amp; Index Ordering
+                    </h4>
+                  </div>
+                  <span className="text-[10px] bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded-full">
+                    Storefront Display
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Select which sections this medicine will appear in on the store homepage:
+                  Configure sequence ordering and toggle visibility on the store homepage grids:
                 </p>
+
+                {/* Index / Sort Order Input & Show on Homepage Toggle */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Display Sequence Number (Index)
+                    </label>
+                    <input
+                      type="number"
+                      value={productForm.sort_order ?? 0}
+                      onChange={(e) => setProductForm({ ...productForm, sort_order: e.target.value })}
+                      placeholder="e.g. 1, 2, 3..."
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-900 focus:bg-white focus:outline-none focus:border-blue-600"
+                    />
+                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                      Lower numbers appear first (e.g. 1, 2, 3...)
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Homepage Grid Status
+                    </label>
+                    <label className={`flex items-center space-x-2.5 p-2 rounded-lg border cursor-pointer transition-all ${
+                      productForm.show_on_homepage !== false ? 'bg-blue-50/80 border-blue-300' : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={productForm.show_on_homepage !== false}
+                        onChange={(e) => setProductForm({ ...productForm, show_on_homepage: e.target.checked })}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                      />
+                      <span className="text-xs font-bold text-slate-900">
+                        Show on Homepage Grids
+                      </span>
+                    </label>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   {/* Option 1: Featured Medicines */}
