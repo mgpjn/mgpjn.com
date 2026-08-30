@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Truck, ExternalLink, Copy, Check, MapPin, Calendar, Clock, PackageCheck, ShieldCheck } from 'lucide-react';
+import { X, Truck, ExternalLink, Copy, Check, MapPin, Calendar, Clock, PackageCheck, ShieldCheck, Store } from 'lucide-react';
+import { getOrderDeliveryTiming } from '../../data/deliveryTiming';
 
 export default function OrderTrackingModal({ order, isOpen, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -47,6 +48,45 @@ export default function OrderTrackingModal({ order, isOpen, onClose }) {
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Estimated Delivery / Takeaway Timing Card */}
+        {(() => {
+          const timingInfo = getOrderDeliveryTiming(order);
+          return (
+            <div className={`p-4 rounded-2xl border text-left space-y-2 ${
+              timingInfo.isTakeaway
+                ? 'bg-gradient-to-br from-emerald-50 to-teal-50/50 border-emerald-200'
+                : 'bg-gradient-to-br from-blue-50 to-indigo-50/40 border-blue-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  {timingInfo.isTakeaway ? (
+                    <Store className="w-4 h-4 text-emerald-700" />
+                  ) : (
+                    <Truck className="w-4 h-4 text-blue-700" />
+                  )}
+                  <span className="text-[11px] font-black uppercase tracking-wide text-slate-700">
+                    {timingInfo.isTakeaway ? '🏬 Takeaway Pickup Timing' : '🚚 Estimated Delivery Timing'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                  {timingInfo.tag}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between flex-wrap gap-2">
+                <span className={`text-base font-black ${timingInfo.isTakeaway ? 'text-emerald-950' : 'text-slate-900'}`}>
+                  {order.order_status === 'delivered' ? '✓ Delivered' : timingInfo.timingTitle}
+                </span>
+                <span className="text-[11px] text-slate-600 font-medium">
+                  {timingInfo.isTakeaway ? timingInfo.pickupWindow : timingInfo.subText}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {timingInfo.instruction}
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Courier & Tracking Details Card */}
         {order.tracking_number || order.courier_name ? (

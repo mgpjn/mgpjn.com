@@ -7,6 +7,7 @@ import {
 import { getUserOrders } from '../../services/api';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
 import OrderTrackingModal from '../../components/orders/OrderTrackingModal';
+import { getOrderDeliveryTiming } from '../../data/deliveryTiming';
 
 export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -204,6 +205,14 @@ export default function MyOrdersPage() {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
+                    </span>
+                    <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 mt-1.5 rounded-lg text-[11px] font-bold bg-slate-50 border border-slate-200 text-slate-700">
+                      <Clock className="w-3 h-3 text-brand-blue-700" />
+                      <span>
+                        {isDelivered
+                          ? `Delivered on ${new Date(order.delivered_at || order.updated_at).toLocaleDateString()}`
+                          : getOrderDeliveryTiming(order).timingTitle}
+                      </span>
                     </span>
                   </div>
 

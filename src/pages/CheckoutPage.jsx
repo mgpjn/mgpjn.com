@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, CreditCard, QrCode, Banknote, ArrowRight,
-  Truck, CheckCircle2, Lock, Sparkles
+  Truck, CheckCircle2, Lock, Sparkles, Store
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +28,10 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const isTakeaway = formData.payment_method === 'takeaway';
+  const effectiveDeliveryCharge = isTakeaway ? 0 : deliveryCharge;
+  const payableTotal = subtotal + effectiveDeliveryCharge;
+
   if (cartItems.length === 0) {
     navigate('/shop');
     return null;
@@ -47,12 +51,15 @@ export default function CheckoutPage() {
         customer_name: formData.customer_name,
         phone: formData.phone,
         email: formData.email,
-        shipping_address: formData.shipping_address,
+        shipping_address: isTakeaway ? (formData.shipping_address || 'Store Takeaway / Self Pickup Counter') : formData.shipping_address,
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
         payment_method: formData.payment_method,
-        notes: formData.notes,
+        delivery_type: isTakeaway ? 'takeaway' : 'home_delivery',
+        notes: isTakeaway
+          ? `[STORE TAKEAWAY / SELF PICKUP] ${formData.notes || ''}`.trim()
+          : formData.notes,
         items: cartItems.map((item) => ({
           product_id: item.id,
           quantity: item.quantity,
@@ -181,10 +188,22 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-4">
             <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
               <Lock className="w-5 h-5 text-brand-blue-800" />
-              <span>2. Select Payment Mode</span>
+              <span>2. Select Payment &amp; Delivery Mode</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {isTakeaway && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs flex items-center space-x-2.5 text-emerald-900 shadow-2xs">
+                <Store className="w-5 h-5 flex-shrink-0 text-emerald-600" />
+                <div>
+                  <strong className="block text-emerald-950">🏬 Store Takeaway (Self Pickup) Selected:</strong>
+                  <span className="text-emerald-800 text-[11px]">
+                    Enjoy <strong>₹0 Delivery Fee</strong>! Your medicines will be kept packed and ready for counter pickup within 30-60 minutes at your nearest MediGlaxo authorized pharmacy hub.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <label
                 className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                   formData.payment_method === 'cod'
@@ -253,6 +272,32 @@ export default function CheckoutPage() {
                   <p className="text-[10px] text-slate-500">Credit / Debit card & NetBanking.</p>
                 </div>
               </label>
+
+              <label
+                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                  formData.payment_method === 'takeaway'
+                    ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <Store className="w-6 h-6 text-emerald-700" />
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="takeaway"
+                    checked={formData.payment_method === 'takeaway'}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-1.5 mb-0.5">
+                    <h4 className="font-bold text-xs text-slate-800">Store Takeaway</h4>
+                    <span className="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">FREE</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">Self pickup &amp; pay at nearest local pharmacy counter.</p>
+                </div>
+              </label>
             </div>
           </div>
         </div>
@@ -280,27 +325,39 @@ export default function CheckoutPage() {
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Delivery Fee</span>
-              <span>{deliveryCharge === 0 ? <strong className="text-emerald-600">FREE</strong> : `₹${deliveryCharge}`}</span>
+              <span>
+                {isTakeaway ? (
+                  <strong className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px]">
+                    FREE (Takeaway)
+                  </strong>
+                ) : effectiveDeliveryCharge === 0 ? (
+                  <strong className="text-emerald-600">FREE</strong>
+                ) : (
+                  `₹${effectiveDeliveryCharge}`
+                )}
+              </span>
             </div>
             <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t">
               <span>Total Amount</span>
-              <span className="text-brand-blue-800">₹{finalTotal.toFixed(2)}</span>
+              <span className="text-brand-blue-800">₹{payableTotal.toFixed(2)}</span>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-blue-800 hover:bg-brand-blue-900 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-blue-800/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+            className="w-full bg-brand-blue-800 hover:bg-brand-blue-900 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-blue-800/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
           >
             {loading ? (
               <span>Placing Order...</span>
             ) : (
               <>
                 <span>
-                  {formData.payment_method === 'cod'
-                    ? `Confirm Cash on Delivery (COD) Order • ₹${finalTotal.toFixed(2)}`
-                    : `Place Order & Pay ₹${finalTotal.toFixed(2)}`}
+                  {isTakeaway
+                    ? `Confirm Store Takeaway (Self Pickup) • ₹${payableTotal.toFixed(2)}`
+                    : formData.payment_method === 'cod'
+                    ? `Confirm Cash on Delivery (COD) Order • ₹${payableTotal.toFixed(2)}`
+                    : `Place Order & Pay ₹${payableTotal.toFixed(2)}`}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </>

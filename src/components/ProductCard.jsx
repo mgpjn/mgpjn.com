@@ -104,11 +104,6 @@ export default function ProductCard({ product }) {
           <span className="text-[11px] font-bold text-teal-800 ml-1">{rating}</span>
           <span className="text-[10px] text-slate-400 font-normal">({reviewCount})</span>
         </div>
-
-        {/* Delivery Estimate */}
-        <p className="text-[11px] text-slate-600 font-normal mb-2">
-          Get by <span className="font-semibold text-slate-800">8pm, Today</span>
-        </p>
       </div>
 
       {/* Pricing & Cart Action Row */}
