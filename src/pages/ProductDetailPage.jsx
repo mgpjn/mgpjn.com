@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, Plus, Minus, ShieldCheck, Truck, Clock,
   FileText, Check, AlertCircle, Sparkles, ChevronRight, ChevronLeft, Share2, Package, Tag,
@@ -12,8 +12,10 @@ import ProductCard from '../components/ProductCard';
 
 export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const params = useParams();
+  const navigate = useNavigate();
   const idOrSlug = params.slug || params.idOrSlug || params.id;
   const { user } = useAuth();
+  const { addToCart, setIsDrawerOpen } = useCart();
   // Wholesale / Bulk Rate is strictly reserved for sub-retailer se upar ke saare roles (Retailers, Sub Distributors, Distributors, Super Distributors, Admins)
   const isWholesaleAllowed = Boolean(
     user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
@@ -117,7 +119,13 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const handleAddToCart = () => {
     addToCart(product, quantity);
     setAddedAnimation(true);
+    if (setIsDrawerOpen) setIsDrawerOpen(true);
     setTimeout(() => setAddedAnimation(false), 1500);
+  };
+
+  const handleBuyNow = () => {
+    addToCart(product, quantity);
+    navigate('/checkout');
   };
 
   const saltDetails = product.salt_composition_details || [];
@@ -424,13 +432,14 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                 )}
               </button>
 
-              <Link
-                to="/checkout"
-                onClick={() => addToCart(product, quantity)}
-                className="bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-2xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 text-center"
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                className="bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-2xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 text-center cursor-pointer transition-all active:scale-95"
               >
+                <Sparkles className="w-4 h-4" />
                 <span>Buy Now with 1-Click</span>
-              </Link>
+              </button>
             </div>
           </div>
         </div>

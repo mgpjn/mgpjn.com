@@ -1,12 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, Star } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Plus, Minus, Star, Zap } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProductCard({ product }) {
-  const { cartItems, addToCart, updateQuantity } = useCart();
+  const { cartItems, addToCart, updateQuantity, setIsDrawerOpen } = useCart();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const cartItem = cartItems.find((item) => item.id === product.id);
 
   // Wholesale Rate is strictly for Sub-Retailer se upar ke saare roles (Retailer, Sub Distributor, Distributor, Super Distributor, Admin)
@@ -131,29 +132,78 @@ export default function ProductCard({ product }) {
             </span>
           </div>
 
-          {/* Add / Quantity Button */}
-          <div>
+          {/* Add / Quantity Button & Buy Now */}
+          <div className="flex items-center space-x-1.5">
             {!cartItem ? (
-              <button
-                onClick={() => addToCart(product, 1)}
-                className="bg-teal-700 hover:bg-teal-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1 cursor-pointer"
-              >
-                <span>ADD</span>
-              </button>
-            ) : (
-              <div className="flex items-center bg-teal-50 border border-teal-200 rounded-lg p-0.5">
+              <>
                 <button
-                  onClick={() => updateQuantity(product.id, cartItem.quantity - 1)}
-                  className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addToCart(product, 1);
+                    if (setIsDrawerOpen) setIsDrawerOpen(true);
+                  }}
+                  className="bg-teal-700 hover:bg-teal-800 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1 cursor-pointer"
+                  title="Add to Cart"
                 >
-                  <Minus className="w-2.5 h-2.5" />
+                  <ShoppingCart className="w-3 h-3" />
+                  <span>ADD</span>
                 </button>
-                <span className="text-xs font-bold text-teal-900 px-2">{cartItem.quantity}</span>
                 <button
-                  onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
-                  className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addToCart(product, 1);
+                    navigate('/checkout');
+                  }}
+                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center space-x-1 cursor-pointer"
+                  title="Buy Now (Instant Checkout)"
                 >
-                  <Plus className="w-2.5 h-2.5" />
+                  <Zap className="w-3 h-3" />
+                  <span>BUY</span>
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center space-x-1.5">
+                <div className="flex items-center bg-teal-50 border border-teal-200 rounded-lg p-0.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateQuantity(product.id, cartItem.quantity - 1);
+                    }}
+                    className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+                  >
+                    <Minus className="w-2.5 h-2.5" />
+                  </button>
+                  <span className="text-xs font-bold text-teal-900 px-1.5">{cartItem.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      updateQuantity(product.id, cartItem.quantity + 1);
+                    }}
+                    className="w-5 h-5 rounded bg-white text-teal-800 shadow-xs flex items-center justify-center font-bold hover:bg-teal-700 hover:text-white transition-colors text-xs cursor-pointer"
+                  >
+                    <Plus className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate('/checkout');
+                  }}
+                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-2 py-1 rounded-lg text-[11px] font-bold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center space-x-0.5"
+                  title="Proceed to Checkout"
+                >
+                  <Zap className="w-2.5 h-2.5" />
+                  <span>Buy</span>
                 </button>
               </div>
             )}

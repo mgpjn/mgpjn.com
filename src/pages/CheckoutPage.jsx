@@ -55,8 +55,22 @@ export default function CheckoutPage() {
   const isFullWallet = useWallet && walletAmountUsed >= payableTotal;
 
   if (cartItems.length === 0) {
-    navigate('/shop');
-    return null;
+    return (
+      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+          <Store className="w-8 h-8 text-brand-blue-800" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">Your cart is currently empty</h2>
+        <p className="text-xs text-slate-500">Please add medicines to your cart before proceeding to checkout.</p>
+        <button
+          type="button"
+          onClick={() => navigate('/shop')}
+          className="px-6 py-2.5 bg-brand-blue-800 text-white font-bold text-xs rounded-xl shadow-md hover:bg-brand-blue-900 transition-all cursor-pointer"
+        >
+          Explore Medicines Catalog
+        </button>
+      </div>
+    );
   }
 
   const handleChange = (e) => {
