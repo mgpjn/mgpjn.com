@@ -5418,10 +5418,10 @@ export default function AdminDashboard() {
       {/* MODAL 2: SET PRODUCT PRICE (IMAGE 3)                      */}
       {/* ======================================================== */}
       {showSetPriceModal && priceTargetProduct && assignTargetUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-5">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full my-auto max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Header matching Image 3 with gradient */}
-            <div className="bg-gradient-to-r from-[#ff5722] to-[#0288d1] text-white p-4 sm:p-5 flex items-center justify-between shadow-md">
+            <div className="bg-gradient-to-r from-[#ff5722] to-[#0288d1] text-white p-4 sm:p-5 flex items-center justify-between shadow-md flex-shrink-0">
               <div>
                 <h3 className="text-base sm:text-lg font-black tracking-tight">Set Product Price</h3>
                 <p className="text-[11px] text-white/90 font-medium">
@@ -5437,7 +5437,7 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProductPriceSubmit} className="p-5 sm:p-6 space-y-4">
+            <form onSubmit={handleSaveProductPriceSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
               {/* Product ID & Base Price Card */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
                 <div>
@@ -5669,7 +5669,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 flex items-center justify-end space-x-2 border-t border-slate-100">
+              <div className="pt-4 pb-1 sticky bottom-0 bg-white/95 backdrop-blur-xs flex items-center justify-end space-x-2 border-t border-slate-100 z-10">
                 <button
                   type="button"
                   onClick={() => setShowSetPriceModal(false)}
