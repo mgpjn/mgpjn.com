@@ -6,6 +6,7 @@ import { getProfile, updateProfile } from '../../services/api';
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
+  const [profileUser, setProfileUser] = useState(user);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,6 +32,7 @@ export default function ProfilePage() {
       .then((res) => {
         if (res.data.success) {
           const u = res.data.user;
+          setProfileUser(u);
           setFormData({
             name: u.name || '',
             email: u.email || '',
@@ -65,6 +67,7 @@ export default function ProfilePage() {
       const res = await updateProfile(formData);
       if (res.data.success) {
         setMessage('Profile & KYC details updated successfully!');
+        setProfileUser(res.data.user);
         if (updateUser) updateUser(res.data.user);
       }
     } catch (err) {
@@ -95,29 +98,29 @@ export default function ProfilePage() {
       )}
 
       {/* Wallet Overview Card */}
-      {user && (
-        <div className="bg-gradient-to-r from-emerald-900 to-teal-800 text-white rounded-3xl p-6 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white flex-shrink-0">
-              <Wallet className="w-6 h-6 text-emerald-300" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-emerald-200 uppercase tracking-wider block">MediGlaxo Wallet Balance</span>
-              <div className="text-2xl sm:text-3xl font-black text-white">₹{(user.wallet_balance || 0).toFixed(2)}</div>
-            </div>
+      <div className="bg-gradient-to-r from-emerald-900 to-teal-800 text-white rounded-3xl p-6 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white flex-shrink-0">
+            <Wallet className="w-6 h-6 text-emerald-300" />
           </div>
-
-          <div className="flex items-center space-x-3">
-            <Link
-              to="/wallet"
-              className="px-4 py-2.5 bg-white text-emerald-900 rounded-xl text-xs font-black hover:bg-emerald-50 transition-all flex items-center space-x-1.5 shadow-sm"
-            >
-              <span>Passbook &amp; Withdraw (Min ₹500)</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+          <div>
+            <span className="text-xs font-bold text-emerald-200 uppercase tracking-wider block">MediGlaxo Wallet Balance</span>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              ₹{Number(profileUser?.wallet_balance ?? user?.wallet_balance ?? 0).toFixed(2)}
+            </div>
           </div>
         </div>
-      )}
+
+        <div className="flex items-center space-x-3">
+          <Link
+            to="/wallet"
+            className="px-4 py-2.5 bg-white text-emerald-900 rounded-xl text-xs font-black hover:bg-emerald-50 transition-all flex items-center space-x-1.5 shadow-sm"
+          >
+            <span>Passbook &amp; Withdraw (Min ₹500)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Personal Details */}
