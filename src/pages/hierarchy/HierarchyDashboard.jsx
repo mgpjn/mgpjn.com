@@ -712,17 +712,24 @@ export default function HierarchyDashboard() {
             <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Hierarchy Role *</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl font-semibold text-brand-blue-800 bg-brand-blue-50/50 focus:outline-none focus:border-brand-blue-600"
-                    required
-                  >
-                    {allowedRoles.map((r) => (
-                      <option key={r.key} value={r.key}>{r.label} (Level {r.level})</option>
-                    ))}
-                  </select>
+                  <label className="font-bold text-slate-700 block mb-1">Role to Register *</label>
+                  {allowedRoles.length > 1 ? (
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl font-semibold text-brand-blue-800 bg-brand-blue-50/50 focus:outline-none focus:border-brand-blue-600"
+                      required
+                    >
+                      {allowedRoles.map((r) => (
+                        <option key={r.key} value={r.key}>{r.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2 border border-brand-blue-200 bg-brand-blue-50 text-brand-blue-900 rounded-xl font-bold flex items-center justify-between">
+                      <span>{allowedRoles[0]?.label || 'Downline Partner'}</span>
+                      <span className="text-[10px] bg-brand-blue-200/60 text-brand-blue-950 px-2 py-0.5 rounded-md font-semibold">Immediate Downline</span>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -884,17 +891,11 @@ export default function HierarchyDashboard() {
                     className="w-full px-3 py-2 border rounded-xl"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Reset Password (Optional)</label>
-                  <input
-                    type="password"
-                    placeholder="Leave blank to keep same"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
-                  />
-                </div>
+              <div className="bg-slate-50 border border-slate-200/70 rounded-xl p-3 text-[11px] text-slate-500 flex items-center space-x-2">
+                <span>🔒</span>
+                <span>For member privacy and security, password updates are managed by the account holder via their Profile settings.</span>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">

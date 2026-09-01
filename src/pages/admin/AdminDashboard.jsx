@@ -2397,15 +2397,6 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
-                                  {isSuperAdmin && (
-                                    <button
-                                      onClick={() => handleOpenAssignProductsModal(u)}
-                                      title={`Assign Products & State Pricing (${u.state || 'All States'})`}
-                                      className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
-                                    >
-                                      <Tag className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
                                 </td>
                               </tr>
                             );
@@ -2539,15 +2530,6 @@ export default function AdminDashboard() {
                                 >
                                   <Edit className="w-3.5 h-3.5" />
                                 </button>
-                                {isSuperAdmin && (
-                                  <button
-                                    onClick={() => handleOpenAssignProductsModal(u)}
-                                    title={`Assign Products & State Pricing (${u.state || 'All States'})`}
-                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                  >
-                                    <Tag className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
                               </td>
                             </tr>
                           );
