@@ -26,6 +26,7 @@ import {
   getAdminStats,
   getAdminUsersByRole, storeAdminHierarchyUser, updateAdminHierarchyUser, impersonateAdminUser,
   resetAdminUserPassword, toggleAdminUserStatus, transferAdminUser, approveAdminUser, rejectAdminUser,
+  getAdminUserDownlineSummary, deleteAdminHierarchyUser,
   uploadKycDocument,
   getAdminMargins, updateAdminMargins,
   getAdminTransfers, createAdminTransfer,
@@ -379,6 +380,14 @@ export default function AdminDashboard() {
     discount_on_mrp: '',
   });
 
+  // Delete User with Mandatory Downline Transfer Modal (Super Admin Only)
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+  const [deleteTargetUser, setDeleteTargetUser] = useState(null);
+  const [deleteDownlineSummary, setDeleteDownlineSummary] = useState(null);
+  const [loadingDeleteSummary, setLoadingDeleteSummary] = useState(false);
+  const [selectedReassignParentId, setSelectedReassignParentId] = useState('');
+  const [deletingUser, setDeletingUser] = useState(false);
+
   // Medicine Purchase Orders (PO)
   const [purchaseOrdersList, setPurchaseOrdersList] = useState({ data: [] });
   const [selectedPO, setSelectedPO] = useState(null);
@@ -635,6 +644,64 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       alert(`Rejection error: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  // Super Admin: Initiate Safe User Deletion with Mandatory Downline Check
+  const handleInitiateDeleteUser = async (user) => {
+    if (!user) return;
+    setDeleteTargetUser(user);
+    setDeleteDownlineSummary(null);
+    setSelectedReassignParentId('');
+    setShowDeleteUserModal(true);
+    setLoadingDeleteSummary(true);
+    try {
+      const res = await getAdminUserDownlineSummary(user.id);
+      if (res.data.success) {
+        setDeleteDownlineSummary(res.data);
+        if (res.data.eligible_parents && res.data.eligible_parents.length > 0) {
+          setSelectedReassignParentId(String(res.data.eligible_parents[0].id));
+        }
+      }
+    } catch (err) {
+      console.error('Error checking downline summary:', err);
+      alert(err.response?.data?.message || 'Failed to check downline records.');
+    } finally {
+      setLoadingDeleteSummary(false);
+    }
+  };
+
+  // Super Admin: Execute User Deletion & Chain Reassignment
+  const handleExecuteDeleteUser = async () => {
+    if (!deleteTargetUser) return;
+    const hasDownlines = (deleteDownlineSummary?.total_downline_count || 0) > 0;
+    if (hasDownlines && !selectedReassignParentId) {
+      alert('Please select a replacement Super Distributor / Parent to safely transfer downline members before deletion.');
+      return;
+    }
+
+    const confirmMsg = hasDownlines
+      ? `Are you sure you want to transfer ${deleteDownlineSummary.total_downline_count} downline members and permanently delete ${deleteTargetUser.name}? This action cannot be undone.`
+      : `Are you sure you want to permanently delete ${deleteTargetUser.name}?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeletingUser(true);
+    try {
+      const res = await deleteAdminHierarchyUser(deleteTargetUser.id, {
+        reassign_to_user_id: selectedReassignParentId ? parseInt(selectedReassignParentId, 10) : undefined,
+      });
+
+      if (res.data.success) {
+        alert(res.data.message || 'User deleted successfully.');
+        setShowDeleteUserModal(false);
+        setDeleteTargetUser(null);
+        fetchUsersByRole(currentSection);
+      }
+    } catch (err) {
+      alert(`Delete failed: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -2520,14 +2587,23 @@ export default function AdminDashboard() {
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
                                   {isSuperAdmin && (
-                                    <button
-                                      onClick={() => handleOpenAssignProductsModal(u)}
-                                      title={`Assign Products & State Pricing (${u.state || 'All States'})`}
-                                      className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
-                                    >
-                                      <Tag className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
+                                     <>
+                                       <button
+                                         onClick={() => handleOpenAssignProductsModal(u)}
+                                         title={`Assign Products & State Pricing (${u.state || 'All States'})`}
+                                         className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                                       >
+                                         <Tag className="w-3.5 h-3.5" />
+                                       </button>
+                                       <button
+                                         onClick={() => handleInitiateDeleteUser(u)}
+                                         title={`Delete ${u.name} (Super Admin Only)`}
+                                         className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-all hover:scale-110 active:scale-95 ml-0.5"
+                                       >
+                                         <Trash2 className="w-3.5 h-3.5" />
+                                       </button>
+                                     </>
+                                   )}
                                 </td>
                               </tr>
                             );
@@ -2669,6 +2745,15 @@ export default function AdminDashboard() {
                                     <Package className="w-3.5 h-3.5" />
                                     <span>Assign Products</span>
                                   </button>
+                                  {isSuperAdmin && (
+                                    <button
+                                      onClick={() => handleInitiateDeleteUser(u)}
+                                      title={`Delete ${u.name} (Super Admin Only)`}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-all hover:scale-110 active:scale-95 ml-1"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -2810,6 +2895,15 @@ export default function AdminDashboard() {
                                     <Package className="w-3.5 h-3.5" />
                                     <span>Assign Products</span>
                                   </button>
+                                  {isSuperAdmin && (
+                                    <button
+                                      onClick={() => handleInitiateDeleteUser(u)}
+                                      title={`Delete ${u.name} (Super Admin Only)`}
+                                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-all hover:scale-110 active:scale-95 ml-1"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </td>
                             </tr>
                           );
@@ -7094,6 +7188,172 @@ export default function AdminDashboard() {
                     </>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: SAFE USER DELETION WITH MANDATORY DOWNLINE TRANSFER */}
+      {/* ======================================================== */}
+      {showDeleteUserModal && deleteTargetUser && isSuperAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 border border-slate-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white p-5 flex items-center justify-between shadow-md">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-tight">Delete Partner Account</h3>
+                  <p className="text-xs text-rose-100 font-medium">Super Admin Security &amp; Hierarchy Preservation</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteUserModal(false)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              {/* User Details Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-sm">{deleteTargetUser.name}</h4>
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
+                    <span className="font-mono font-bold text-[#ff5722]">{deleteTargetUser.referral_code || `ID #${deleteTargetUser.id}`}</span>
+                    <span>•</span>
+                    <span className="font-bold capitalize bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[10px]">
+                      {deleteTargetUser.role?.replace('_', ' ')}
+                    </span>
+                    <span>•</span>
+                    <span>{deleteTargetUser.phone}</span>
+                  </div>
+                </div>
+                <div className="text-right text-xs">
+                  <span className="text-slate-400 block font-bold">State</span>
+                  <span className="font-black text-slate-800">{deleteTargetUser.state || 'All States'}</span>
+                </div>
+              </div>
+
+              {loadingDeleteSummary ? (
+                <div className="py-12 text-center text-slate-400 text-xs font-bold flex flex-col items-center justify-center space-y-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-rose-600" />
+                  <span>Checking partner hierarchy &amp; downline network...</span>
+                </div>
+              ) : (
+                (() => {
+                  const totalDownlines = deleteDownlineSummary?.total_downline_count || 0;
+                  const hasDownlines = totalDownlines > 0;
+                  const eligibleParents = deleteDownlineSummary?.eligible_parents || [];
+
+                  return (
+                    <div className="space-y-4">
+                      {hasDownlines ? (
+                        <>
+                          {/* Mandatory Reassignment Warning Card */}
+                          <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 space-y-2.5">
+                            <div className="flex items-center space-x-2 text-amber-950 font-black text-xs sm:text-sm">
+                              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                              <span>Mandatory Downline Transfer Required ({totalDownlines} Partners Connected)</span>
+                            </div>
+                            <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                              Is partner ke neeche <strong className="font-black text-amber-950">{totalDownlines} active downline partner/sub-distributors</strong> jude huye hain. Downline ka pricing aur commission hierarchy balance rakhne ke liye in sabhi ko doosre active Super Distributor par transfer karna anivarya (mandatory) hai.
+                            </p>
+                            <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-950 space-y-1">
+                              <div className="flex justify-between font-bold">
+                                <span>Direct Downlines:</span>
+                                <span>{deleteDownlineSummary?.direct_downline_count || 0}</span>
+                              </div>
+                              <div className="flex justify-between font-bold">
+                                <span>Total Chain Members:</span>
+                                <span>{deleteDownlineSummary?.chain_downline_count || totalDownlines}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Target Parent Selection */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-black text-slate-900 block">
+                              Select Replacement Super Distributor / Parent <span className="text-rose-600">*</span>
+                            </label>
+                            <p className="text-[11px] text-slate-500">
+                              All {totalDownlines} downline partners will automatically be attached to this Super Distributor's price list and commission chain.
+                            </p>
+
+                            {eligibleParents.length === 0 ? (
+                              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-bold">
+                                ⚠️ No other active Super Distributors found in system. Please create or activate another Super Distributor first before transferring and deleting this partner.
+                              </div>
+                            ) : (
+                              <select
+                                value={selectedReassignParentId}
+                                onChange={(e) => setSelectedReassignParentId(e.target.value)}
+                                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-purple-200 rounded-xl font-bold text-xs text-slate-900 focus:bg-white focus:border-purple-600 outline-none shadow-2xs"
+                              >
+                                {eligibleParents.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} ({p.referral_code || `ID #${p.id}`}) — {p.state || 'All States'} • {p.phone}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        /* Zero Downlines Card */
+                        <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 space-y-2 text-center">
+                          <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
+                            <Check className="w-5 h-5 stroke-[3]" />
+                          </div>
+                          <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                            Zero Downlines Connected (Safe to Delete)
+                          </h4>
+                          <p className="text-xs text-emerald-900 font-medium">
+                            Is partner ke neeche koi bhi downline ya sub-distributor connect nahi hai. Is account ko bina kisi network impact ke surakshit roop se delete kiya ja sakta hai.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteUserModal(false)}
+                  disabled={deletingUser}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteDeleteUser}
+                  disabled={deletingUser || loadingDeleteSummary || ((deleteDownlineSummary?.total_downline_count || 0) > 0 && !selectedReassignParentId)}
+                  className={`px-5 py-2 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer hover:scale-105 active:scale-95 ${
+                    (deleteDownlineSummary?.total_downline_count || 0) > 0
+                      ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30'
+                      : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
+                  }`}
+                >
+                  {deletingUser && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  <span>
+                    {deletingUser
+                      ? 'Processing Deletion...'
+                      : (deleteDownlineSummary?.total_downline_count || 0) > 0
+                      ? `Reassign Downlines & Delete ${deleteTargetUser.name}`
+                      : `Permanently Delete ${deleteTargetUser.name}`}
+                  </span>
+                </button>
               </div>
             </div>
           </div>

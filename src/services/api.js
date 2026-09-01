@@ -115,6 +115,8 @@ export const toggleAdminUserStatus = (id, data) => api.post(`/admin/users/${id}/
 export const transferAdminUser = (id, data) => api.post(`/admin/users/${id}/transfer`, data);
 export const approveAdminUser = (id) => api.post(`/admin/users/${id}/approve`);
 export const rejectAdminUser = (id, data) => api.post(`/admin/users/${id}/reject`, data);
+export const getAdminUserDownlineSummary = (id) => api.get(`/admin/users/${id}/downline-summary`);
+export const deleteAdminHierarchyUser = (id, data) => api.delete(`/admin/users/${id}`, { data });
 export const uploadKycDocument = (formData) => api.post('/admin/upload-kyc-document', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
