@@ -6,7 +6,7 @@ import {
   ShoppingCart, Wallet, Image, BarChart3, ShieldCheck, Settings,
   LogOut, Plus, Search, RefreshCw, Eye, EyeOff, Edit, Trash2,
   CheckCircle2, XCircle, ArrowUpRight, Printer, Tag, Bell,
-  ChevronDown, ChevronRight, ChevronLeft, Filter, AlertCircle, Check, X, Shield,
+  ChevronDown, ChevronRight, ChevronLeft, Filter, AlertCircle, AlertTriangle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
   CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download,
@@ -711,7 +711,7 @@ export default function AdminDashboard() {
         alert(res.data.message || 'User deleted successfully.');
         setShowDeleteUserModal(false);
         setDeleteTargetUser(null);
-        fetchUsersByRole(currentSection);
+        fetchData();
       }
     } catch (err) {
       alert(`Delete failed: ${err.response?.data?.message || err.message}`);
