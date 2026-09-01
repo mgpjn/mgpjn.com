@@ -361,14 +361,16 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                         </Link>
                       )}
 
-                      <Link
-                        to="/mlm"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center space-x-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-brand-blue-50 hover:text-brand-blue-800 font-semibold"
-                      >
-                        <Network className="w-4 h-4 text-brand-orange-500" />
-                        <span>Refer &amp; Earn Portal</span>
-                      </Link>
+                      {['sub_retailer', 'customer', 'customer_layer_1', 'customer_layer_2', 'customer_layer_3', 'member'].includes(user.role) && (
+                        <Link
+                          to="/mlm"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center space-x-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-brand-blue-50 hover:text-brand-blue-800 font-semibold"
+                        >
+                          <Network className="w-4 h-4 text-brand-orange-500" />
+                          <span>Refer &amp; Earn Portal</span>
+                        </Link>
+                      )}
 
                       <Link
                         to="/wallet"

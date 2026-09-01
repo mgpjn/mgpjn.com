@@ -95,6 +95,29 @@ function ProtectedRoute({ children, minLevel = 1, role }) {
   return children;
 }
 
+function MlmProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-xs text-slate-400">Loading MediGlaxo...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Strict Rule: Referral link & Refer Income Dashboard is exclusively for Sub-Retailer, Customer 1, Customer 2, and Consumer Network
+  const allowedRoles = ['sub_retailer', 'customer', 'customer_layer_1', 'customer_layer_2', 'customer_layer_3', 'member'];
+  if (!allowedRoles.includes(user.role)) {
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/hierarchy" replace />;
+  }
+
+  return children;
+}
+
 function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -230,29 +253,29 @@ export default function App() {
             }
           />
 
-          {/* Refer & Earn Protected Routes */}
+          {/* Refer & Earn Protected Routes (Exclusively for Sub-Retailer, Customer 1, Customer 2) */}
           <Route
             path="/mlm"
             element={
-              <ProtectedRoute>
+              <MlmProtectedRoute>
                 <MlmDashboard />
-              </ProtectedRoute>
+              </MlmProtectedRoute>
             }
           />
           <Route
             path="/mlm/tree"
             element={
-              <ProtectedRoute>
+              <MlmProtectedRoute>
                 <GenealogyTree />
-              </ProtectedRoute>
+              </MlmProtectedRoute>
             }
           />
           <Route
             path="/mlm/wallet"
             element={
-              <ProtectedRoute>
+              <MlmProtectedRoute>
                 <WalletPayouts />
-              </ProtectedRoute>
+              </MlmProtectedRoute>
             }
           />
           <Route
@@ -266,17 +289,17 @@ export default function App() {
           <Route
             path="/mlm/referrals"
             element={
-              <ProtectedRoute>
+              <MlmProtectedRoute>
                 <ReferralsPage />
-              </ProtectedRoute>
+              </MlmProtectedRoute>
             }
           />
           <Route
             path="/mlm/commissions"
             element={
-              <ProtectedRoute>
+              <MlmProtectedRoute>
                 <CommissionsLedger />
-              </ProtectedRoute>
+              </MlmProtectedRoute>
             }
           />
 

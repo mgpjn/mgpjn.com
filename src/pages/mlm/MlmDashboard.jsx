@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   Wallet, Users, Network, TrendingUp, Copy, Check, QrCode,
   ArrowUpRight, ArrowDownRight, Award, ShieldCheck, ChevronRight, Share2,
@@ -12,6 +12,24 @@ import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
 
 export default function MlmDashboard() {
   const { user } = useAuth();
+
+  // Strict Rule: Referral link & Refer Income Dashboard is exclusively for Sub-Retailers and Customers
+  const isReferralEligible = user && [
+    'sub_retailer',
+    'customer',
+    'customer_layer_1',
+    'customer_layer_2',
+    'customer_layer_3',
+    'member'
+  ].includes(user.role);
+
+  if (user && !isReferralEligible) {
+    if (user.role === 'admin' || user.role === 'super_admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/hierarchy" replace />;
+  }
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
