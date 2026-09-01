@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, Star, Zap } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Star, Zap, Share2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import ShareProductModal from './ShareProductModal';
 
 export default function ProductCard({ product }) {
   const { cartItems, addToCart, updateQuantity, setIsDrawerOpen } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const cartItem = cartItems.find((item) => item.id === product.id);
 
   // Wholesale Rate is strictly for Sub-Retailer se upar ke saare roles (Retailer, Sub Distributor, Distributor, Super Distributor, Admin)
@@ -92,6 +94,20 @@ export default function ProductCard({ product }) {
             }}
           />
 
+          {/* Quick Share Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsShareModalOpen(true);
+            }}
+            title="Share this medicine"
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 hover:bg-white text-slate-500 hover:text-emerald-600 shadow-sm flex items-center justify-center transition-all z-20 opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 cursor-pointer"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
+
           {/* Rx Badge if prescription required */}
           {product.is_prescription_required && (
             <span className="absolute top-2 left-2 bg-[#ff9800] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs">
@@ -99,9 +115,9 @@ export default function ProductCard({ product }) {
             </span>
           )}
 
-          {/* Discount Pill on Top Right if discount > 0 */}
-          {discount > 0 && (
-            <span className="absolute top-2 right-2 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-xs">
+          {/* Discount Pill on Top Left if discount > 0 (or beside Rx) */}
+          {discount > 0 && !product.is_prescription_required && (
+            <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-xs">
               {discount}% OFF
             </span>
           )}
@@ -236,6 +252,13 @@ export default function ProductCard({ product }) {
           </div>
         )}
       </div>
+
+      {/* Share Product Modal */}
+      <ShareProductModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        product={product}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { getProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
+import ShareProductModal from '../components/ShareProductModal';
 
 export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const params = useParams();
@@ -28,6 +29,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const [loading, setLoading] = useState(true);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const allImages = useMemo(() => {
     if (!product) return [];
@@ -156,13 +158,20 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
               }}
             />
             {product.discount_percentage > 0 && (
-              <span className="absolute top-4 right-4 bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">
+              <span className="absolute top-4 left-4 bg-rose-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-md z-10">
                 {product.discount_percentage}% OFF
               </span>
             )}
-            <span className="absolute top-4 left-4 bg-brand-blue-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg z-10">
-              Batch Tested
-            </span>
+            
+            {/* Quick Floating Share Button on Image */}
+            <button
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              title="Share this product"
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-600 shadow-md flex items-center justify-center transition-all z-20 hover:scale-110 active:scale-95 cursor-pointer"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
 
             {/* Prev / Next navigation arrows if multiple images */}
             {allImages.length > 1 && (
@@ -237,10 +246,18 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
         {/* Right Info Section */}
         <div className="lg:col-span-7 space-y-6">
           <div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between">
               <span className="text-xs font-extrabold text-brand-blue-800 bg-brand-blue-50 px-2.5 py-1 rounded-lg uppercase tracking-wide">
                 {product.category?.name || 'Pharmacy'} • {product.dosage_form}
               </span>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-full font-bold text-xs transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Share Product</span>
+              </button>
             </div>
 
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 mt-2.5 tracking-tight">
@@ -439,6 +456,29 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                 <span>Buy Now with 1-Click</span>
               </button>
             </div>
+
+            {/* Share Product Action Bar */}
+            <div className="pt-3 border-t border-slate-200/60">
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/90 rounded-2xl text-emerald-950 font-black text-xs flex items-center justify-between transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-98"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                    <Share2 className="w-4 h-4 fill-current" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block font-black text-slate-900 text-xs">Share Product &amp; Earn Downline Commission</span>
+                    <span className="block text-[10px] text-emerald-700 font-medium">Send genuine medicine link directly on WhatsApp, Facebook, etc.</span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1 text-emerald-700 font-extrabold text-xs">
+                  <span>Share Now</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -540,6 +580,13 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           </div>
         </div>
       )}
+
+      {/* Share Product Modal */}
+      <ShareProductModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        product={product}
+      />
     </div>
   );
 }
