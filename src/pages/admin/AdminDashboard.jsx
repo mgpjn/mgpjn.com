@@ -35,6 +35,7 @@ import {
   uploadAdminProductImage,
   getAdminProductStatePrices, saveAdminProductStatePrices,
   getAdminUserAssignedProducts, toggleAdminUserProductAssignment, bulkAssignAdminUserProducts, saveAdminUserProductPrice,
+  bulkUpdateAdminProductPricing,
   getAdminOrders, updateAdminOrderStatus,
   getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
   getAdminPrescriptions, updateAdminPrescriptionStatus,
@@ -357,6 +358,25 @@ export default function AdminDashboard() {
     retailer_price: 140,
   });
   const [savingPrice, setSavingPrice] = useState(false);
+
+  // Bulk Product Pricing & Commissions Modal States
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [showBulkPricingModal, setShowBulkPricingModal] = useState(false);
+  const [bulkProductsList, setBulkProductsList] = useState([]);
+  const [savingBulkPricing, setSavingBulkPricing] = useState(false);
+  const [bulkBatchRates, setBulkBatchRates] = useState({
+    sd_margin: '',
+    dist_margin: '',
+    subd_margin: '',
+    rt_margin: '',
+    level_1_commission: '',
+    level_2_commission: '',
+    level_3_commission: '',
+    sub_retailer_commission: '',
+    customer_commission: '',
+    stock: '',
+    discount_on_mrp: '',
+  });
 
   // Medicine Purchase Orders (PO)
   const [purchaseOrdersList, setPurchaseOrdersList] = useState({ data: [] });
@@ -921,6 +941,161 @@ export default function AdminDashboard() {
       alert(`Failed to save price: ${err.response?.data?.message || err.message}`);
     } finally {
       setSavingPrice(false);
+    }
+  };
+
+  // Bulk Product Price & Commission Handlers
+  const handleToggleSelectProduct = (id) => {
+    setSelectedProductIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAllVisible = () => {
+    const visibleIds = (productsList?.data || []).map((p) => p.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedProductIds.includes(id));
+    if (allSelected) {
+      setSelectedProductIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedProductIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleSelectAllDbProducts = () => {
+    const allIds = (productsList?.data || []).map((p) => p.id);
+    setSelectedProductIds(allIds);
+  };
+
+  const handleClearSelectedProducts = () => {
+    setSelectedProductIds([]);
+  };
+
+  const handleOpenBulkPricingModal = () => {
+    const items = productsList?.data || [];
+    let targetItems = [];
+    if (selectedProductIds.length > 0) {
+      targetItems = items.filter((p) => selectedProductIds.includes(p.id));
+    } else {
+      targetItems = items;
+    }
+
+    if (targetItems.length === 0) {
+      alert('No medicines available to edit. Please add or load medicines first.');
+      return;
+    }
+
+    const initialList = targetItems.map((p) => ({
+      id: p.id,
+      name: p.name,
+      subtitle: p.subtitle || p.composition || '',
+      image: p.image,
+      batch_no: p.batch_no || '',
+      category_name: p.category?.name || '',
+      mrp: p.mrp || (p.price ? Number((p.price * 1.25).toFixed(2)) : 0),
+      retail_price: p.retail_price || p.price || 0,
+      wholesale_price: p.wholesale_price || p.retailer_price || 0,
+      sd_price: p.sd_price || (p.base_price ? Number((p.base_price * 1.12).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.45).toFixed(2)) : 0)),
+      dist_price: p.dist_price || (p.sd_price ? Number((p.sd_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.50).toFixed(2)) : 0)),
+      subd_price: p.subd_price || (p.dist_price ? Number((p.dist_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.55).toFixed(2)) : 0)),
+      retailer_price: p.retailer_price || (p.subd_price ? Number((p.subd_price * 1.15).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.65).toFixed(2)) : 0)),
+      stock: p.stock ?? 100,
+      level_1_commission: p.level_1_commission !== undefined && p.level_1_commission !== null ? p.level_1_commission : 10.00,
+      level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : 5.00,
+      level_3_commission: p.level_3_commission !== undefined && p.level_3_commission !== null ? p.level_3_commission : 2.00,
+      sub_retailer_commission: p.sub_retailer_commission !== undefined && p.sub_retailer_commission !== null ? p.sub_retailer_commission : 10.00,
+      customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : 5.00,
+      sd_margin: p.sd_margin !== undefined && p.sd_margin !== null ? p.sd_margin : 2.00,
+      dist_margin: p.dist_margin !== undefined && p.dist_margin !== null ? p.dist_margin : 5.00,
+      subd_margin: p.subd_margin !== undefined && p.subd_margin !== null ? p.subd_margin : 10.00,
+      rt_margin: p.rt_margin !== undefined && p.rt_margin !== null ? p.rt_margin : 15.00,
+    }));
+
+    setBulkProductsList(initialList);
+    setShowBulkPricingModal(true);
+  };
+
+  const handleBulkProductItemChange = (id, field, value) => {
+    setBulkProductsList((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const updated = {
+          ...item,
+          [field]: value === '' ? '' : (field === 'stock' ? parseInt(value, 10) || 0 : parseFloat(value) || 0)
+        };
+        return updated;
+      })
+    );
+  };
+
+  const handleAutoCalculateTierRates = () => {
+    setBulkProductsList((prev) =>
+      prev.map((item) => {
+        const mrp = parseFloat(item.mrp) || 0;
+        if (mrp <= 0) return item;
+        const sd = Math.round(mrp * 0.45 * 100) / 100;
+        const dist = Math.round(sd * 1.05 * 100) / 100;
+        const subd = Math.round(dist * 1.05 * 100) / 100;
+        const rt = Math.round(subd * 1.15 * 100) / 100;
+        const retail = Math.round(mrp * 0.80 * 100) / 100;
+        return {
+          ...item,
+          sd_price: sd,
+          dist_price: dist,
+          subd_price: subd,
+          retailer_price: rt,
+          wholesale_price: rt,
+          retail_price: retail,
+          level_1_commission: 10.00,
+          level_2_commission: 5.00,
+          level_3_commission: 2.00,
+          sub_retailer_commission: 10.00,
+          customer_commission: 5.00,
+        };
+      })
+    );
+  };
+
+  const handleApplyBatchRatesToAll = () => {
+    setBulkProductsList((prev) =>
+      prev.map((item) => {
+        const updated = { ...item };
+        if (bulkBatchRates.level_1_commission !== '') updated.level_1_commission = parseFloat(bulkBatchRates.level_1_commission) || 0;
+        if (bulkBatchRates.level_2_commission !== '') updated.level_2_commission = parseFloat(bulkBatchRates.level_2_commission) || 0;
+        if (bulkBatchRates.level_3_commission !== '') updated.level_3_commission = parseFloat(bulkBatchRates.level_3_commission) || 0;
+        if (bulkBatchRates.sub_retailer_commission !== '') updated.sub_retailer_commission = parseFloat(bulkBatchRates.sub_retailer_commission) || 0;
+        if (bulkBatchRates.customer_commission !== '') updated.customer_commission = parseFloat(bulkBatchRates.customer_commission) || 0;
+        if (bulkBatchRates.sd_margin !== '') updated.sd_margin = parseFloat(bulkBatchRates.sd_margin) || 0;
+        if (bulkBatchRates.dist_margin !== '') updated.dist_margin = parseFloat(bulkBatchRates.dist_margin) || 0;
+        if (bulkBatchRates.subd_margin !== '') updated.subd_margin = parseFloat(bulkBatchRates.subd_margin) || 0;
+        if (bulkBatchRates.rt_margin !== '') updated.rt_margin = parseFloat(bulkBatchRates.rt_margin) || 0;
+        if (bulkBatchRates.stock !== '') updated.stock = parseInt(bulkBatchRates.stock, 10) || 0;
+        if (bulkBatchRates.discount_on_mrp !== '') {
+          const discount = parseFloat(bulkBatchRates.discount_on_mrp) || 0;
+          const mrp = parseFloat(updated.mrp) || 0;
+          if (mrp > 0) {
+            updated.retail_price = Math.round(mrp * (1 - discount / 100) * 100) / 100;
+          }
+        }
+        return updated;
+      })
+    );
+  };
+
+  const handleSaveBulkPricing = async () => {
+    if (bulkProductsList.length === 0) return;
+    setSavingBulkPricing(true);
+    try {
+      const res = await bulkUpdateAdminProductPricing({ products: bulkProductsList });
+      if (res.data.success) {
+        alert(res.data.message || `Successfully updated ${bulkProductsList.length} medicines!`);
+        setShowBulkPricingModal(false);
+        setSelectedProductIds([]);
+        fetchProductsFromDb(productPage, false);
+      }
+    } catch (err) {
+      alert(`Failed to save bulk prices: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setSavingBulkPricing(false);
     }
   };
 
@@ -2565,6 +2740,20 @@ export default function AdminDashboard() {
                   </button>
 
                   <button
+                    type="button"
+                    onClick={handleOpenBulkPricingModal}
+                    className="bg-purple-700 hover:bg-purple-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-purple-700/20 cursor-pointer transition-all"
+                    title="Bulk Edit Prices, Post Rates & Commissions for Selected Medicines"
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-purple-200" />
+                    <span>
+                      {selectedProductIds.length > 0
+                        ? `Bulk Edit (${selectedProductIds.length})`
+                        : 'Bulk Edit Pricing & Commissions'}
+                    </span>
+                  </button>
+
+                  <button
                     onClick={() => {
                       setEditingProduct(null);
                       setProductForm({
@@ -2604,6 +2793,39 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* Selection Action Bar (Appears when 1+ products selected) */}
+              {selectedProductIds.length > 0 && (
+                <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 text-white px-4 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-purple-950/20 border border-purple-800">
+                  <div className="flex items-center space-x-3 text-xs font-bold">
+                    <span className="bg-purple-800/90 text-purple-200 px-3 py-1 rounded-xl border border-purple-700">
+                      ✓ {selectedProductIds.length} Medicines Marked
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllDbProducts}
+                      className="text-amber-300 hover:text-amber-200 underline cursor-pointer"
+                    >
+                      Select All ({productsList?.data?.length || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearSelectedProducts}
+                      className="text-purple-300 hover:text-rose-300 cursor-pointer ml-1"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenBulkPricingModal}
+                    className="bg-amber-400 hover:bg-amber-300 text-purple-950 px-4 py-1.5 rounded-xl text-xs font-black flex items-center space-x-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Open Bulk Editor ({selectedProductIds.length})</span>
+                  </button>
+                </div>
+              )}
 
               {/* Search, Category Filter & Widget Tabs Toolbar (Database-Driven) */}
               <div className="space-y-3 pt-1 border-b pb-4">
@@ -2773,6 +2995,18 @@ export default function AdminDashboard() {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
                     <tr>
+                      <th className="p-2.5 text-center w-8">
+                        <input
+                          type="checkbox"
+                          checked={
+                            (productsList?.data || []).length > 0 &&
+                            (productsList?.data || []).every((p) => selectedProductIds.includes(p.id))
+                          }
+                          onChange={handleToggleSelectAllVisible}
+                          title="Select / Deselect All Visible Medicines"
+                          className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        />
+                      </th>
                       <th className="p-2.5 text-center w-10 text-slate-400">SR</th>
                       <th className="p-2.5 text-center w-12 text-blue-900" title="Storefront Priority Rank / Index Sequence">Rank</th>
                       <th className="p-2.5">Medicine</th>
@@ -2794,7 +3028,7 @@ export default function AdminDashboard() {
                       if (loadingProducts && items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={12} className="p-12 text-center text-slate-400 space-y-2">
+                            <td colSpan={13} className="p-12 text-center text-slate-400 space-y-2">
                               <Loader2 className="w-6 h-6 animate-spin text-brand-blue-700 mx-auto" />
                               <p className="text-xs font-bold text-slate-600">Querying database & loading medicines...</p>
                             </td>
@@ -2805,7 +3039,7 @@ export default function AdminDashboard() {
                       if (items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={12} className="p-10 text-center text-slate-400 space-y-2">
+                            <td colSpan={13} className="p-10 text-center text-slate-400 space-y-2">
                               <p className="text-sm font-bold text-slate-700">No medicines found</p>
                               <p className="text-xs text-slate-400">
                                 {productSearchQuery
@@ -2831,7 +3065,16 @@ export default function AdminDashboard() {
                       }
 
                       return items.map((p, idx) => (
-                        <tr key={p.id} className="hover:bg-slate-50/60 group">
+                        <tr key={p.id} className={`hover:bg-slate-50/60 group ${selectedProductIds.includes(p.id) ? 'bg-purple-50/40' : ''}`}>
+                          {/* Selection Checkbox */}
+                          <td className="p-2.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedProductIds.includes(p.id)}
+                              onChange={() => handleToggleSelectProduct(p.id)}
+                              className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                            />
+                          </td>
                           {/* Serial Number (Row Counter 1, 2, 3... 58) */}
                           <td className="p-2.5 text-center font-bold text-slate-400 text-xs whitespace-nowrap">
                             {idx + 1}
@@ -7510,6 +7753,361 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* BULK PRODUCT PRICE, TIER RATES & COMMISSION EDITOR MODAL                 */}
+      {/* ========================================================================= */}
+      {showBulkPricingModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-7xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-indigo-950 text-white p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">Bulk Product Price, Tier Rates &amp; Commission Editor</h3>
+                    <span className="bg-amber-400 text-purple-950 px-2.5 py-0.5 rounded-full text-[11px] font-black">
+                      {bulkProductsList.length} Medicines in Batch
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-purple-200/80">
+                    Modify printed MRP, customer selling rates, post wholesale prices (SD, Dist, Sub-D, Retailer) &amp; dynamic commissions in one place.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowBulkPricingModal(false)}
+                className="p-1.5 text-purple-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              {/* Quick Batch Multiplier / Uniform Rate Toolbar */}
+              <div className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-black text-purple-950 uppercase tracking-wide flex items-center space-x-1.5">
+                      <span>⚡ 1-Click Batch Tools (Apply to All {bulkProductsList.length} Selected)</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAutoCalculateTierRates}
+                    className="px-3 py-1.5 bg-purple-900 hover:bg-purple-950 text-amber-300 hover:text-white rounded-xl text-xs font-black shadow-sm flex items-center space-x-1.5 transition-all cursor-pointer"
+                    title="Auto-calculate standard wholesale tiers & 10/5/2 commissions based on printed MRP"
+                  >
+                    <span>✨ Auto-Calculate All Tier Rates from MRP</span>
+                  </button>
+                </div>
+
+                {/* Batch Inputs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 text-xs">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">L1 Comm (%)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 10"
+                      value={bulkBatchRates.level_1_commission}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, level_1_commission: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">L2 Comm (%)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 5"
+                      value={bulkBatchRates.level_2_commission}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, level_2_commission: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">L3 Comm (%)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 2"
+                      value={bulkBatchRates.level_3_commission}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, level_3_commission: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">Sub-Ret (%)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 10"
+                      value={bulkBatchRates.sub_retailer_commission}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, sub_retailer_commission: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">Cust Comm (%)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 5"
+                      value={bulkBatchRates.customer_commission}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, customer_commission: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">MRP Off (%)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 20"
+                      value={bulkBatchRates.discount_on_mrp}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, discount_on_mrp: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-600 block mb-0.5">Stock Qty</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 100"
+                      value={bulkBatchRates.stock}
+                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, stock: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-purple-900 focus:outline-none focus:border-purple-600"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleApplyBatchRatesToAll}
+                      className="w-full py-1.5 px-2 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer text-center"
+                    >
+                      Apply Batch
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product-by-Product List Table */}
+              <div className="border border-slate-200 rounded-2xl overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="bg-slate-900 text-white text-[10px] uppercase font-bold sticky top-0 z-10">
+                    <tr>
+                      <th className="p-2.5 text-center w-8">#</th>
+                      <th className="p-2.5 min-w-[180px]">Medicine</th>
+                      <th className="p-2.5 min-w-[100px] text-purple-200">Printed MRP (₹)</th>
+                      <th className="p-2.5 min-w-[100px] text-blue-200">Customer (₹)</th>
+                      <th className="p-2.5 min-w-[100px] text-amber-300">SD Rate (₹)</th>
+                      <th className="p-2.5 min-w-[100px] text-emerald-300">Dist Rate (₹)</th>
+                      <th className="p-2.5 min-w-[100px] text-teal-300">Sub-D Rate (₹)</th>
+                      <th className="p-2.5 min-w-[100px] text-sky-300">Retailer (₹)</th>
+                      <th className="p-2.5 min-w-[80px]">Stock</th>
+                      <th className="p-2.5 min-w-[75px] text-rose-300">L1 %</th>
+                      <th className="p-2.5 min-w-[75px] text-rose-300">L2 %</th>
+                      <th className="p-2.5 min-w-[75px] text-rose-300">L3 %</th>
+                      <th className="p-2.5 min-w-[75px] text-orange-300">Sub-Ret %</th>
+                      <th className="p-2.5 min-w-[75px] text-orange-300">Cust %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {bulkProductsList.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-purple-50/30 transition-colors">
+                        <td className="p-2 text-center font-bold text-slate-400 text-xs whitespace-nowrap">
+                          {idx + 1}
+                        </td>
+                        <td className="p-2">
+                          <div className="flex items-center space-x-2">
+                            <img
+                              src={item.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=60'}
+                              alt={item.name}
+                              className="w-7 h-7 object-contain bg-white rounded border p-0.5 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-900 block truncate max-w-[150px]">{item.name}</span>
+                              <span className="text-[10px] text-slate-400 block font-mono">{item.batch_no}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Printed MRP */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.mrp}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'mrp', e.target.value)}
+                            className="w-20 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 focus:bg-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Customer / Selling Price */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.retail_price}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'retail_price', e.target.value)}
+                            className="w-20 px-2 py-1 bg-blue-50/50 border border-blue-200 rounded-lg text-xs font-bold text-blue-900 focus:bg-white focus:border-blue-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* SD Price */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.sd_price}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'sd_price', e.target.value)}
+                            className="w-20 px-2 py-1 bg-amber-50/50 border border-amber-200 rounded-lg text-xs font-bold text-amber-950 focus:bg-white focus:border-amber-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Dist Price */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.dist_price}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'dist_price', e.target.value)}
+                            className="w-20 px-2 py-1 bg-emerald-50/50 border border-emerald-200 rounded-lg text-xs font-bold text-emerald-950 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* SubD Price */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.subd_price}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'subd_price', e.target.value)}
+                            className="w-20 px-2 py-1 bg-teal-50/50 border border-teal-200 rounded-lg text-xs font-bold text-teal-950 focus:bg-white focus:border-teal-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Retailer Price */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.retailer_price}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'retailer_price', e.target.value)}
+                            className="w-20 px-2 py-1 bg-sky-50/50 border border-sky-200 rounded-lg text-xs font-bold text-sky-950 focus:bg-white focus:border-sky-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Stock */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            value={item.stock}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'stock', e.target.value)}
+                            className="w-16 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Level 1 Commission % */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.level_1_commission}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'level_1_commission', e.target.value)}
+                            className="w-14 px-1.5 py-1 bg-rose-50/50 border border-rose-200 rounded-lg text-xs font-bold text-rose-900 focus:bg-white focus:border-rose-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Level 2 Commission % */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.level_2_commission}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'level_2_commission', e.target.value)}
+                            className="w-14 px-1.5 py-1 bg-rose-50/50 border border-rose-200 rounded-lg text-xs font-bold text-rose-900 focus:bg-white focus:border-rose-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Level 3 Commission % */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.level_3_commission}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'level_3_commission', e.target.value)}
+                            className="w-14 px-1.5 py-1 bg-rose-50/50 border border-rose-200 rounded-lg text-xs font-bold text-rose-900 focus:bg-white focus:border-rose-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Sub-Retailer Commission % */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.sub_retailer_commission}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'sub_retailer_commission', e.target.value)}
+                            className="w-14 px-1.5 py-1 bg-orange-50/50 border border-orange-200 rounded-lg text-xs font-bold text-orange-900 focus:bg-white focus:border-orange-600 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Customer Commission % */}
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.customer_commission}
+                            onChange={(e) => handleBulkProductItemChange(item.id, 'customer_commission', e.target.value)}
+                            className="w-14 px-1.5 py-1 bg-orange-50/50 border border-orange-200 rounded-lg text-xs font-bold text-orange-900 focus:bg-white focus:border-orange-600 focus:outline-none"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+              <div className="text-xs text-slate-500 font-semibold flex items-center space-x-1.5">
+                <span className="text-emerald-600">✓</span>
+                <span>All updates will be applied instantly to the database in a single transaction.</span>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkPricingModal(false)}
+                  className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={savingBulkPricing || bulkProductsList.length === 0}
+                  onClick={handleSaveBulkPricing}
+                  className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl font-black text-xs shadow-lg shadow-purple-800/20 transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {savingBulkPricing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving All Changes to Database...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCheck className="w-4 h-4" />
+                      <span>Save All Changes ({bulkProductsList.length} Medicines)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

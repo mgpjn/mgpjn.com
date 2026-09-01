@@ -128,6 +128,7 @@ export const getAdminUserAssignedProducts = (userId) => api.get(`/admin/users/${
 export const toggleAdminUserProductAssignment = (userId, data) => api.post(`/admin/users/${userId}/assign-product`, data);
 export const bulkAssignAdminUserProducts = (userId, data) => api.post(`/admin/users/${userId}/assign-all-products`, data);
 export const saveAdminUserProductPrice = (userId, data) => api.post(`/admin/users/${userId}/set-product-price`, data);
+export const bulkUpdateAdminProductPricing = (data) => api.post('/admin/products/bulk-update-pricing', data);
 
 // Medicine Purchase Orders (PO)
 export const getPurchaseOrders = (params) => api.get('/purchase-orders', { params });
