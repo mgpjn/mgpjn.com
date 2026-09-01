@@ -111,7 +111,7 @@ export default function ReturnRefundPage() {
               <Mail className="w-5 h-5 text-emerald-400 flex-shrink-0" />
               <div>
                 <p className="text-slate-400 text-[10px]">Email Support Desk</p>
-                <p className="text-white font-bold">support@mediglaxo.com</p>
+                <p className="text-white font-bold">support@mgpjn.com</p>
               </div>
             </div>
           </div>

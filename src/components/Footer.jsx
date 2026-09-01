@@ -99,7 +99,7 @@ export default function Footer() {
               </li>
               <li className="flex items-start space-x-3">
                 <Mail className="w-4 h-4 text-brand-orange-400 flex-shrink-0 mt-0.5" />
-                <span>support@mediglaxo.com</span>
+                <span>support@mgpjn.com</span>
               </li>
               <li className="flex items-start space-x-3">
                 <MapPin className="w-4 h-4 text-brand-orange-400 flex-shrink-0 mt-0.5" />

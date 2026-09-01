@@ -37,7 +37,7 @@ export default function ContactUsPage() {
               </div>
               <div className="flex items-start space-x-3">
                 <Mail className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <span>support@mediglaxo.com</span>
+                <span>support@mgpjn.com</span>
               </div>
             </div>
           </div>

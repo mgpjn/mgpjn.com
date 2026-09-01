@@ -304,7 +304,7 @@ export default function AdminDashboard() {
     company_name: 'MEDIGLAXO PHARMA',
     gstin: '24ABVFM0075D1ZA',
     helpline: '+91 9650582703',
-    support_email: 'support@mediglaxo.com',
+    support_email: 'support@mgpjn.com',
     min_payout: '500',
     free_shipping_min: '500',
     delivery_charge: '50',

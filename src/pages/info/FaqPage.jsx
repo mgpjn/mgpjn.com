@@ -90,7 +90,7 @@ export default function FaqPage() {
             <span>Call Helpline</span>
           </a>
           <a
-            href="mailto:support@mediglaxo.com"
+            href="mailto:support@mgpjn.com"
             className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all"
           >
             <Mail className="w-4 h-4" />

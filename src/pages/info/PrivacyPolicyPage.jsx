@@ -110,7 +110,7 @@ export default function PrivacyPolicyPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-brand-orange-400 flex-shrink-0" />
-                <span className="text-slate-300">support@mediglaxo.com</span>
+                <span className="text-slate-300">support@mgpjn.com</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-brand-orange-400 flex-shrink-0" />
