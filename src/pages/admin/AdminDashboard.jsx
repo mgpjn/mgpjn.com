@@ -180,7 +180,9 @@ export default function AdminDashboard() {
   const [categoriesList, setCategoriesList] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productSectionFilter, setProductSectionFilter] = useState('all'); // 'all', 'featured', 'trending', 'active', 'inactive'
+  const [productSectionFilter, setProductSectionFilter] = useState('all'); // 'all', 'featured', 'trending', 'homepage', 'active', 'inactive'
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all');
   const [productForm, setProductForm] = useState({
     name: '',
     subtitle: '',
@@ -2520,72 +2522,183 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Section Filters & Category Tabs */}
+              {/* Search, Category Filter & Widget Tabs Toolbar */}
               {(() => {
                 const allP = productsList?.data || (Array.isArray(productsList) ? productsList : []);
                 const featuredCnt = allP.filter(p => p.is_featured).length;
                 const hotCnt = allP.filter(p => p.is_trending).length;
+                const homeCnt = allP.filter(p => p.show_on_homepage !== false).length;
                 const activeCnt = allP.filter(p => p.status !== 'Inactive').length;
                 const inactiveCnt = allP.filter(p => p.status === 'Inactive').length;
 
+                // Multi-attribute search & filter logic
+                const filtered = allP.filter(p => {
+                  // 1. Search query filter
+                  if (productSearchQuery.trim()) {
+                    const q = productSearchQuery.toLowerCase().trim();
+                    const nameMatch = (p.name || '').toLowerCase().includes(q);
+                    const subMatch = (p.subtitle || '').toLowerCase().includes(q);
+                    const compMatch = (p.composition || '').toLowerCase().includes(q);
+                    const batchMatch = (p.batch_no || '').toLowerCase().includes(q);
+                    const catMatch = (p.category?.name || '').toLowerCase().includes(q);
+                    const mfgMatch = (p.manufacturer || '').toLowerCase().includes(q);
+                    const formMatch = (p.dosage_form || '').toLowerCase().includes(q);
+                    if (!nameMatch && !subMatch && !compMatch && !batchMatch && !catMatch && !mfgMatch && !formMatch) {
+                      return false;
+                    }
+                  }
+
+                  // 2. Category filter
+                  if (productCategoryFilter !== 'all') {
+                    if (String(p.category_id) !== String(productCategoryFilter) && String(p.category?.id) !== String(productCategoryFilter)) {
+                      return false;
+                    }
+                  }
+
+                  // 3. Section / Widget filter
+                  if (productSectionFilter === 'featured') return Boolean(p.is_featured);
+                  if (productSectionFilter === 'trending') return Boolean(p.is_trending);
+                  if (productSectionFilter === 'homepage') return p.show_on_homepage !== false;
+                  if (productSectionFilter === 'active') return p.status !== 'Inactive';
+                  if (productSectionFilter === 'inactive') return p.status === 'Inactive';
+                  return true;
+                });
+
                 return (
-                  <div className="flex flex-wrap items-center gap-2 pt-1 border-b pb-3">
-                    <span className="text-xs font-bold text-slate-500 mr-1">Filter by Section:</span>
-                    <button
-                      type="button"
-                      onClick={() => setProductSectionFilter('all')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        productSectionFilter === 'all'
-                          ? 'bg-slate-900 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      All Medicines ({allP.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProductSectionFilter('featured')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
-                        productSectionFilter === 'featured'
-                          ? 'bg-amber-500 text-white shadow-xs'
-                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
-                      }`}
-                    >
-                      <span>⭐ Featured ({featuredCnt})</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProductSectionFilter('trending')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
-                        productSectionFilter === 'trending'
-                          ? 'bg-rose-600 text-white shadow-xs'
-                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100 border border-rose-200'
-                      }`}
-                    >
-                      <span>🔥 Hot Selling ({hotCnt})</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProductSectionFilter('active')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        productSectionFilter === 'active'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                      }`}
-                    >
-                      Active ({activeCnt})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProductSectionFilter('inactive')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        productSectionFilter === 'inactive'
-                          ? 'bg-rose-700 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                      }`}
-                    >
-                      Inactive ({inactiveCnt})
-                    </button>
+                  <div className="space-y-3 pt-1 border-b pb-4">
+                    {/* 1. Search Bar + Category Dropdown */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                      {/* Search Box */}
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={productSearchQuery}
+                          onChange={(e) => setProductSearchQuery(e.target.value)}
+                          placeholder="Search medicine by name, salt/composition, batch number, manufacturer, dosage..."
+                          className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
+                        />
+                        {productSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setProductSearchQuery('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-xs"
+                            title="Clear search"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Category Filter Dropdown */}
+                      <div className="sm:w-60">
+                        <select
+                          value={productCategoryFilter}
+                          onChange={(e) => setProductCategoryFilter(e.target.value)}
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
+                        >
+                          <option value="all">All Categories ({categoriesList?.length || 0})</option>
+                          {categoriesList?.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 2. Homepage Widget Tabs & Quick Filter Pills */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-extrabold text-slate-500 mr-1 uppercase">Widgets:</span>
+                        <button
+                          type="button"
+                          onClick={() => setProductSectionFilter('all')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            productSectionFilter === 'all'
+                              ? 'bg-slate-900 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          All ({allP.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductSectionFilter('featured')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                            productSectionFilter === 'featured'
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                          }`}
+                          title="Filter by Featured Products"
+                        >
+                          <span>⭐ Featured ({featuredCnt})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductSectionFilter('trending')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                            productSectionFilter === 'trending'
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : 'bg-rose-50 text-rose-900 hover:bg-rose-100 border border-rose-200'
+                          }`}
+                          title="Filter by Hot Selling / Top Products"
+                        >
+                          <span>🔥 Hot Selling ({hotCnt})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductSectionFilter('homepage')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                            productSectionFilter === 'homepage'
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-blue-50 text-blue-900 hover:bg-blue-100 border border-blue-200'
+                          }`}
+                          title="Filter by Visible on Storefront Homepage"
+                        >
+                          <span>🏠 Home Grid ({homeCnt})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductSectionFilter('active')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            productSectionFilter === 'active'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                          }`}
+                        >
+                          Active ({activeCnt})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductSectionFilter('inactive')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            productSectionFilter === 'inactive'
+                              ? 'bg-rose-700 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                          }`}
+                        >
+                          Inactive ({inactiveCnt})
+                        </button>
+                      </div>
+
+                      <div className="text-[11px] font-bold text-slate-500">
+                        Showing <span className="text-slate-900 font-black">{filtered.length}</span> of {allP.length} medicines
+                        {(productSearchQuery || productCategoryFilter !== 'all' || productSectionFilter !== 'all') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProductSearchQuery('');
+                              setProductCategoryFilter('all');
+                              setProductSectionFilter('all');
+                            }}
+                            className="ml-2 text-rose-600 hover:underline font-bold cursor-pointer"
+                          >
+                            Reset Filters
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })()}
@@ -2602,7 +2715,7 @@ export default function AdminDashboard() {
                       <th className="p-3.5">Retail Rate</th>
                       <th className="p-3.5">Wholesale Rate</th>
                       <th className="p-3.5">Stock</th>
-                      <th className="p-3.5 text-center">Homepage Section</th>
+                      <th className="p-3.5 text-center min-w-[260px]">Homepage Widgets (1-Click)</th>
                       <th className="p-3.5">Status</th>
                       <th className="p-3.5 text-right sticky right-0 bg-slate-50 shadow-[-4px_0_8px_rgba(0,0,0,0.04)] z-10 min-w-[210px]">Actions</th>
                     </tr>
@@ -2611,8 +2724,32 @@ export default function AdminDashboard() {
                     {(() => {
                       const allP = productsList?.data || (Array.isArray(productsList) ? productsList : []);
                       const filtered = allP.filter(p => {
+                        // 1. Search query filter
+                        if (productSearchQuery.trim()) {
+                          const q = productSearchQuery.toLowerCase().trim();
+                          const nameMatch = (p.name || '').toLowerCase().includes(q);
+                          const subMatch = (p.subtitle || '').toLowerCase().includes(q);
+                          const compMatch = (p.composition || '').toLowerCase().includes(q);
+                          const batchMatch = (p.batch_no || '').toLowerCase().includes(q);
+                          const catMatch = (p.category?.name || '').toLowerCase().includes(q);
+                          const mfgMatch = (p.manufacturer || '').toLowerCase().includes(q);
+                          const formMatch = (p.dosage_form || '').toLowerCase().includes(q);
+                          if (!nameMatch && !subMatch && !compMatch && !batchMatch && !catMatch && !mfgMatch && !formMatch) {
+                            return false;
+                          }
+                        }
+
+                        // 2. Category filter
+                        if (productCategoryFilter !== 'all') {
+                          if (String(p.category_id) !== String(productCategoryFilter) && String(p.category?.id) !== String(productCategoryFilter)) {
+                            return false;
+                          }
+                        }
+
+                        // 3. Section / Widget filter
                         if (productSectionFilter === 'featured') return Boolean(p.is_featured);
                         if (productSectionFilter === 'trending') return Boolean(p.is_trending);
+                        if (productSectionFilter === 'homepage') return p.show_on_homepage !== false;
                         if (productSectionFilter === 'active') return p.status !== 'Inactive';
                         if (productSectionFilter === 'inactive') return p.status === 'Inactive';
                         return true;
@@ -2622,7 +2759,7 @@ export default function AdminDashboard() {
                         return (
                           <tr>
                             <td colSpan={11} className="p-8 text-center text-slate-400">
-                              No medicines match the selected section filter.
+                              {productSearchQuery ? `No medicines found matching "${productSearchQuery}".` : 'No medicines match the selected filter.'}
                             </td>
                           </tr>
                         );
@@ -2679,10 +2816,10 @@ export default function AdminDashboard() {
                           <td className="p-3.5 font-bold text-slate-800">
                             {p.stock}
                           </td>
-                          {/* Interactive Section Placement Badges */}
+                          {/* 1-Click Homepage Widgets Configuration (Outside List) */}
                           <td className="p-3.5 text-center">
                             <div className="flex items-center justify-center space-x-1.5 flex-wrap gap-y-1">
-                              {/* 1. Featured Section Toggle */}
+                              {/* 1. Featured Widget Toggle */}
                               <button
                                 type="button"
                                 onClick={() => handleToggleProductSection(p.id, 'is_featured', p.is_featured)}
@@ -2693,24 +2830,24 @@ export default function AdminDashboard() {
                                 }`}
                                 title={p.is_featured ? 'Click to remove from Homepage Featured section' : 'Click to show in Homepage Featured section'}
                               >
-                                <span>{p.is_featured ? '★ Featured' : '☆ Featured'}</span>
+                                <span>{p.is_featured ? '⭐ Featured' : '☆ + Featured'}</span>
                               </button>
 
-                              {/* 2. Hot Selling / Fast Moving Section Toggle */}
+                              {/* 2. Hot Selling / Top Fast-Moving Widget Toggle */}
                               <button
                                 type="button"
                                 onClick={() => handleToggleProductSection(p.id, 'is_trending', p.is_trending)}
                                 className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
                                   p.is_trending
-                                    ? 'bg-rose-100 text-rose-900 border border-rose-300 shadow-2xs hover:bg-rose-200'
+                                    ? 'bg-rose-100 text-rose-900 border border-rose-300 shadow-2xs hover:bg-rose-200 font-extrabold'
                                     : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
                                 }`}
                                 title={p.is_trending ? 'Click to remove from Hot Selling Fast-Moving section' : 'Click to show in Hot Selling Fast-Moving section'}
                               >
-                                <span>{p.is_trending ? '🔥 Hot' : '+ Hot'}</span>
+                                <span>{p.is_trending ? '🔥 Hot Selling' : '🔥 + Hot'}</span>
                               </button>
 
-                              {/* 3. Homepage Grid Visibility Toggle */}
+                              {/* 3. Homepage Grid Placement Toggle */}
                               <button
                                 type="button"
                                 onClick={() => handleToggleProductSection(p.id, 'show_on_homepage', p.show_on_homepage !== false)}
@@ -2719,7 +2856,7 @@ export default function AdminDashboard() {
                                     ? 'bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs hover:bg-blue-200'
                                     : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
                                 }`}
-                                title={p.show_on_homepage !== false ? 'Shown on Homepage Grid (Click to Hide)' : 'Hidden from Homepage Grid (Click to Show)'}
+                                title={p.show_on_homepage !== false ? 'Shown on Storefront Homepage Grid (Click to Hide)' : 'Hidden from Homepage Grid (Click to Show)'}
                               >
                                 <span>{p.show_on_homepage !== false ? '🏠 Home: On' : '🏠 Home: Off'}</span>
                               </button>
