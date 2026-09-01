@@ -164,8 +164,21 @@ export const AuthProvider = ({ children }) => {
 
   const isImpersonated = Boolean(sessionStorage.getItem('mediglaxo_is_impersonated'));
 
+  const setDirectSession = (newToken, newUser) => {
+    const now = Date.now().toString();
+    localStorage.setItem('mediglaxo_token', newToken);
+    if (newUser) {
+      localStorage.setItem('mediglaxo_user', JSON.stringify(newUser));
+    }
+    localStorage.setItem('mediglaxo_login_time', now);
+    setToken(newToken);
+    if (newUser) {
+      setUser(newUser);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser, setImpersonatedSession, isImpersonated }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser, setImpersonatedSession, setDirectSession, isImpersonated }}>
       {children}
     </AuthContext.Provider>
   );

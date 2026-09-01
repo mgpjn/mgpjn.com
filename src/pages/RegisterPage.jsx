@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw } from 'lucide-react';
+import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { sendRegisterOtp, verifyOtp } from '../services/api';
+import { sendFirebasePhoneOtp } from '../config/firebase';
 
 export default function RegisterPage() {
   const { user, register } = useAuth();
@@ -36,12 +37,22 @@ export default function RegisterPage() {
 
   // Email OTP Verification State
   const [emailVerified, setEmailVerified] = useState(false);
-  const [showOtpField, setShowOtpField] = useState(false);
-  const [otpInput, setOtpInput] = useState('');
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpVerifying, setOtpVerifying] = useState(false);
-  const [otpStatusMsg, setOtpStatusMsg] = useState('');
-  const [otpErrorMsg, setOtpErrorMsg] = useState('');
+  const [showEmailOtpField, setShowEmailOtpField] = useState(false);
+  const [emailOtpInput, setEmailOtpInput] = useState('');
+  const [emailOtpSending, setEmailOtpSending] = useState(false);
+  const [emailOtpVerifying, setEmailOtpVerifying] = useState(false);
+  const [emailOtpStatus, setEmailOtpStatus] = useState('');
+  const [emailOtpError, setEmailOtpError] = useState('');
+
+  // Phone OTP Verification State (Firebase Phone Auth)
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [showPhoneOtpField, setShowPhoneOtpField] = useState(false);
+  const [phoneOtpInput, setPhoneOtpInput] = useState('');
+  const [phoneOtpSending, setPhoneOtpSending] = useState(false);
+  const [phoneOtpVerifying, setPhoneOtpVerifying] = useState(false);
+  const [phoneConfirmation, setPhoneConfirmation] = useState(null);
+  const [phoneOtpStatus, setPhoneOtpStatus] = useState('');
+  const [phoneOtpError, setPhoneOtpError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,19 +61,24 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (e.target.name === 'email' && emailVerified) {
       setEmailVerified(false);
-      setShowOtpField(false);
-      setOtpStatusMsg('');
+      setShowEmailOtpField(false);
+      setEmailOtpStatus('');
+    }
+    if (e.target.name === 'phone' && phoneVerified) {
+      setPhoneVerified(false);
+      setShowPhoneOtpField(false);
+      setPhoneOtpStatus('');
     }
   };
 
   const handleSendEmailOtp = async () => {
     if (!formData.email || !formData.email.includes('@')) {
-      setOtpErrorMsg('Please enter a valid email address first.');
+      setEmailOtpError('Please enter a valid email address first.');
       return;
     }
-    setOtpSending(true);
-    setOtpErrorMsg('');
-    setOtpStatusMsg('');
+    setEmailOtpSending(true);
+    setEmailOtpError('');
+    setEmailOtpStatus('');
 
     try {
       const res = await sendRegisterOtp({
@@ -70,38 +86,85 @@ export default function RegisterPage() {
         name: formData.name || 'Valued Customer',
       });
       if (res.data.success) {
-        setShowOtpField(true);
-        setOtpStatusMsg(res.data.message || `Verification OTP sent to ${formData.email}`);
+        setShowEmailOtpField(true);
+        setEmailOtpStatus(res.data.message || `Verification OTP sent to ${formData.email}`);
       }
     } catch (err) {
-      setOtpErrorMsg(err.response?.data?.message || 'Failed to send OTP email.');
+      setEmailOtpError(err.response?.data?.message || 'Failed to send OTP email.');
     } finally {
-      setOtpSending(false);
+      setEmailOtpSending(false);
     }
   };
 
   const handleVerifyEmailOtp = async () => {
-    if (otpInput.length !== 6) {
-      setOtpErrorMsg('Please enter the 6-digit OTP code.');
+    if (emailOtpInput.length !== 6) {
+      setEmailOtpError('Please enter the 6-digit email OTP.');
       return;
     }
-    setOtpVerifying(true);
-    setOtpErrorMsg('');
+    setEmailOtpVerifying(true);
+    setEmailOtpError('');
 
     try {
       const res = await verifyOtp({
         email: formData.email,
-        otp: otpInput,
+        otp: emailOtpInput,
       });
       if (res.data.success) {
         setEmailVerified(true);
-        setShowOtpField(false);
-        setOtpStatusMsg('Email verified successfully!');
+        setShowEmailOtpField(false);
+        setEmailOtpStatus('Email verified successfully!');
       }
     } catch (err) {
-      setOtpErrorMsg(err.response?.data?.message || 'Invalid or expired OTP.');
+      setEmailOtpError(err.response?.data?.message || 'Invalid or expired OTP.');
     } finally {
-      setOtpVerifying(false);
+      setEmailOtpVerifying(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    const cleanPhone = formData.phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setPhoneOtpError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setPhoneOtpSending(true);
+    setPhoneOtpError('');
+    setPhoneOtpStatus('');
+
+    try {
+      const confirmation = await sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
+      setPhoneConfirmation(confirmation);
+      setShowPhoneOtpField(true);
+      setPhoneOtpStatus(`SMS OTP sent to +91 ${cleanPhone}`);
+    } catch (err) {
+      console.error('Firebase Phone Auth Error:', err);
+      setPhoneOtpError(err.message || 'Failed to send SMS OTP.');
+    } finally {
+      setPhoneOtpSending(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (phoneOtpInput.length !== 6) {
+      setPhoneOtpError('Please enter the 6-digit SMS OTP.');
+      return;
+    }
+    if (!phoneConfirmation) {
+      setPhoneOtpError('Session expired. Please request a new OTP.');
+      return;
+    }
+    setPhoneOtpVerifying(true);
+    setPhoneOtpError('');
+
+    try {
+      await phoneConfirmation.confirm(phoneOtpInput);
+      setPhoneVerified(true);
+      setShowPhoneOtpField(false);
+      setPhoneOtpStatus('Mobile number verified successfully!');
+    } catch (err) {
+      setPhoneOtpError('Invalid SMS OTP. Please check and try again.');
+    } finally {
+      setPhoneOtpVerifying(false);
     }
   };
 
@@ -126,12 +189,15 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
+      {/* Invisible reCAPTCHA container */}
+      <div id="register-recaptcha-container"></div>
+
       <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl space-y-6">
         <div className="text-center space-y-3">
           <Link to="/" className="inline-block">
             <img src="/logo.png" alt="MediGlaxo Pharma Junction" className="h-16 w-auto mx-auto object-contain" />
           </Link>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Your Account</h2>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Customer Account</h2>
           <p className="text-xs text-slate-400">Join thousands of customers ordering genuine medicines online</p>
         </div>
 
@@ -161,17 +227,17 @@ export default function RegisterPage() {
               {emailVerified ? (
                 <span className="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-600">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Verified</span>
+                  <span>Email Verified</span>
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={handleSendEmailOtp}
-                  disabled={otpSending || !formData.email}
+                  disabled={emailOtpSending || !formData.email}
                   className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 disabled:opacity-40 cursor-pointer flex items-center space-x-1"
                 >
-                  {otpSending && <RefreshCw className="w-3 h-3 animate-spin" />}
-                  <span>{otpSending ? 'Sending...' : 'Verify Email (OTP)'}</span>
+                  {emailOtpSending && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>{emailOtpSending ? 'Sending...' : 'Verify Email'}</span>
                 </button>
               )}
             </div>
@@ -188,49 +254,106 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* OTP Verification Box */}
-          {showOtpField && !emailVerified && (
+          {/* Email OTP Verification Box */}
+          {showEmailOtpField && !emailVerified && (
             <div className="p-3.5 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2 animate-in fade-in">
               <div className="flex items-center justify-between text-xs font-bold text-orange-950">
                 <span>Enter 6-Digit Email OTP:</span>
-                <span className="text-[10px] text-orange-700">Sent via no-reply@mgpjn.com</span>
+                <span className="text-[10px] text-orange-700">via no-reply@mgpjn.com</span>
               </div>
               <div className="flex space-x-2">
                 <input
                   type="text"
                   maxLength={6}
-                  value={otpInput}
-                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                  value={emailOtpInput}
+                  onChange={(e) => setEmailOtpInput(e.target.value.replace(/\D/g, ''))}
                   placeholder="6-Digit OTP"
                   className="w-2/3 px-3 py-2 bg-white border border-orange-300 rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-brand-orange-500"
                 />
                 <button
                   type="button"
                   onClick={handleVerifyEmailOtp}
-                  disabled={otpVerifying || otpInput.length !== 6}
+                  disabled={emailOtpVerifying || emailOtpInput.length !== 6}
                   className="w-1/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1 disabled:opacity-50 cursor-pointer"
                 >
-                  {otpVerifying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                  {emailOtpVerifying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                   <span>Verify</span>
                 </button>
               </div>
-              {otpErrorMsg && <p className="text-[11px] text-rose-600 font-bold">{otpErrorMsg}</p>}
-              {otpStatusMsg && <p className="text-[11px] text-emerald-700 font-semibold">{otpStatusMsg}</p>}
+              {emailOtpError && <p className="text-[11px] text-rose-600 font-bold">{emailOtpError}</p>}
+              {emailOtpStatus && <p className="text-[11px] text-emerald-700 font-semibold">{emailOtpStatus}</p>}
             </div>
           )}
 
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number *</label>
-            <input
-              type="tel"
-              required
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="9876543210"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">Mobile Number *</label>
+              {phoneVerified ? (
+                <span className="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-600">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Mobile Verified</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSendPhoneOtp}
+                  disabled={phoneOtpSending || formData.phone.length < 10}
+                  className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 disabled:opacity-40 cursor-pointer flex items-center space-x-1"
+                >
+                  {phoneOtpSending && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>{phoneOtpSending ? 'Sending SMS...' : 'Verify Mobile (OTP)'}</span>
+                </button>
+              )}
+            </div>
+            <div className="relative flex">
+              <span className="inline-flex items-center px-3 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-bold text-slate-600">
+                +91
+              </span>
+              <input
+                type="tel"
+                required
+                maxLength={10}
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="9876543210"
+                className={`w-full px-3.5 py-2.5 border rounded-r-xl text-xs focus:bg-white focus:outline-none ${
+                  phoneVerified ? 'bg-emerald-50/40 border-emerald-300 font-bold' : 'bg-slate-50 border-slate-200 focus:border-brand-blue-700'
+                }`}
+              />
+            </div>
           </div>
+
+          {/* Mobile Phone OTP Verification Box */}
+          {showPhoneOtpField && !phoneVerified && (
+            <div className="p-3.5 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between text-xs font-bold text-orange-950">
+                <span>Enter 6-Digit SMS OTP:</span>
+                <span className="text-[10px] text-orange-700">Firebase SMS</span>
+              </div>
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={phoneOtpInput}
+                  onChange={(e) => setPhoneOtpInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="SMS Code"
+                  className="w-2/3 px-3 py-2 bg-white border border-orange-300 rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-brand-orange-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyPhoneOtp}
+                  disabled={phoneOtpVerifying || phoneOtpInput.length !== 6}
+                  className="w-1/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1 disabled:opacity-50 cursor-pointer"
+                >
+                  {phoneOtpVerifying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                  <span>Verify</span>
+                </button>
+              </div>
+              {phoneOtpError && <p className="text-[11px] text-rose-600 font-bold">{phoneOtpError}</p>}
+              {phoneOtpStatus && <p className="text-[11px] text-emerald-700 font-semibold">{phoneOtpStatus}</p>}
+            </div>
+          )}
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Create Password *</label>
@@ -275,7 +398,7 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
           >
-            <span>{loading ? 'Creating Account...' : 'Create Free Account'}</span>
+            <span>{loading ? 'Creating Account...' : 'Create Customer Account'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -290,3 +413,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+

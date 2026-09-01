@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck } from 'lucide-react';
+import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendForgotPasswordOtp, resetPasswordWithOtp } from '../services/api';
+import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, loginWithPhone } from '../services/api';
+import { sendFirebasePhoneOtp } from '../config/firebase';
 
 export default function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, setDirectSession } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,14 +24,34 @@ export default function LoginPage() {
     }
   }, [user, navigate]);
 
+  // Login Modes: 'password' | 'phone_otp'
+  const [loginMode, setLoginMode] = useState('password');
+
+  // Password Login State
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Super Admin 2FA Verification State
+  const [superAdmin2FaRequired, setSuperAdmin2FaRequired] = useState(false);
+  const [superAdminEmail, setSuperAdminEmail] = useState('');
+  const [superAdminMaskedEmail, setSuperAdminMaskedEmail] = useState('');
+  const [superAdminOtp, setSuperAdminOtp] = useState('');
+  const [verifying2Fa, setVerifying2Fa] = useState(false);
+
+  // Phone OTP Login State (Firebase Phone Auth)
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+  const [phoneTimer, setPhoneTimer] = useState(0);
+
   // Forgot Password / OTP Modal State
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotStep, setForgotStep] = useState(1); // 1 = Enter Email, 2 = Enter OTP & New Password
+  const [forgotStep, setForgotStep] = useState(1);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotOtp, setForgotOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -43,20 +64,36 @@ export default function LoginPage() {
   useEffect(() => {
     let interval = null;
     if (resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
+      interval = setInterval(() => setResendTimer((prev) => prev - 1), 1000);
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    let interval = null;
+    if (phoneTimer > 0) {
+      interval = setInterval(() => setPhoneTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [phoneTimer]);
+
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
       const data = await login({ login: loginInput, password });
+      
+      // If Super Admin 2FA is required by backend
+      if (data.requires_2fa) {
+        setSuperAdmin2FaRequired(true);
+        setSuperAdminEmail(data.full_email || loginInput);
+        setSuperAdminMaskedEmail(data.email || 'your email');
+        setLoading(false);
+        return;
+      }
+
       const role = data.user.role;
       if (role === 'admin' || role === 'super_admin') {
         navigate('/admin');
@@ -74,7 +111,108 @@ export default function LoginPage() {
     }
   };
 
-  const handleSendOtp = async (e) => {
+  // Verify Super Admin 2FA Email OTP
+  const handleVerify2FaSubmit = async (e) => {
+    e.preventDefault();
+    if (superAdminOtp.length !== 6) {
+      setError('Please enter the complete 6-digit 2FA code.');
+      return;
+    }
+    setVerifying2Fa(true);
+    setError('');
+
+    try {
+      const res = await verifySuperAdmin2Fa({
+        email: superAdminEmail,
+        otp: superAdminOtp,
+      });
+
+      if (res.data.success) {
+        setDirectSession(res.data.token, res.data.user);
+        navigate('/admin');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid 2FA code. Please check and try again.');
+    } finally {
+      setVerifying2Fa(false);
+    }
+  };
+
+  // Send Firebase Phone OTP
+  const handleSendPhoneOtp = async (e) => {
+    if (e) e.preventDefault();
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    if (cleanNumber.length < 10) {
+      setPhoneError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setPhoneLoading(true);
+    setPhoneError('');
+
+    try {
+      const result = await sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
+      setConfirmationResult(result);
+      setPhoneOtpSent(true);
+      setPhoneTimer(60);
+    } catch (err) {
+      console.error('Firebase Phone Auth Error:', err);
+      setPhoneError(err.message || 'Failed to send SMS OTP. Please check phone number.');
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  // Verify Firebase Phone OTP & Login
+  const handleVerifyPhoneOtp = async (e) => {
+    e.preventDefault();
+    if (phoneOtp.length !== 6) {
+      setPhoneError('Please enter the 6-digit OTP received on your mobile.');
+      return;
+    }
+    if (!confirmationResult) {
+      setPhoneError('Session expired. Please request a new OTP.');
+      return;
+    }
+    setPhoneLoading(true);
+    setPhoneError('');
+
+    try {
+      // 1. Confirm OTP with Firebase
+      await confirmationResult.confirm(phoneOtp);
+
+      // 2. Authorize with Backend
+      const res = await loginWithPhone({ phone: phoneNumber });
+      if (res.data.success) {
+        // If Super Admin Phone Login requires 2FA
+        if (res.data.requires_2fa) {
+          setSuperAdmin2FaRequired(true);
+          setSuperAdminEmail(res.data.full_email);
+          setSuperAdminMaskedEmail(res.data.email);
+          setPhoneLoading(false);
+          return;
+        }
+
+        setDirectSession(res.data.token, res.data.user);
+        const role = res.data.user.role;
+        if (role === 'admin' || role === 'super_admin') {
+          navigate('/admin');
+        } else if (['super_distributor', 'distributor', 'sub_distributor', 'retailer'].includes(role)) {
+          navigate('/hierarchy');
+        } else if (role === 'sub_retailer' || role === 'member') {
+          navigate('/mlm');
+        } else {
+          navigate('/shop');
+        }
+      }
+    } catch (err) {
+      console.error('Phone verification error:', err);
+      setPhoneError(err.response?.data?.message || err.message || 'Invalid SMS OTP entered. Please try again.');
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleSendForgotOtp = async (e) => {
     if (e) e.preventDefault();
     if (!forgotEmail) {
       setOtpError('Please enter your registered email address.');
@@ -135,7 +273,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
+      {/* Invisible reCAPTCHA container */}
+      <div id="recaptcha-container"></div>
+
       <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl space-y-6">
         <div className="text-center space-y-3">
           <Link to="/" className="inline-block">
@@ -145,73 +286,271 @@ export default function LoginPage() {
           <p className="text-xs text-slate-400">Access your pharmacy account, orders, and management portals</p>
         </div>
 
-        {error && (
-          <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold text-center">
-            {error}
-          </div>
-        )}
+        {/* Super Admin 2FA Email OTP Verification Step */}
+        {superAdmin2FaRequired ? (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 text-center space-y-2">
+              <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto">
+                <ShieldAlert className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <h4 className="text-sm font-black text-amber-950">Super Admin 2-Step Verification</h4>
+              <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                Master security code dispatched to <strong className="font-mono text-amber-950 font-bold">{superAdminMaskedEmail}</strong> via <strong>no-reply@mgpjn.com</strong>.
+              </p>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Email / Phone / Member ID</label>
-            <input
-              type="text"
-              name="login"
-              id="login-input"
-              autoComplete="username"
-              required
-              value={loginInput}
-              onChange={(e) => setLoginInput(e.target.value)}
-              placeholder="e.g. admin@mediglaxo.com or SUPER100"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-            />
-          </div>
+            {error && (
+              <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold text-center">
+                {error}
+              </div>
+            )}
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700">Password</label>
+            <form onSubmit={handleVerify2FaSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Enter 6-Digit 2FA Code *</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={superAdminOtp}
+                  onChange={(e) => setSuperAdminOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="e.g. 684920"
+                  className="w-full text-center tracking-[8px] font-mono text-xl font-black py-3 bg-amber-50/50 border-2 border-amber-300 rounded-2xl text-slate-900 focus:bg-white focus:outline-none focus:border-amber-600 shadow-2xs"
+                />
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuperAdmin2FaRequired(false);
+                    setSuperAdminOtp('');
+                    setError('');
+                  }}
+                  className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={verifying2Fa || superAdminOtp.length !== 6}
+                  className="w-2/3 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl font-bold text-xs shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {verifying2Fa ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  <span>{verifying2Fa ? 'Verifying...' : 'Authorize Access'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <>
+            {/* Login Mode Toggle Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-2xl">
               <button
                 type="button"
                 onClick={() => {
-                  setForgotEmail(loginInput.includes('@') ? loginInput : '');
-                  setForgotStep(1);
-                  setOtpError('');
-                  setOtpMessage('');
-                  setShowForgotModal(true);
+                  setLoginMode('password');
+                  setError('');
                 }}
-                className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 cursor-pointer"
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                  loginMode === 'password'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
               >
-                Forgot Password?
+                <Lock className="w-3.5 h-3.5" />
+                <span>Password</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode('phone_otp');
+                  setPhoneError('');
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+                  loginMode === 'phone_otp'
+                    ? 'bg-white text-brand-orange-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Mobile OTP</span>
               </button>
             </div>
-            <input
-              type="password"
-              name="password"
-              id="password-input"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-            />
-          </div>
 
-          <button
-            type="submit"
-            id="login-submit-btn"
-            disabled={loading}
-            className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
-          >
-            <span>{loading ? 'Signing In...' : 'Sign In'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </form>
+            {/* Mode A: Password Login */}
+            {loginMode === 'password' && (
+              <div className="space-y-4">
+                {error && (
+                  <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold text-center">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Email / Phone / Member ID</label>
+                    <input
+                      type="text"
+                      name="login"
+                      id="login-input"
+                      autoComplete="username"
+                      required
+                      value={loginInput}
+                      onChange={(e) => setLoginInput(e.target.value)}
+                      placeholder="e.g. admin@mediglaxo.com or SUPER100"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-slate-700">Password</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotEmail(loginInput.includes('@') ? loginInput : '');
+                          setForgotStep(1);
+                          setOtpError('');
+                          setOtpMessage('');
+                          setShowForgotModal(true);
+                        }}
+                        className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <input
+                      type="password"
+                      name="password"
+                      id="password-input"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    id="login-submit-btn"
+                    disabled={loading}
+                    className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>{loading ? 'Signing In...' : 'Sign In'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Mode B: Mobile OTP Login */}
+            {loginMode === 'phone_otp' && (
+              <div className="space-y-4">
+                {phoneError && (
+                  <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold text-center">
+                    {phoneError}
+                  </div>
+                )}
+
+                {!phoneOtpSent ? (
+                  /* Step 1: Input Phone Number */
+                  <form onSubmit={handleSendPhoneOtp} className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 block mb-1">10-Digit Mobile Number *</label>
+                      <div className="relative flex">
+                        <span className="inline-flex items-center px-3.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-bold text-slate-600">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          maxLength={10}
+                          required
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                          placeholder="9876543210"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl text-xs font-bold focus:bg-white focus:outline-none focus:border-brand-orange-500"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-1">Instant SMS OTP via Firebase authentication</span>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={phoneLoading || phoneNumber.length !== 10}
+                      className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      {phoneLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                      <span>{phoneLoading ? 'Sending SMS OTP...' : 'Send Mobile OTP'}</span>
+                    </button>
+                  </form>
+                ) : (
+                  /* Step 2: Enter SMS OTP */
+                  <form onSubmit={handleVerifyPhoneOtp} className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700">Enter 6-Digit SMS OTP *</label>
+                        {phoneTimer > 0 ? (
+                          <span className="text-[10px] text-slate-400 font-bold">Resend in {phoneTimer}s</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSendPhoneOtp}
+                            disabled={phoneLoading}
+                            className="text-[11px] font-bold text-brand-orange-500 hover:underline cursor-pointer"
+                          >
+                            Resend SMS
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        value={phoneOtp}
+                        onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                        placeholder="e.g. 123456"
+                        className="w-full text-center tracking-[8px] font-mono text-lg font-black py-2.5 bg-orange-50/50 border-2 border-orange-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:border-brand-orange-500"
+                      />
+                      <span className="text-[10px] text-slate-400 block mt-1">Sent to: +91 {phoneNumber}</span>
+                    </div>
+
+                    <div className="flex space-x-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoneOtpSent(false);
+                          setPhoneOtp('');
+                          setPhoneError('');
+                        }}
+                        className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={phoneLoading || phoneOtp.length !== 6}
+                        className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {phoneLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        <span>{phoneLoading ? 'Verifying...' : 'Verify & Login'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
         <div className="text-center text-xs text-slate-500">
           Don't have an account?{' '}
           <Link to="/register" className="text-brand-orange-500 font-bold hover:underline">
-            Create Free Account
+            Create Free Customer Account
           </Link>
         </div>
       </div>
@@ -259,7 +598,7 @@ export default function LoginPage() {
 
               {forgotStep === 1 ? (
                 /* Step 1: Request OTP */
-                <form onSubmit={handleSendOtp} className="space-y-4">
+                <form onSubmit={handleSendForgotOtp} className="space-y-4">
                   <p className="text-xs text-slate-600 leading-relaxed font-medium">
                     Enter your registered email address. We will send a secure 6-digit OTP code to verify your identity.
                   </p>
@@ -299,7 +638,7 @@ export default function LoginPage() {
                       ) : (
                         <button
                           type="button"
-                          onClick={handleSendOtp}
+                          onClick={handleSendForgotOtp}
                           disabled={otpLoading}
                           className="text-[11px] font-bold text-brand-orange-500 hover:underline cursor-pointer"
                         >
@@ -371,3 +710,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
