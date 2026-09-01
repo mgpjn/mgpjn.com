@@ -25,6 +25,7 @@ import { FALLBACK_NETWORK_USERS } from '../../data/fallbackUsers';
 import {
   getAdminStats,
   getAdminUsersByRole, storeAdminHierarchyUser, updateAdminHierarchyUser, impersonateAdminUser,
+  getAdminSubRetailersForAssignment, assignCustomerSubRetailer,
   resetAdminUserPassword, toggleAdminUserStatus, transferAdminUser, approveAdminUser, rejectAdminUser,
   getAdminUserDownlineSummary, deleteAdminHierarchyUser,
   uploadKycDocument,
@@ -388,6 +389,15 @@ export default function AdminDashboard() {
   const [selectedReassignParentId, setSelectedReassignParentId] = useState('');
   const [deletingUser, setDeletingUser] = useState(false);
 
+  // Assign Direct Customer to Sub-Retailer State (Super Admin Only)
+  const [showAssignCustomerModal, setShowAssignCustomerModal] = useState(false);
+  const [assignTargetCustomer, setAssignTargetCustomer] = useState(null);
+  const [subRetailersList, setSubRetailersList] = useState([]);
+  const [subRetailerSearch, setSubRetailerSearch] = useState('');
+  const [selectedSubRetailerId, setSelectedSubRetailerId] = useState('');
+  const [assigningLoading, setAssigningLoading] = useState(false);
+  const [unassignedCount, setUnassignedCount] = useState(0);
+
   // Medicine Purchase Orders (PO)
   const [purchaseOrdersList, setPurchaseOrdersList] = useState({ data: [] });
   const [selectedPO, setSelectedPO] = useState(null);
@@ -405,6 +415,7 @@ export default function AdminDashboard() {
     { key: 'customer-layer-1', label: 'Customer 1', path: '/admin/customer-layer-1', icon: User, roleType: 'customer_layer_1' },
     { key: 'customer-layer-2', label: 'Customer 2', path: '/admin/customer-layer-2', icon: UserCheck2, roleType: 'customer_layer_2' },
     { key: 'customer-layer-3', label: 'Customer 3', path: '/admin/customer-layer-3', icon: UserPlus2, roleType: 'customer_layer_3' },
+    { key: 'unassigned-customers', label: 'Direct Leads (Unassigned)', path: '/admin/unassigned-customers', icon: Star, roleType: 'unassigned_customers', badge: unassignedCount },
     { key: 'user_customer', label: 'All Customers (Directory)', path: '/admin/user_customer', icon: Users2, roleType: 'customer' },
     { key: 'purchase-orders', label: 'Medicine PO Approvals', path: '/admin/purchase-orders', icon: FileCheck },
     { key: 'margins', label: 'Margin Management', path: '/admin/margins', icon: Calculator },
@@ -429,6 +440,7 @@ export default function AdminDashboard() {
     'customer-layer-1',
     'customer-layer-2',
     'customer-layer-3',
+    'unassigned-customers',
     'all-customers',
     'user_customer'
   ];
@@ -447,6 +459,9 @@ export default function AdminDashboard() {
         try {
           const res = await getAdminUsersByRole({ role, search: searchQuery, status: statusFilter, state: stateFilter, sort: sortOrder });
           const usersList = res?.data?.users?.data || res?.data?.users;
+          if (res?.data?.unassigned_count !== undefined) {
+            setUnassignedCount(res.data.unassigned_count);
+          }
           if (res?.data?.success && Array.isArray(usersList) && usersList.length > 0) {
             setRoleUsers(res.data.users);
             setRoleStats(res.data.stats);
@@ -702,6 +717,44 @@ export default function AdminDashboard() {
       alert(`Delete failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setDeletingUser(false);
+    }
+  };
+
+  // Open Assign Customer Modal (Super Admin Only)
+  const handleOpenAssignSubretailerModal = async (targetCustomer) => {
+    setAssignTargetCustomer(targetCustomer);
+    setSelectedSubRetailerId('');
+    setSubRetailerSearch('');
+    setShowAssignCustomerModal(true);
+    try {
+      const res = await getAdminSubRetailersForAssignment();
+      if (res.data?.success) {
+        setSubRetailersList(res.data.sub_retailers || []);
+      }
+    } catch (e) {
+      console.error('Failed to load sub-retailers:', e);
+    }
+  };
+
+  // Execute Customer Assignment to Sub-Retailer
+  const handleExecuteCustomerAssignment = async (e) => {
+    e.preventDefault();
+    if (!selectedSubRetailerId || !assignTargetCustomer) return;
+    setAssigningLoading(true);
+    try {
+      const res = await assignCustomerSubRetailer(assignTargetCustomer.id, {
+        sub_retailer_id: selectedSubRetailerId,
+      });
+      if (res.data?.success) {
+        alert(res.data.message || 'Customer successfully assigned to Sub-Retailer!');
+        setShowAssignCustomerModal(false);
+        setAssignTargetCustomer(null);
+        fetchData();
+      }
+    } catch (err) {
+      alert(`Assignment failed: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setAssigningLoading(false);
     }
   };
 
@@ -2377,7 +2430,7 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
-                    {['customer-layer-1', 'customer-layer-2', 'customer-layer-3', 'all-customers', 'user_customer'].includes(currentSection) ? (
+                    {['customer-layer-1', 'customer-layer-2', 'customer-layer-3', 'unassigned-customers', 'all-customers', 'user_customer'].includes(currentSection) ? (
                       <thead className="bg-slate-50/80 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-100">
                         <tr>
                           <th className="p-3.5">CUSTOMER ID</th>
@@ -2430,7 +2483,7 @@ export default function AdminDashboard() {
                           );
                         }
                         return userList.map((u) => {
-                          const isCust = ['customer-layer-1', 'customer-layer-2', 'customer-layer-3', 'all-customers', 'user_customer'].includes(currentSection);
+                          const isCust = ['customer-layer-1', 'customer-layer-2', 'customer-layer-3', 'unassigned-customers', 'all-customers', 'user_customer'].includes(currentSection);
                           const isSubRet = currentSection === 'sub-retailers';
 
                           if (isCust) {
@@ -2456,7 +2509,7 @@ export default function AdminDashboard() {
                                   <span className="text-[11px] text-slate-400 font-mono">📍 {u.pincode || '394230'}</span>
                                 </td>
                                 <td className="p-3.5">
-                                  {u.sponsor ? (
+                                  {u.sponsor && u.sponsor.role !== 'super_admin' ? (
                                     <div>
                                       <span className="font-bold text-slate-800 block text-xs">{u.sponsor.name}</span>
                                       <span className="inline-block bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-0.5">
@@ -2465,7 +2518,12 @@ export default function AdminDashboard() {
                                       <span className="text-[10px] text-slate-400 font-mono block">Code: {u.sponsor.referral_code}</span>
                                     </div>
                                   ) : (
-                                    <span className="text-slate-400 italic text-[11px]">Direct / Head Office</span>
+                                    <div className="space-y-1">
+                                      <span className="inline-flex items-center space-x-1 bg-amber-50 border border-amber-300 text-amber-900 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                                        <span>⚡ Direct Web Lead</span>
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-mono block">Super Admin Level (Unassigned)</span>
+                                    </div>
                                   )}
                                 </td>
                                 <td className="p-3.5">
@@ -2499,6 +2557,16 @@ export default function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="p-3.5 text-right space-x-1.5">
+                                  {(!u.sponsor_id || u.sponsor?.role === 'super_admin' || currentSection === 'unassigned-customers') && (
+                                    <button
+                                      onClick={() => handleOpenAssignSubretailerModal(u)}
+                                      title="Assign Customer to Sub-Retailer"
+                                      className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-bold text-[11px] shadow-sm shadow-orange-500/20 transition-all cursor-pointer mr-1"
+                                    >
+                                      <UserPlus className="w-3.5 h-3.5" />
+                                      <span>Assign Sub-Retailer</span>
+                                    </button>
+                                  )}
                                   {u.status === 'pending' && (
                                     <>
                                       <button
@@ -7355,6 +7423,165 @@ export default function AdminDashboard() {
                   </span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ASSIGN DIRECT CUSTOMER TO SUB-RETAILER            */}
+      {/* ======================================================== */}
+      {showAssignCustomerModal && assignTargetCustomer && isSuperAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-brand-orange-600 text-white p-5 flex items-center justify-between shadow-md flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black tracking-tight">Assign Customer to Sub-Retailer</h3>
+                  <p className="text-xs text-orange-100 font-medium">Map direct registered web lead into Partner Downline</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAssignCustomerModal(false);
+                  setAssignTargetCustomer(null);
+                }}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {/* Customer Info Summary Card */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Customer (Web Lead)</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{assignTargetCustomer.name}</h4>
+                    <p className="text-xs text-slate-500 font-mono">{assignTargetCustomer.email} • {assignTargetCustomer.phone}</p>
+                  </div>
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full">
+                    {assignTargetCustomer.referral_code || `CUST${assignTargetCustomer.id}`}
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
+                  <span>Location: <strong>{assignTargetCustomer.city || 'Surat'}, {assignTargetCustomer.state || 'Gujarat'} ({assignTargetCustomer.pincode || '394230'})</strong></span>
+                  <span>Total Spent: <strong className="text-emerald-700">₹{Number(assignTargetCustomer.total_spent || 0).toFixed(2)}</strong></span>
+                </div>
+              </div>
+
+              {/* Assignment Form */}
+              <form onSubmit={handleExecuteCustomerAssignment} className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Select Target Sub-Retailer / Partner Hub *
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Search Sub-Retailer by Name, Code, City, Pincode..."
+                      value={subRetailerSearch}
+                      onChange={(e) => setSubRetailerSearch(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-brand-orange-500"
+                    />
+
+                    <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-white">
+                      {subRetailersList
+                        .filter((sr) => {
+                          if (!subRetailerSearch) return true;
+                          const q = subRetailerSearch.toLowerCase();
+                          return (
+                            sr.name?.toLowerCase().includes(q) ||
+                            sr.business_name?.toLowerCase().includes(q) ||
+                            sr.referral_code?.toLowerCase().includes(q) ||
+                            sr.city?.toLowerCase().includes(q) ||
+                            sr.pincode?.includes(q) ||
+                            sr.phone?.includes(q)
+                          );
+                        })
+                        .map((sr) => {
+                          const isSelected = selectedSubRetailerId === sr.id;
+                          return (
+                            <div
+                              key={sr.id}
+                              onClick={() => setSelectedSubRetailerId(sr.id)}
+                              className={`p-3 text-xs cursor-pointer transition-colors flex items-center justify-between ${
+                                isSelected ? 'bg-orange-50/80 border-l-4 border-brand-orange-500' : 'hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="space-y-0.5">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-black text-slate-900">{sr.name}</span>
+                                  <span className="text-[10px] font-bold font-mono text-brand-orange-600 bg-orange-100/70 px-1.5 py-0.5 rounded">
+                                    {sr.referral_code}
+                                  </span>
+                                  <span className="text-[9px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    {sr.role}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-slate-500">
+                                  {sr.business_name && <span>{sr.business_name} • </span>}
+                                  📍 {sr.city || 'N/A'}, {sr.state || ''} {sr.pincode ? `(${sr.pincode})` : ''} • 📞 {sr.phone}
+                                </p>
+                                {sr.sponsor && (
+                                  <p className="text-[10px] text-slate-400">
+                                    Upline: {sr.sponsor.name} ({sr.sponsor.referral_code})
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="selectedSubRetailer"
+                                  checked={isSelected}
+                                  onChange={() => setSelectedSubRetailerId(sr.id)}
+                                  className="w-4 h-4 text-brand-orange-600 focus:ring-brand-orange-500 cursor-pointer"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {subRetailersList.length === 0 && (
+                        <div className="p-4 text-center text-xs text-slate-400">
+                          Loading active Sub-Retailers...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed font-medium">
+                  💡 <strong>Hierarchy Impact:</strong> Customer will immediately be attached under the selected Sub-Retailer. All future medicine orders from this customer will automatically trigger commissions across this Sub-Retailer's Retailer and Distributor upline chain.
+                </div>
+
+                <div className="flex space-x-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAssignCustomerModal(false);
+                      setAssignTargetCustomer(null);
+                    }}
+                    className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={assigningLoading || !selectedSubRetailerId}
+                    className="w-2/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-2.5 rounded-xl font-bold text-xs shadow-md shadow-brand-orange-500/20 flex items-center justify-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {assigningLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    <span>{assigningLoading ? 'Assigning...' : 'Confirm Assignment'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

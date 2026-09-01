@@ -84,6 +84,8 @@ export const getAdminUsersByRole = (params) => api.get('/admin/users-by-role', {
 export const storeAdminHierarchyUser = (data) => api.post('/admin/users', data);
 export const updateAdminHierarchyUser = (id, data) => api.put(`/admin/users/${id}`, data);
 export const impersonateAdminUser = (id) => api.post(`/admin/users/${id}/impersonate`);
+export const getAdminSubRetailersForAssignment = () => api.get('/admin/customers/sub-retailers-list');
+export const assignCustomerSubRetailer = (id, data) => api.post(`/admin/customers/${id}/assign-subretailer`, data);
 
 export const getAdminMargins = () => api.get('/admin/margins');
 export const updateAdminMargins = (data) => api.post('/admin/margins', data);
