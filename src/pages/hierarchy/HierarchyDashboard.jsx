@@ -254,22 +254,6 @@ export default function HierarchyDashboard() {
     }
   };
 
-  const hierarchyHierarchyFlow = [
-    { key: 'super_admin', label: 'Super Admin', level: 8, icon: '👑' },
-    { key: 'admin', label: 'Admin', level: 7, icon: '🛡️' },
-    { key: 'super_distributor', label: 'Super Distributor', level: 6, icon: '🌟' },
-    { key: 'distributor', label: 'Distributor', level: 5, icon: '💼' },
-    { key: 'sub_distributor', label: 'Sub Distributor', level: 4, icon: '🏢' },
-    { key: 'retailer', label: 'Retailer', level: 3, icon: '🏬' },
-    { key: 'sub_retailer', label: 'Sub Retailer', level: 2, icon: '🛍️' },
-    { key: 'customer', label: 'Customer', level: 1, icon: '👤' },
-  ];
-
-  const myLevel = user?.role
-    ? (user.role === 'super_admin' ? 8 : user.role === 'admin' ? 7 : (ROLE_CONFIG[user.role]?.level || 2))
-    : 8;
-  const visibleHierarchyFlow = hierarchyHierarchyFlow.filter((h) => h.level < myLevel);
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
@@ -277,13 +261,13 @@ export default function HierarchyDashboard() {
         <div>
           <div className="inline-flex items-center space-x-2 bg-brand-blue-50 text-brand-blue-900 px-3 py-1 rounded-full text-xs font-bold mb-2">
             <Shield className="w-3.5 h-3.5" />
-            <span>Downline Network &amp; Subordinate Team Control</span>
+            <span>Team &amp; Partner Network</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-            Team &amp; Downline Hierarchy Management
+            Team &amp; Partner Network Management
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage your subordinate team roles, add distributors, chemists, sub-retailers, and monitor sales volume.
+            Manage your partner team members, add distributors, chemists, sub-retailers, and monitor sales volume.
           </p>
         </div>
 
@@ -293,42 +277,10 @@ export default function HierarchyDashboard() {
             className="bg-brand-orange-500 hover:bg-brand-orange-600 text-white px-5 py-3 rounded-2xl text-xs font-bold flex items-center space-x-2 shadow-lg shadow-brand-orange-500/20 transition-all hover:scale-105"
           >
             <UserPlus className="w-4 h-4" />
-            <span>+ Add Subordinate Member</span>
+            <span>+ Add Team Member</span>
           </button>
         )}
       </div>
-
-      {/* Downline Subordinate Hierarchy Visual Ladder */}
-      {visibleHierarchyFlow.length > 0 && (
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
-              Subordinate Roles Below Your Post ({user?.role ? user.role.replace(/_/g, ' ').toUpperCase() : 'MEMBER'})
-            </h3>
-            <span className="text-[11px] font-bold text-brand-blue-800">
-              Only roles strictly below your position are manageable
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-            {visibleHierarchyFlow.map((h, i) => (
-              <div
-                key={h.key}
-                className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-center flex flex-col items-center justify-center space-y-1 relative"
-              >
-                <span className="text-xl">{h.icon}</span>
-                <span className="text-xs font-extrabold text-slate-800 truncate max-w-full">{h.label}</span>
-                <span className="text-[10px] font-bold text-slate-400">Level {h.level}</span>
-                {i < visibleHierarchyFlow.length - 1 && (
-                  <div className="hidden lg:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-300">
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Stats Cards with Opening Entrance Animations */}
       {stats && (
@@ -505,7 +457,7 @@ export default function HierarchyDashboard() {
                   ) : usersData.data.length === 0 ? (
                     <tr>
                       <td colSpan="8" className="text-center py-10 text-slate-400">
-                        No team members found. Click "+ Add Subordinate Member" to register downlines.
+                        No team members found. Click "+ Add Team Member" to register members.
                       </td>
                     </tr>
                   ) : (
@@ -743,7 +695,7 @@ export default function HierarchyDashboard() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center space-x-2">
                 <UserPlus className="w-5 h-5 text-brand-orange-500" />
-                <h3 className="font-black text-slate-900 text-base">Register Subordinate Member</h3>
+                <h3 className="font-black text-slate-900 text-base">Register Team Member</h3>
               </div>
               <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
