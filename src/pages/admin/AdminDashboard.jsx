@@ -862,7 +862,7 @@ export default function AdminDashboard() {
   const handleOpenSetPriceModal = (product) => {
     setPriceTargetProduct(product);
     const mrpVal = product.mrp !== undefined && product.mrp !== null ? Number(product.mrp) : (product.price ? Number((product.price * 1.25).toFixed(2)) : 100);
-    const endUser = product.end_user_price || product.mrp || (product.base_price ? Number((product.base_price * 8.6).toFixed(2)) : 86);
+    const endUser = product.end_user_price || product.product_price || product.retail_price || product.price || 100;
     const productPrice = product.product_price !== undefined && product.product_price !== null ? product.product_price : endUser;
     setPriceForm({
       mrp: mrpVal,
@@ -877,10 +877,10 @@ export default function AdminDashboard() {
       subd_margin: product.subd_margin !== undefined ? product.subd_margin : 10,
       rt_margin: product.rt_margin !== undefined ? product.rt_margin : 15,
       end_user_price: endUser,
-      sd_price: product.sd_price !== undefined ? product.sd_price : (product.base_price ? Number((product.base_price * 1.12).toFixed(2)) : 112),
-      dist_price: product.dist_price !== undefined ? product.dist_price : (product.base_price ? Number((product.base_price * 1.15).toFixed(2)) : 115),
-      subd_price: product.subd_price !== undefined ? product.subd_price : (product.base_price ? Number((product.base_price * 1.20).toFixed(2)) : 120),
-      retailer_price: product.retailer_price !== undefined ? product.retailer_price : (product.base_price ? Number((product.base_price * 1.40).toFixed(2)) : 140),
+      sd_price: product.sd_price !== undefined && product.sd_price !== null ? product.sd_price : (product.wholesale_price || 100),
+      dist_price: product.dist_price !== undefined && product.dist_price !== null ? product.dist_price : (product.wholesale_price || 100),
+      subd_price: product.subd_price !== undefined && product.subd_price !== null ? product.subd_price : (product.wholesale_price || 100),
+      retailer_price: product.retailer_price !== undefined && product.retailer_price !== null ? product.retailer_price : (product.wholesale_price || 100),
     });
     setShowSetPriceModal(true);
   };
@@ -7063,10 +7063,15 @@ export default function AdminDashboard() {
                 <div>
                   <h4 className="font-extrabold text-slate-900 text-sm">{priceTargetProduct.name}</h4>
                   <span className="text-[11px] font-mono text-slate-400 font-bold block">Product ID: {priceTargetProduct.id}</span>
-                  <div className="mt-1">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">
                       📍 Applicable State: {assignTargetUser.state || 'GUJARAT'}
                     </span>
+                    {assignTargetUser.role === 'super_distributor' && (
+                      <span className="bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-md">
+                        ⚡ Cascades to Downline (Distributor → Sub-Distributor → Retailer → Customer)
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
