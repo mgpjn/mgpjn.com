@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserCheck, UserPlus, Store, Users2,
@@ -6,11 +6,11 @@ import {
   ShoppingCart, Wallet, Image, BarChart3, ShieldCheck, Settings,
   LogOut, Plus, Search, RefreshCw, Eye, EyeOff, Edit, Trash2,
   CheckCircle2, XCircle, ArrowUpRight, Printer, Tag, Bell,
-  ChevronDown, ChevronRight, Filter, AlertCircle, Check, X, Shield,
+  ChevronDown, ChevronRight, ChevronLeft, Filter, AlertCircle, Check, X, Shield,
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
   CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download,
-  FileText, CreditCard, Building2, PhoneCall
+  FileText, CreditCard, Building2, PhoneCall, Loader2
 } from 'lucide-react';
 import { EarningsSalesChart, StockInventoryChart } from '../../components/common/DashboardCharts';
 import {
@@ -176,13 +176,27 @@ export default function AdminDashboard() {
   const [productMarginsList, setProductMarginsList] = useState({ data: [] });
 
   // Products
-  const [productsList, setProductsList] = useState({ data: [] });
+  const [productsList, setProductsList] = useState({ data: [], current_page: 1, last_page: 1, total: 0, per_page: 50 });
   const [categoriesList, setCategoriesList] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productSectionFilter, setProductSectionFilter] = useState('all'); // 'all', 'featured', 'trending', 'homepage', 'active', 'inactive'
   const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState('all');
+  const [productPerPage, setProductPerPage] = useState(50);
+  const [productPage, setProductPage] = useState(1);
+  const [productStats, setProductStats] = useState({
+    all_total: 0,
+    featured: 0,
+    trending: 0,
+    homepage: 0,
+    active: 0,
+    inactive: 0,
+  });
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+  const productBottomObserverRef = useRef(null);
   const [productForm, setProductForm] = useState({
     name: '',
     subtitle: '',
@@ -425,9 +439,9 @@ export default function AdminDashboard() {
         const res = await getAdminProductMargins();
         if (res.data.success) setProductMarginsList(res.data.products);
       } else if (currentSection === 'products') {
-        const [prodRes, catRes] = await Promise.all([getAdminProducts(), getAdminCategories()]);
-        if (prodRes.data.success) setProductsList(prodRes.data.products);
+        const catRes = await getAdminCategories();
         if (catRes.data.success) setCategoriesList(catRes.data.categories);
+        await fetchProductsFromDb(1, false);
       } else if (currentSection === 'categories') {
         const res = await getAdminCategories();
         if (res.data.success) setCategoriesList(res.data.categories);
@@ -458,6 +472,92 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  // Debounce product search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedProductSearch(productSearchQuery);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [productSearchQuery]);
+
+  const fetchProductsFromDb = useCallback(async (page = 1, append = false, overrideParams = {}) => {
+    if (append) {
+      setLoadingMoreProducts(true);
+    } else {
+      setLoadingProducts(true);
+    }
+
+    try {
+      const search = overrideParams.search !== undefined ? overrideParams.search : debouncedProductSearch;
+      const categoryId = overrideParams.category_id !== undefined ? overrideParams.category_id : productCategoryFilter;
+      const section = overrideParams.section !== undefined ? overrideParams.section : productSectionFilter;
+      const perPage = overrideParams.per_page !== undefined ? overrideParams.per_page : productPerPage;
+
+      const params = {
+        page,
+        per_page: perPage,
+      };
+      if (search && search.trim()) params.search = search.trim();
+      if (categoryId && categoryId !== 'all') params.category_id = categoryId;
+      if (section && section !== 'all') params.section = section;
+
+      const res = await getAdminProducts(params);
+      if (res?.data?.success) {
+        const prodData = res.data.products;
+        if (append) {
+          setProductsList((prev) => ({
+            ...prodData,
+            data: [...(prev?.data || []), ...(prodData?.data || [])],
+          }));
+        } else {
+          setProductsList(prodData || { data: [] });
+        }
+
+        if (res.data.stats) {
+          setProductStats(res.data.stats);
+        }
+        setProductPage(page);
+      }
+    } catch (err) {
+      console.error('Error fetching admin products from DB:', err);
+    } finally {
+      setLoadingProducts(false);
+      setLoadingMoreProducts(false);
+    }
+  }, [debouncedProductSearch, productCategoryFilter, productSectionFilter, productPerPage]);
+
+  // Re-fetch products from DB whenever filters or debounced search changes
+  useEffect(() => {
+    if (currentSection === 'products') {
+      fetchProductsFromDb(1, false);
+    }
+  }, [currentSection, debouncedProductSearch, productCategoryFilter, productSectionFilter, productPerPage, fetchProductsFromDb]);
+
+  // Infinite Scroll / Lazy Load Observer
+  useEffect(() => {
+    if (currentSection !== 'products') return;
+    if (loadingMoreProducts || loadingProducts) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const first = entries[0];
+      if (
+        first.isIntersecting &&
+        productsList?.current_page < productsList?.last_page &&
+        !loadingMoreProducts &&
+        !loadingProducts
+      ) {
+        fetchProductsFromDb(productsList.current_page + 1, true);
+      }
+    }, { rootMargin: '200px', threshold: 0.1 });
+
+    const currentRef = productBottomObserverRef.current;
+    if (currentRef) observer.observe(currentRef);
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
+  }, [currentSection, productsList, loadingMoreProducts, loadingProducts, fetchProductsFromDb]);
 
   useEffect(() => {
     fetchData();
@@ -2522,186 +2622,169 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Search, Category Filter & Widget Tabs Toolbar */}
-              {(() => {
-                const allP = productsList?.data || (Array.isArray(productsList) ? productsList : []);
-                const featuredCnt = allP.filter(p => p.is_featured).length;
-                const hotCnt = allP.filter(p => p.is_trending).length;
-                const homeCnt = allP.filter(p => p.show_on_homepage !== false).length;
-                const activeCnt = allP.filter(p => p.status !== 'Inactive').length;
-                const inactiveCnt = allP.filter(p => p.status === 'Inactive').length;
-
-                // Multi-attribute search & filter logic
-                const filtered = allP.filter(p => {
-                  // 1. Search query filter
-                  if (productSearchQuery.trim()) {
-                    const q = productSearchQuery.toLowerCase().trim();
-                    const nameMatch = (p.name || '').toLowerCase().includes(q);
-                    const subMatch = (p.subtitle || '').toLowerCase().includes(q);
-                    const compMatch = (p.composition || '').toLowerCase().includes(q);
-                    const batchMatch = (p.batch_no || '').toLowerCase().includes(q);
-                    const catMatch = (p.category?.name || '').toLowerCase().includes(q);
-                    const mfgMatch = (p.manufacturer || '').toLowerCase().includes(q);
-                    const formMatch = (p.dosage_form || '').toLowerCase().includes(q);
-                    if (!nameMatch && !subMatch && !compMatch && !batchMatch && !catMatch && !mfgMatch && !formMatch) {
-                      return false;
-                    }
-                  }
-
-                  // 2. Category filter
-                  if (productCategoryFilter !== 'all') {
-                    if (String(p.category_id) !== String(productCategoryFilter) && String(p.category?.id) !== String(productCategoryFilter)) {
-                      return false;
-                    }
-                  }
-
-                  // 3. Section / Widget filter
-                  if (productSectionFilter === 'featured') return Boolean(p.is_featured);
-                  if (productSectionFilter === 'trending') return Boolean(p.is_trending);
-                  if (productSectionFilter === 'homepage') return p.show_on_homepage !== false;
-                  if (productSectionFilter === 'active') return p.status !== 'Inactive';
-                  if (productSectionFilter === 'inactive') return p.status === 'Inactive';
-                  return true;
-                });
-
-                return (
-                  <div className="space-y-3 pt-1 border-b pb-4">
-                    {/* 1. Search Bar + Category Dropdown */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                      {/* Search Box */}
-                      <div className="relative flex-1">
-                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={productSearchQuery}
-                          onChange={(e) => setProductSearchQuery(e.target.value)}
-                          placeholder="Search medicine by name, salt/composition, batch number, manufacturer, dosage..."
-                          className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
-                        />
-                        {productSearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => setProductSearchQuery('')}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-xs"
-                            title="Clear search"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Category Filter Dropdown */}
-                      <div className="sm:w-60">
-                        <select
-                          value={productCategoryFilter}
-                          onChange={(e) => setProductCategoryFilter(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
-                        >
-                          <option value="all">All Categories ({categoriesList?.length || 0})</option>
-                          {categoriesList?.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* 2. Homepage Widget Tabs & Quick Filter Pills */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-extrabold text-slate-500 mr-1 uppercase">Widgets:</span>
-                        <button
-                          type="button"
-                          onClick={() => setProductSectionFilter('all')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            productSectionFilter === 'all'
-                              ? 'bg-slate-900 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          All ({allP.length})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setProductSectionFilter('featured')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
-                            productSectionFilter === 'featured'
-                              ? 'bg-amber-500 text-white shadow-xs'
-                              : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
-                          }`}
-                          title="Filter by Featured Products"
-                        >
-                          <span>⭐ Featured ({featuredCnt})</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setProductSectionFilter('trending')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
-                            productSectionFilter === 'trending'
-                              ? 'bg-rose-600 text-white shadow-xs'
-                              : 'bg-rose-50 text-rose-900 hover:bg-rose-100 border border-rose-200'
-                          }`}
-                          title="Filter by Hot Selling / Top Products"
-                        >
-                          <span>🔥 Hot Selling ({hotCnt})</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setProductSectionFilter('homepage')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
-                            productSectionFilter === 'homepage'
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-blue-50 text-blue-900 hover:bg-blue-100 border border-blue-200'
-                          }`}
-                          title="Filter by Visible on Storefront Homepage"
-                        >
-                          <span>🏠 Home Grid ({homeCnt})</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setProductSectionFilter('active')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            productSectionFilter === 'active'
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
-                          }`}
-                        >
-                          Active ({activeCnt})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setProductSectionFilter('inactive')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            productSectionFilter === 'inactive'
-                              ? 'bg-rose-700 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                          }`}
-                        >
-                          Inactive ({inactiveCnt})
-                        </button>
-                      </div>
-
-                      <div className="text-[11px] font-bold text-slate-500">
-                        Showing <span className="text-slate-900 font-black">{filtered.length}</span> of {allP.length} medicines
-                        {(productSearchQuery || productCategoryFilter !== 'all' || productSectionFilter !== 'all') && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setProductSearchQuery('');
-                              setProductCategoryFilter('all');
-                              setProductSectionFilter('all');
-                            }}
-                            className="ml-2 text-rose-600 hover:underline font-bold cursor-pointer"
-                          >
-                            Reset Filters
-                          </button>
-                        )}
-                      </div>
-                    </div>
+              {/* Search, Category Filter & Widget Tabs Toolbar (Database-Driven) */}
+              <div className="space-y-3 pt-1 border-b pb-4">
+                {/* 1. Search Bar + Category Dropdown + Per Page Selector */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* Search Box */}
+                  <div className="relative flex-1">
+                    {loadingProducts ? (
+                      <Loader2 className="w-4 h-4 text-brand-blue-600 animate-spin absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    ) : (
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    )}
+                    <input
+                      type="text"
+                      value={productSearchQuery}
+                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                      placeholder="Direct DB Search by medicine name, salt/composition, batch, manufacturer, dosage..."
+                      className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
+                    />
+                    {productSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setProductSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-xs"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
-                );
-              })()}
+
+                  {/* Category Filter Dropdown */}
+                  <div className="sm:w-56">
+                    <select
+                      value={productCategoryFilter}
+                      onChange={(e) => setProductCategoryFilter(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
+                    >
+                      <option value="all">All Categories ({categoriesList?.length || 0})</option>
+                      {categoriesList?.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Page Size Selector */}
+                  <div className="sm:w-36">
+                    <select
+                      value={productPerPage}
+                      onChange={(e) => setProductPerPage(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
+                      title="Items per page"
+                    >
+                      <option value={25}>25 per page</option>
+                      <option value={50}>50 per page</option>
+                      <option value={100}>100 per page</option>
+                      <option value="all">Show All</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2. Homepage Widget Tabs & Quick Filter Pills */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-extrabold text-slate-500 mr-1 uppercase">Widgets:</span>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        productSectionFilter === 'all'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All ({productStats?.all_total ?? productsList?.total ?? 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('featured')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                        productSectionFilter === 'featured'
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                      }`}
+                      title="Filter by Featured Products"
+                    >
+                      <span>⭐ Featured ({productStats?.featured ?? 0})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('trending')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                        productSectionFilter === 'trending'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100 border border-rose-200'
+                      }`}
+                      title="Filter by Hot Selling / Top Products"
+                    >
+                      <span>🔥 Hot Selling ({productStats?.trending ?? 0})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('homepage')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                        productSectionFilter === 'homepage'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-blue-50 text-blue-900 hover:bg-blue-100 border border-blue-200'
+                      }`}
+                      title="Filter by Visible on Storefront Homepage"
+                    >
+                      <span>🏠 Home Grid ({productStats?.homepage ?? 0})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('active')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        productSectionFilter === 'active'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                      }`}
+                    >
+                      Active ({productStats?.active ?? 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductSectionFilter('inactive')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        productSectionFilter === 'inactive'
+                          ? 'bg-rose-700 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      Inactive ({productStats?.inactive ?? 0})
+                    </button>
+                  </div>
+
+                  <div className="text-[11px] font-bold text-slate-500 flex items-center space-x-2">
+                    {loadingProducts && (
+                      <span className="inline-flex items-center space-x-1 text-brand-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Searching DB...</span>
+                      </span>
+                    )}
+                    <span>
+                      Showing <span className="text-slate-900 font-black">{productsList?.data?.length || 0}</span> of <span className="text-slate-900 font-black">{productsList?.total || 0}</span> medicines
+                    </span>
+                    {(productSearchQuery || productCategoryFilter !== 'all' || productSectionFilter !== 'all') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductSearchQuery('');
+                          setProductCategoryFilter('all');
+                          setProductSectionFilter('all');
+                        }}
+                        className="text-rose-600 hover:underline font-bold cursor-pointer ml-1"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -2722,50 +2805,48 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {(() => {
-                      const allP = productsList?.data || (Array.isArray(productsList) ? productsList : []);
-                      const filtered = allP.filter(p => {
-                        // 1. Search query filter
-                        if (productSearchQuery.trim()) {
-                          const q = productSearchQuery.toLowerCase().trim();
-                          const nameMatch = (p.name || '').toLowerCase().includes(q);
-                          const subMatch = (p.subtitle || '').toLowerCase().includes(q);
-                          const compMatch = (p.composition || '').toLowerCase().includes(q);
-                          const batchMatch = (p.batch_no || '').toLowerCase().includes(q);
-                          const catMatch = (p.category?.name || '').toLowerCase().includes(q);
-                          const mfgMatch = (p.manufacturer || '').toLowerCase().includes(q);
-                          const formMatch = (p.dosage_form || '').toLowerCase().includes(q);
-                          if (!nameMatch && !subMatch && !compMatch && !batchMatch && !catMatch && !mfgMatch && !formMatch) {
-                            return false;
-                          }
-                        }
+                      const items = productsList?.data || [];
 
-                        // 2. Category filter
-                        if (productCategoryFilter !== 'all') {
-                          if (String(p.category_id) !== String(productCategoryFilter) && String(p.category?.id) !== String(productCategoryFilter)) {
-                            return false;
-                          }
-                        }
-
-                        // 3. Section / Widget filter
-                        if (productSectionFilter === 'featured') return Boolean(p.is_featured);
-                        if (productSectionFilter === 'trending') return Boolean(p.is_trending);
-                        if (productSectionFilter === 'homepage') return p.show_on_homepage !== false;
-                        if (productSectionFilter === 'active') return p.status !== 'Inactive';
-                        if (productSectionFilter === 'inactive') return p.status === 'Inactive';
-                        return true;
-                      });
-
-                      if (filtered.length === 0) {
+                      if (loadingProducts && items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={11} className="p-8 text-center text-slate-400">
-                              {productSearchQuery ? `No medicines found matching "${productSearchQuery}".` : 'No medicines match the selected filter.'}
+                            <td colSpan={11} className="p-12 text-center text-slate-400 space-y-2">
+                              <Loader2 className="w-6 h-6 animate-spin text-brand-blue-700 mx-auto" />
+                              <p className="text-xs font-bold text-slate-600">Querying database & loading medicines...</p>
                             </td>
                           </tr>
                         );
                       }
 
-                      return filtered.map((p) => (
+                      if (items.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={11} className="p-10 text-center text-slate-400 space-y-2">
+                              <p className="text-sm font-bold text-slate-700">No medicines found</p>
+                              <p className="text-xs text-slate-400">
+                                {productSearchQuery
+                                  ? `No records found in database matching "${productSearchQuery}".`
+                                  : 'No medicines match the selected filter criteria.'}
+                              </p>
+                              {(productSearchQuery || productCategoryFilter !== 'all' || productSectionFilter !== 'all') && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setProductSearchQuery('');
+                                    setProductCategoryFilter('all');
+                                    setProductSectionFilter('all');
+                                  }}
+                                  className="mt-2 px-3 py-1.5 bg-brand-blue-50 text-brand-blue-800 border border-blue-200 rounded-lg text-xs font-bold cursor-pointer"
+                                >
+                                  Clear All Filters
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return items.map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50/60 group">
                           {/* Index Sequence Input */}
                           <td className="p-2.5 text-center">
@@ -2777,7 +2858,7 @@ export default function AdminDashboard() {
                                 const val = parseInt(e.target.value, 10);
                                 if (!isNaN(val) && val !== p.sort_order) {
                                   await toggleAdminProductSection(p.id, { section: 'sort_order', value: val });
-                                  fetchData();
+                                  fetchProductsFromDb(productPage, false);
                                 }
                               }}
                               onKeyDown={(e) => {
@@ -2912,6 +2993,46 @@ export default function AdminDashboard() {
                     })()}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Lazy Loading & Pagination Controls Footer */}
+              <div className="pt-4 border-t space-y-3">
+                {/* 1. Load More / Infinite Scroll Sentinel */}
+                {productsList?.current_page < productsList?.last_page && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/70 via-slate-50 to-emerald-50/70 rounded-2xl border border-blue-100 shadow-2xs">
+                    <div className="text-xs text-slate-600 font-medium">
+                      Loaded <strong className="text-slate-900 font-black">{productsList?.data?.length || 0}</strong> of <strong className="text-slate-900 font-black">{productsList?.total || 0}</strong> total medicines from database.
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => fetchProductsFromDb(productsList.current_page + 1, true)}
+                      disabled={loadingMoreProducts}
+                      className="px-5 py-2.5 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-xs transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {loadingMoreProducts ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Loading Next Page ({productsList.current_page + 1} of {productsList.last_page})...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDownCircle className="w-4 h-4" />
+                          <span>Load More Medicines ({(productsList?.total || 0) - (productsList?.data?.length || 0)} remaining)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {productsList?.data?.length >= productsList?.total && productsList?.total > 0 && (
+                  <div className="text-center py-2 text-xs font-semibold text-slate-400">
+                    ✅ All {productsList.total} medicines loaded from database.
+                  </div>
+                )}
+
+                {/* Sentinel element for automatic IntersectionObserver infinite scroll */}
+                <div ref={productBottomObserverRef} className="h-4 w-full" />
               </div>
             </div>
           )}
