@@ -560,6 +560,7 @@ export default function AdminDashboard() {
   }, [currentSection, productsList, loadingMoreProducts, loadingProducts, fetchProductsFromDb]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     fetchData();
   }, [currentSection, statusFilter, sortOrder, stateFilter]);
 

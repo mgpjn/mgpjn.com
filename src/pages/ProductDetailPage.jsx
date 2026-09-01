@@ -43,6 +43,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
 
   useEffect(() => {
     if (!idOrSlug) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     setLoading(true);
     getProduct(idOrSlug)
       .then((res) => {
