@@ -1184,6 +1184,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleOpenEditProduct = (p) => {
+    setEditingProduct(p);
+    setProductForm({
+      name: p.name || '',
+      subtitle: p.subtitle || p.composition || '',
+      category_id: p.category_id || '',
+      sub_category_id: p.sub_category_id || '',
+      batch_no: p.batch_no || '',
+      manufacturer: p.manufacturer || 'MEDIGLAXO PHARMA',
+      description: p.description || '',
+      mrp: p.mrp || p.price || '',
+      base_price: p.base_price || (p.price * 0.45) || '',
+      retail_price: p.retail_price || p.price || '',
+      sd_price: p.sd_price || '',
+      dist_price: p.dist_price || '',
+      subd_price: p.subd_price || '',
+      retailer_price: p.retailer_price || p.wholesale_price || '',
+      wholesale_price: p.wholesale_price || '',
+      stock_quantity: p.stock ?? p.stock_quantity ?? 100,
+      box_packing: p.box_packing || '1 Box (10 Strips)',
+      box_unit: p.box_unit || 'Box',
+      strip_packing: p.strip_packing || '1 Strip (10 Tablets)',
+      strip_unit: p.strip_unit || 'Strip',
+      expiry_date: p.expiry_date || '',
+      status: p.status || 'Active',
+      is_featured: Boolean(p.is_featured),
+      is_trending: Boolean(p.is_trending),
+      sort_order: p.sort_order ?? 0,
+      show_on_homepage: p.show_on_homepage !== false,
+      image: p.image || '',
+      images: Array.isArray(p.images) && p.images.length > 0
+        ? p.images
+        : (p.image ? [p.image] : []),
+    });
+    setShowProductModal(true);
+  };
+
+  const handleDeleteProduct = async (productId, productName) => {
+    if (window.confirm(`Kya aap "${productName || 'is medicine'}" ko delete karna chahte hain?`)) {
+      try {
+        const res = await deleteAdminProduct(productId);
+        if (res?.data?.success) {
+          alert(`"${productName || 'Medicine'}" successfully delete ho gaya!`);
+          fetchData();
+        } else {
+          alert(res?.data?.message || 'Product delete nahi ho paya.');
+        }
+      } catch (err) {
+        console.error('Delete product error:', err);
+        alert('Failed to delete product. Please check console for details.');
+      }
+    }
+  };
+
   // Transfer Submit
   const handleSaveTransfer = async (e) => {
     e.preventDefault();
@@ -1513,9 +1567,29 @@ export default function AdminDashboard() {
                             <span className="text-[11px] text-slate-400 font-medium">{p.category?.name || 'Injections'}</span>
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0 pl-3">
-                          <div className="text-sm font-black text-[#ff5722]">₹{parseFloat(p.retail_price || p.price || 24).toFixed(2)}</div>
-                          <div className="text-[10px] text-slate-400 font-medium">Stock: {p.stock || 0}</div>
+                        <div className="flex items-center space-x-2 flex-shrink-0 pl-3">
+                          <div className="text-right">
+                            <div className="text-sm font-black text-[#ff5722]">₹{parseFloat(p.retail_price || p.price || 24).toFixed(2)}</div>
+                            <div className="text-[10px] text-slate-400 font-medium">Stock: {p.stock || 0}</div>
+                          </div>
+                          <div className="flex items-center space-x-1 pl-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProduct(p)}
+                              className="p-1.5 bg-blue-50 hover:bg-blue-100 text-brand-blue-800 border border-blue-200 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-105"
+                              title="Edit Medicine"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(p.id, p.name)}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-105"
+                              title="Delete Medicine"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -2530,7 +2604,7 @@ export default function AdminDashboard() {
                       <th className="p-3.5">Stock</th>
                       <th className="p-3.5 text-center">Homepage Section</th>
                       <th className="p-3.5">Status</th>
-                      <th className="p-3.5 text-right">Actions</th>
+                      <th className="p-3.5 text-right sticky right-0 bg-slate-50 shadow-[-4px_0_8px_rgba(0,0,0,0.04)] z-10 min-w-[210px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2547,7 +2621,7 @@ export default function AdminDashboard() {
                       if (filtered.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={10} className="p-8 text-center text-slate-400">
+                            <td colSpan={11} className="p-8 text-center text-slate-400">
                               No medicines match the selected section filter.
                             </td>
                           </tr>
@@ -2555,7 +2629,7 @@ export default function AdminDashboard() {
                       }
 
                       return filtered.map((p) => (
-                        <tr key={p.id} className="hover:bg-slate-50/60">
+                        <tr key={p.id} className="hover:bg-slate-50/60 group">
                           {/* Index Sequence Input */}
                           <td className="p-3.5 text-center">
                             <input
@@ -2666,68 +2740,37 @@ export default function AdminDashboard() {
                               {p.status || 'Active'}
                             </button>
                           </td>
-                          <td className="p-3.5 text-right space-x-2">
-                          <button
-                            onClick={() => {
-                              setEditingProduct(p);
-                              setProductForm({
-                                name: p.name,
-                                subtitle: p.subtitle || p.composition || '',
-                                category_id: p.category_id,
-                                sub_category_id: p.sub_category_id || '',
-                                batch_no: p.batch_no || '',
-                                manufacturer: p.manufacturer || 'MEDIGLAXO PHARMA',
-                                description: p.description || '',
-                                mrp: p.mrp || p.price,
-                                base_price: p.base_price || (p.price * 0.45),
-                                retail_price: p.retail_price || p.price || '',
-                                sd_price: p.sd_price || '',
-                                dist_price: p.dist_price || '',
-                                subd_price: p.subd_price || '',
-                                retailer_price: p.retailer_price || p.wholesale_price || '',
-                                wholesale_price: p.wholesale_price || '',
-                                stock_quantity: p.stock,
-                                box_packing: p.box_packing || '1 Box (10 Strips)',
-                                box_unit: p.box_unit || 'Box',
-                                strip_packing: p.strip_packing || '1 Strip (10 Tablets)',
-                                strip_unit: p.strip_unit || 'Strip',
-                                expiry_date: p.expiry_date || '',
-                                status: p.status || 'Active',
-                                is_featured: Boolean(p.is_featured),
-                                is_trending: Boolean(p.is_trending),
-                                sort_order: p.sort_order ?? 0,
-                                show_on_homepage: p.show_on_homepage !== false,
-                                image: p.image || '',
-                                images: Array.isArray(p.images) && p.images.length > 0
-                                  ? p.images
-                                  : (p.image ? [p.image] : []),
-                              });
-                              setShowProductModal(true);
-                            }}
-                            className="text-brand-blue-700 hover:text-brand-blue-900"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenStatePriceModal(p)}
-                            title="State-Wise Wholesale Pricing"
-                            className="text-emerald-600 hover:text-emerald-800 p-1 hover:bg-emerald-50 rounded"
-                          >
-                            <SlidersHorizontal className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (window.confirm('Delete this product?')) {
-                                await deleteAdminProduct(p.id);
-                                fetchData();
-                              }
-                            }}
-                            className="text-rose-500 hover:text-rose-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
+                          {/* Action Buttons (Sticky Right for guaranteed visibility on all screens) */}
+                          <td className="p-3.5 text-right sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.04)] group-hover:bg-slate-50/90 z-10 whitespace-nowrap space-x-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProduct(p)}
+                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-brand-blue-800 border border-blue-200 rounded-xl font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Edit Medicine Details & Pricing"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenStatePriceModal(p)}
+                              className="inline-flex items-center space-x-1 px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              title="State-Wise Wholesale Pricing"
+                            >
+                              <SlidersHorizontal className="w-3.5 h-3.5" />
+                              <span>State</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(p.id, p.name)}
+                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Delete this product"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </td>
+                        </tr>
                       ));
                     })()}
                   </tbody>
@@ -2863,11 +2906,12 @@ export default function AdminDashboard() {
                     <tr>
                       <th className="p-3">Medicine</th>
                       <th className="p-3">Category</th>
-                      <th className="p-3">Retail Price (Strip)</th>
+                      <th className="p-3">Retail Price</th>
                       <th className="p-3">Base Price</th>
-                      <th className="p-3">Wholesale Price (Box)</th>
+                      <th className="p-3">Wholesale Price</th>
                       <th className="p-3">MRP</th>
                       <th className="p-3 font-bold text-purple-700">Margin Spread</th>
+                      <th className="p-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2880,11 +2924,22 @@ export default function AdminDashboard() {
                         <tr key={p.id} className="hover:bg-slate-50/60">
                           <td className="p-3 font-bold text-slate-900">{p.name}</td>
                           <td className="p-3">{p.category?.name || 'Tablets'}</td>
-                          <td className="p-3 font-bold text-slate-800">₹{retail.toFixed(0)} <span className="text-[10px] text-slate-400 font-normal">/ Strip</span></td>
+                          <td className="p-3 font-bold text-slate-800">₹{retail.toFixed(0)} <span className="text-[10px] text-slate-400 font-normal">/ {p.strip_unit || p.unit || 'Unit'}</span></td>
                           <td className="p-3 font-bold text-blue-600">₹{base.toFixed(0)}</td>
-                          <td className="p-3 font-bold text-emerald-600">₹{wholesale.toFixed(0)} <span className="text-[10px] text-emerald-600/70 font-semibold">/ Box</span></td>
+                          <td className="p-3 font-bold text-emerald-600">₹{wholesale.toFixed(0)} <span className="text-[10px] text-emerald-600/70 font-semibold">/ {p.box_unit || 'Wholesale'}</span></td>
                           <td className="p-3 text-slate-400">₹{mrp.toFixed(0)}</td>
                           <td className="p-3 font-black text-purple-700">₹{(retail - base).toFixed(0)}</td>
+                          <td className="p-3 text-right whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProduct(p)}
+                              className="inline-flex items-center space-x-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue-800 border border-blue-200 rounded-lg font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Edit Medicine"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
