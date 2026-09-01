@@ -2790,7 +2790,8 @@ export default function AdminDashboard() {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
                     <tr>
-                      <th className="p-2.5 text-center w-12">#</th>
+                      <th className="p-2.5 text-center w-10 text-slate-400">SR</th>
+                      <th className="p-2.5 text-center w-12 text-blue-900" title="Storefront Priority Rank / Index Sequence">Rank</th>
                       <th className="p-2.5">Medicine</th>
                       <th className="p-2.5">Category</th>
                       <th className="p-2.5">Batch</th>
@@ -2810,7 +2811,7 @@ export default function AdminDashboard() {
                       if (loadingProducts && items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={11} className="p-12 text-center text-slate-400 space-y-2">
+                            <td colSpan={12} className="p-12 text-center text-slate-400 space-y-2">
                               <Loader2 className="w-6 h-6 animate-spin text-brand-blue-700 mx-auto" />
                               <p className="text-xs font-bold text-slate-600">Querying database & loading medicines...</p>
                             </td>
@@ -2821,7 +2822,7 @@ export default function AdminDashboard() {
                       if (items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={11} className="p-10 text-center text-slate-400 space-y-2">
+                            <td colSpan={12} className="p-10 text-center text-slate-400 space-y-2">
                               <p className="text-sm font-bold text-slate-700">No medicines found</p>
                               <p className="text-xs text-slate-400">
                                 {productSearchQuery
@@ -2846,13 +2847,17 @@ export default function AdminDashboard() {
                         );
                       }
 
-                      return items.map((p) => (
+                      return items.map((p, idx) => (
                         <tr key={p.id} className="hover:bg-slate-50/60 group">
-                          {/* Index Sequence Input */}
+                          {/* Serial Number (Row Counter 1, 2, 3... 58) */}
+                          <td className="p-2.5 text-center font-bold text-slate-400 text-xs whitespace-nowrap">
+                            {idx + 1}
+                          </td>
+                          {/* Storefront Priority Rank Sequence Input */}
                           <td className="p-2.5 text-center">
                             <input
                               type="number"
-                              defaultValue={p.sort_order ?? 0}
+                              defaultValue={p.sort_order ?? (idx + 1)}
                               key={`sort-${p.id}-${p.sort_order}`}
                               onBlur={async (e) => {
                                 const val = parseInt(e.target.value, 10);
@@ -2866,8 +2871,8 @@ export default function AdminDashboard() {
                                   e.target.blur();
                                 }
                               }}
-                              className="w-10 text-center py-1 px-0.5 text-xs font-black border border-slate-200 rounded-lg focus:border-brand-blue-600 focus:outline-none bg-slate-50 focus:bg-white"
-                              title="Display Sequence Index. Lower numbers appear first on storefront. Press Enter or click away to save."
+                              className="w-10 text-center py-1 px-0.5 text-xs font-black border border-slate-200 rounded-lg focus:border-brand-blue-600 focus:outline-none bg-slate-50 focus:bg-white text-brand-blue-900"
+                              title="Storefront Priority Rank. Lower numbers appear first on storefront. Press Enter or click away to save."
                             />
                           </td>
                           <td className="p-2.5 flex items-center space-x-2.5 max-w-[220px]">
