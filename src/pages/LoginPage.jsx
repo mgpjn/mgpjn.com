@@ -35,10 +35,12 @@ export default function LoginPage() {
 
   // Super Admin 2FA Verification State
   const [superAdmin2FaRequired, setSuperAdmin2FaRequired] = useState(false);
+  const [superAdminOtp, setSuperAdminOtp] = useState('');
   const [superAdminEmail, setSuperAdminEmail] = useState('');
   const [superAdminMaskedEmail, setSuperAdminMaskedEmail] = useState('');
-  const [superAdminOtp, setSuperAdminOtp] = useState('');
   const [verifying2Fa, setVerifying2Fa] = useState(false);
+  const [superAdminResendTimer, setSuperAdminResendTimer] = useState(0);
+  const [resending2Fa, setResending2Fa] = useState(false);
 
   // Phone OTP Login State (Firebase Phone Auth)
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -68,6 +70,14 @@ export default function LoginPage() {
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  useEffect(() => {
+    let interval = null;
+    if (superAdminResendTimer > 0) {
+      interval = setInterval(() => setSuperAdminResendTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [superAdminResendTimer]);
 
   useEffect(() => {
     let interval = null;
@@ -135,6 +145,24 @@ export default function LoginPage() {
       setError(err.response?.data?.message || 'Invalid 2FA code. Please check and try again.');
     } finally {
       setVerifying2Fa(false);
+    }
+  };
+
+  const handleResend2Fa = async () => {
+    if (superAdminResendTimer > 0 || resending2Fa) return;
+    setResending2Fa(true);
+    setError('');
+    try {
+      const data = await login({ login: superAdminEmail, password });
+      if (data?.requires_2fa) {
+        setSuperAdminResendTimer(60);
+        setSuperAdminOtp('');
+        alert('A new 6-digit 2FA code has been sent to ' + (data.full_email || superAdminEmail));
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to resend 2FA code.');
+    } finally {
+      setResending2Fa(false);
     }
   };
 
@@ -318,6 +346,17 @@ export default function LoginPage() {
                   placeholder="e.g. 684920"
                   className="w-full text-center tracking-[8px] font-mono text-xl font-black py-3 bg-amber-50/50 border-2 border-amber-300 rounded-2xl text-slate-900 focus:bg-white focus:outline-none focus:border-amber-600 shadow-2xs"
                 />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[11px] text-slate-500">Didn't receive email? Check Spam folder</span>
+                  <button
+                    type="button"
+                    onClick={handleResend2Fa}
+                    disabled={superAdminResendTimer > 0 || resending2Fa}
+                    className="text-xs font-bold text-amber-700 hover:text-amber-800 disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {resending2Fa ? 'Sending...' : superAdminResendTimer > 0 ? `Resend in ${superAdminResendTimer}s` : 'Resend Code'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex space-x-2">

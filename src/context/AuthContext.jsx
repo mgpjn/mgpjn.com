@@ -126,7 +126,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const res = await loginUser(credentials);
-    if (res.data.success) {
+    if (res.data?.requires_2fa) {
+      return res.data;
+    }
+    if (res.data?.success && res.data?.token) {
       const now = Date.now().toString();
       localStorage.setItem('mediglaxo_token', res.data.token);
       localStorage.setItem('mediglaxo_user', JSON.stringify(res.data.user));
@@ -135,7 +138,7 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data.user);
       return res.data;
     }
-    throw new Error(res.data.message || 'Login failed');
+    throw new Error(res.data?.message || 'Login failed');
   };
 
   const register = async (userData) => {
