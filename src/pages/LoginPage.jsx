@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, loginWithPhone } from '../services/api';
+import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone } from '../services/api';
 import { sendFirebasePhoneOtp } from '../config/firebase';
 
 export default function LoginPage() {
@@ -153,11 +153,11 @@ export default function LoginPage() {
     setResending2Fa(true);
     setError('');
     try {
-      const data = await login({ login: superAdminEmail, password });
-      if (data?.requires_2fa) {
+      const res = await resendSuperAdmin2Fa({ email: superAdminEmail });
+      if (res.data?.success) {
         setSuperAdminResendTimer(60);
         setSuperAdminOtp('');
-        alert('A new 6-digit 2FA code has been sent to ' + (data.full_email || superAdminEmail));
+        alert(res.data.message || `A new 6-digit 2FA code has been sent to ${superAdminEmail}`);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to resend 2FA code.');
@@ -346,15 +346,25 @@ export default function LoginPage() {
                   placeholder="e.g. 684920"
                   className="w-full text-center tracking-[8px] font-mono text-xl font-black py-3 bg-amber-50/50 border-2 border-amber-300 rounded-2xl text-slate-900 focus:bg-white focus:outline-none focus:border-amber-600 shadow-2xs"
                 />
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-[11px] text-slate-500">Didn't receive email? Check Spam folder</span>
+                <div className="mt-3 p-3 bg-amber-50/80 border border-amber-200/90 rounded-2xl flex items-center justify-between">
+                  <div className="space-y-0.5 text-left">
+                    <span className="text-[11px] font-bold text-amber-950 block">Didn't receive email code?</span>
+                    <span className="text-[10px] text-amber-800/80 block">Check Spam / Promotions folder</span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleResend2Fa}
                     disabled={superAdminResendTimer > 0 || resending2Fa}
-                    className="text-xs font-bold text-amber-700 hover:text-amber-800 disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-200 text-white disabled:text-slate-500 rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed flex items-center space-x-1"
                   >
-                    {resending2Fa ? 'Sending...' : superAdminResendTimer > 0 ? `Resend in ${superAdminResendTimer}s` : 'Resend Code'}
+                    {resending2Fa && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    <span>
+                      {resending2Fa
+                        ? 'Sending...'
+                        : superAdminResendTimer > 0
+                        ? `Resend in ${superAdminResendTimer}s`
+                        : 'Resend OTP'}
+                    </span>
                   </button>
                 </div>
               </div>

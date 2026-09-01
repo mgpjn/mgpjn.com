@@ -49,6 +49,7 @@ export const resetPasswordWithOtp = (data) => api.post('/auth/reset-password-otp
 export const sendRegisterOtp = (data) => api.post('/auth/send-register-otp', data);
 export const verifyOtp = (data) => api.post('/auth/verify-otp', data);
 export const verifySuperAdmin2Fa = (data) => api.post('/auth/verify-superadmin-2fa', data);
+export const resendSuperAdmin2Fa = (data) => api.post('/auth/resend-superadmin-2fa', data);
 export const loginWithPhone = (data) => api.post('/auth/login-phone', data);
 export const logoutUser = () => api.post('/auth/logout');
 
