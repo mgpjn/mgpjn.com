@@ -185,7 +185,7 @@ export default function AdminDashboard() {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState('all');
-  const [productPerPage, setProductPerPage] = useState(50);
+  const [productPerPage, setProductPerPage] = useState('all');
   const [productPage, setProductPage] = useState(1);
   const [productStats, setProductStats] = useState({
     all_total: 0,
@@ -961,8 +961,20 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSelectAllDbProducts = () => {
-    const allIds = (productsList?.data || []).map((p) => p.id);
+  const handleSelectAllDbProducts = async () => {
+    let allProds = productsList?.data || [];
+    if (allProds.length < (productsList?.total || 0) || allProds.length <= 50) {
+      try {
+        const res = await getAdminProducts({ per_page: 'all' });
+        if (res?.data?.success && res.data.products?.data) {
+          allProds = res.data.products.data;
+          setProductsList(res.data.products);
+        }
+      } catch (e) {
+        console.error('Error fetching all products for selection:', e);
+      }
+    }
+    const allIds = allProds.map((p) => p.id);
     setSelectedProductIds(allIds);
   };
 
@@ -970,11 +982,24 @@ export default function AdminDashboard() {
     setSelectedProductIds([]);
   };
 
-  const handleOpenBulkPricingModal = () => {
-    const items = productsList?.data || [];
+  const handleOpenBulkPricingModal = async () => {
+    let items = productsList?.data || [];
+    if (items.length < (productsList?.total || 0) || items.length <= 50) {
+      try {
+        const res = await getAdminProducts({ per_page: 'all' });
+        if (res?.data?.success && res.data.products?.data) {
+          items = res.data.products.data;
+          setProductsList(res.data.products);
+        }
+      } catch (e) {
+        console.error('Error fetching all products for bulk modal:', e);
+      }
+    }
+
     let targetItems = [];
     if (selectedProductIds.length > 0) {
       targetItems = items.filter((p) => selectedProductIds.includes(p.id));
+      if (targetItems.length === 0) targetItems = items;
     } else {
       targetItems = items;
     }
@@ -2881,10 +2906,10 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
                       title="Items per page"
                     >
-                      <option value={25}>25 per page</option>
+                      <option value="all">Show All ({productStats?.all_total || productsList?.total || 0})</option>
                       <option value={50}>50 per page</option>
                       <option value={100}>100 per page</option>
-                      <option value="all">Show All</option>
+                      <option value={25}>25 per page</option>
                     </select>
                   </div>
                 </div>
