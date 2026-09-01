@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { sendRegisterOtp, verifyOtp } from '../services/api';
 
 export default function RegisterPage() {
   const { user, register } = useAuth();
@@ -33,11 +34,75 @@ export default function RegisterPage() {
     role: 'customer',
   });
 
+  // Email OTP Verification State
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [showOtpField, setShowOtpField] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpStatusMsg, setOtpStatusMsg] = useState('');
+  const [otpErrorMsg, setOtpErrorMsg] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (e.target.name === 'email' && emailVerified) {
+      setEmailVerified(false);
+      setShowOtpField(false);
+      setOtpStatusMsg('');
+    }
+  };
+
+  const handleSendEmailOtp = async () => {
+    if (!formData.email || !formData.email.includes('@')) {
+      setOtpErrorMsg('Please enter a valid email address first.');
+      return;
+    }
+    setOtpSending(true);
+    setOtpErrorMsg('');
+    setOtpStatusMsg('');
+
+    try {
+      const res = await sendRegisterOtp({
+        email: formData.email,
+        name: formData.name || 'Valued Customer',
+      });
+      if (res.data.success) {
+        setShowOtpField(true);
+        setOtpStatusMsg(res.data.message || `Verification OTP sent to ${formData.email}`);
+      }
+    } catch (err) {
+      setOtpErrorMsg(err.response?.data?.message || 'Failed to send OTP email.');
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (otpInput.length !== 6) {
+      setOtpErrorMsg('Please enter the 6-digit OTP code.');
+      return;
+    }
+    setOtpVerifying(true);
+    setOtpErrorMsg('');
+
+    try {
+      const res = await verifyOtp({
+        email: formData.email,
+        otp: otpInput,
+      });
+      if (res.data.success) {
+        setEmailVerified(true);
+        setShowOtpField(false);
+        setOtpStatusMsg('Email verified successfully!');
+      }
+    } catch (err) {
+      setOtpErrorMsg(err.response?.data?.message || 'Invalid or expired OTP.');
+    } finally {
+      setOtpVerifying(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -90,32 +155,81 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Email *</label>
-              <input
-                type="email"
-                required
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="ankit@gmail.com"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-              />
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">Email Address *</label>
+              {emailVerified ? (
+                <span className="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-600">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Verified</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSendEmailOtp}
+                  disabled={otpSending || !formData.email}
+                  className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 disabled:opacity-40 cursor-pointer flex items-center space-x-1"
+                >
+                  {otpSending && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  <span>{otpSending ? 'Sending...' : 'Verify Email (OTP)'}</span>
+                </button>
+              )}
             </div>
+            <input
+              type="email"
+              required
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="ankit@gmail.com"
+              className={`w-full px-3.5 py-2.5 border rounded-xl text-xs focus:bg-white focus:outline-none ${
+                emailVerified ? 'bg-emerald-50/40 border-emerald-300 font-medium' : 'bg-slate-50 border-slate-200 focus:border-brand-blue-700'
+              }`}
+            />
+          </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number *</label>
-              <input
-                type="tel"
-                required
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="9876543210"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-              />
+          {/* OTP Verification Box */}
+          {showOtpField && !emailVerified && (
+            <div className="p-3.5 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between text-xs font-bold text-orange-950">
+                <span>Enter 6-Digit Email OTP:</span>
+                <span className="text-[10px] text-orange-700">Sent via no-reply@mgpjn.com</span>
+              </div>
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="6-Digit OTP"
+                  className="w-2/3 px-3 py-2 bg-white border border-orange-300 rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-brand-orange-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyEmailOtp}
+                  disabled={otpVerifying || otpInput.length !== 6}
+                  className="w-1/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1 disabled:opacity-50 cursor-pointer"
+                >
+                  {otpVerifying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                  <span>Verify</span>
+                </button>
+              </div>
+              {otpErrorMsg && <p className="text-[11px] text-rose-600 font-bold">{otpErrorMsg}</p>}
+              {otpStatusMsg && <p className="text-[11px] text-emerald-700 font-semibold">{otpStatusMsg}</p>}
             </div>
+          )}
+
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number *</label>
+            <input
+              type="tel"
+              required
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="9876543210"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+            />
           </div>
 
           <div>
@@ -132,7 +246,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Optional Referral Code Toggle */}
           <div className="pt-1">
             <button
               type="button"
@@ -160,7 +273,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
+            className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
           >
             <span>{loading ? 'Creating Account...' : 'Create Free Account'}</span>
             <ArrowRight className="w-4 h-4" />

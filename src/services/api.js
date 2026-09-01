@@ -44,6 +44,10 @@ export const loginUser = (credentials) => api.post('/auth/login', credentials);
 export const registerUser = (userData) => api.post('/auth/register', userData);
 export const getProfile = () => api.get('/auth/profile');
 export const updateProfile = (data) => api.post('/auth/profile', data);
+export const sendForgotPasswordOtp = (data) => api.post('/auth/forgot-password-otp', data);
+export const resetPasswordWithOtp = (data) => api.post('/auth/reset-password-otp', data);
+export const sendRegisterOtp = (data) => api.post('/auth/send-register-otp', data);
+export const verifyOtp = (data) => api.post('/auth/verify-otp', data);
 export const logoutUser = () => api.post('/auth/logout');
 
 // Referral Income & Partner Portal
