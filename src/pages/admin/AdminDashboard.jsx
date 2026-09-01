@@ -34,7 +34,7 @@ import {
   getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct, toggleAdminProductSection,
   uploadAdminProductImage,
   getAdminProductStatePrices, saveAdminProductStatePrices,
-  getAdminUserAssignedProducts, toggleAdminUserProductAssignment, bulkAssignAdminUserProducts, saveAdminUserProductPrice,
+  getAdminUserAssignedProducts, toggleAdminUserProductAssignment, bulkAssignAdminUserProducts, saveAdminUserProductPrice, bulkSaveAdminUserProductPrices,
   bulkUpdateAdminProductPricing,
   getAdminOrders, updateAdminOrderStatus,
   getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [debouncedProductSearch, setDebouncedProductSearch] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState('all');
-  const [productPerPage, setProductPerPage] = useState('all');
+  const [productPerPage, setProductPerPage] = useState(50);
   const [productPage, setProductPage] = useState(1);
   const [productStats, setProductStats] = useState({
     all_total: 0,
@@ -362,6 +362,7 @@ export default function AdminDashboard() {
   // Bulk Product Pricing & Commissions Modal States
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [showBulkPricingModal, setShowBulkPricingModal] = useState(false);
+  const [bulkPricingTargetDistributor, setBulkPricingTargetDistributor] = useState(null);
   const [bulkProductsList, setBulkProductsList] = useState([]);
   const [savingBulkPricing, setSavingBulkPricing] = useState(false);
   const [bulkBatchRates, setBulkBatchRates] = useState({
@@ -501,12 +502,8 @@ export default function AdminDashboard() {
     return () => clearTimeout(timer);
   }, [productSearchQuery]);
 
-  const fetchProductsFromDb = useCallback(async (page = 1, append = false, overrideParams = {}) => {
-    if (append) {
-      setLoadingMoreProducts(true);
-    } else {
-      setLoadingProducts(true);
-    }
+  const fetchProductsFromDb = useCallback(async (page = 1, overrideParams = {}) => {
+    setLoadingProducts(true);
 
     try {
       const search = overrideParams.search !== undefined ? overrideParams.search : debouncedProductSearch;
@@ -525,14 +522,7 @@ export default function AdminDashboard() {
       const res = await getAdminProducts(params);
       if (res?.data?.success) {
         const prodData = res.data.products;
-        if (append) {
-          setProductsList((prev) => ({
-            ...prodData,
-            data: [...(prev?.data || []), ...(prodData?.data || [])],
-          }));
-        } else {
-          setProductsList(prodData || { data: [] });
-        }
+        setProductsList(prodData || { data: [] });
 
         if (res.data.stats) {
           setProductStats(res.data.stats);
@@ -550,34 +540,9 @@ export default function AdminDashboard() {
   // Re-fetch products from DB whenever filters or debounced search changes
   useEffect(() => {
     if (currentSection === 'products') {
-      fetchProductsFromDb(1, false);
+      fetchProductsFromDb(1);
     }
   }, [currentSection, debouncedProductSearch, productCategoryFilter, productSectionFilter, productPerPage, fetchProductsFromDb]);
-
-  // Infinite Scroll / Lazy Load Observer
-  useEffect(() => {
-    if (currentSection !== 'products') return;
-    if (loadingMoreProducts || loadingProducts) return;
-
-    const observer = new IntersectionObserver((entries) => {
-      const first = entries[0];
-      if (
-        first.isIntersecting &&
-        productsList?.current_page < productsList?.last_page &&
-        !loadingMoreProducts &&
-        !loadingProducts
-      ) {
-        fetchProductsFromDb(productsList.current_page + 1, true);
-      }
-    }, { rootMargin: '200px', threshold: 0.1 });
-
-    const currentRef = productBottomObserverRef.current;
-    if (currentRef) observer.observe(currentRef);
-
-    return () => {
-      if (currentRef) observer.unobserve(currentRef);
-    };
-  }, [currentSection, productsList, loadingMoreProducts, loadingProducts, fetchProductsFromDb]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -982,60 +947,108 @@ export default function AdminDashboard() {
     setSelectedProductIds([]);
   };
 
-  const handleOpenBulkPricingModal = async () => {
-    let items = productsList?.data || [];
-    if (items.length < (productsList?.total || 0) || items.length <= 50) {
-      try {
-        const res = await getAdminProducts({ per_page: 'all' });
-        if (res?.data?.success && res.data.products?.data) {
-          items = res.data.products.data;
-          setProductsList(res.data.products);
-        }
-      } catch (e) {
-        console.error('Error fetching all products for bulk modal:', e);
+  const handleOpenBulkPricingModal = async (targetDistributor = null, preSelectedIds = null) => {
+    setBulkPricingTargetDistributor(targetDistributor);
+    let items = [];
+
+    if (targetDistributor) {
+      // Load products from distributor's assigned list
+      const rawList = assignedProductsList.length > 0 ? assignedProductsList : [];
+      let targetList = rawList;
+      if (preSelectedIds && preSelectedIds.length > 0) {
+        targetList = rawList.filter((p) => preSelectedIds.includes(p.id));
+      } else if (selectedAssignProductIds.length > 0) {
+        targetList = rawList.filter((p) => selectedAssignProductIds.includes(p.id));
       }
-    }
 
-    let targetItems = [];
-    if (selectedProductIds.length > 0) {
-      targetItems = items.filter((p) => selectedProductIds.includes(p.id));
-      if (targetItems.length === 0) targetItems = items;
+      if (targetList.length === 0) targetList = rawList;
+
+      if (targetList.length === 0) {
+        alert('No medicines available to edit for this distributor. Please assign products first.');
+        return;
+      }
+
+      items = targetList.map((p) => ({
+        id: p.id,
+        product_id: p.id,
+        name: p.name,
+        subtitle: p.subtitle || p.composition || '',
+        image: p.image,
+        batch_no: p.batch_no || '',
+        category_name: p.category_name || p.category?.name || '',
+        mrp: p.mrp || (p.price ? Number((p.price * 1.25).toFixed(2)) : 0),
+        retail_price: p.end_user_price || p.retail_price || p.price || 0,
+        wholesale_price: p.wholesale_price || p.retailer_price || 0,
+        sd_price: p.sd_price || p.product_price || (p.mrp ? Number((p.mrp * 0.45).toFixed(2)) : 0),
+        dist_price: p.dist_price || (p.sd_price ? Number((p.sd_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.50).toFixed(2)) : 0)),
+        subd_price: p.subd_price || (p.dist_price ? Number((p.dist_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.55).toFixed(2)) : 0)),
+        retailer_price: p.retailer_price || (p.subd_price ? Number((p.subd_price * 1.15).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.65).toFixed(2)) : 0)),
+        stock: p.stock ?? 100,
+        level_1_commission: p.level_1_commission !== undefined && p.level_1_commission !== null ? p.level_1_commission : (targetDistributor.level_1_commission || 10.00),
+        level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : (targetDistributor.level_2_commission || 5.00),
+        level_3_commission: p.level_3_commission !== undefined && p.level_3_commission !== null ? p.level_3_commission : (targetDistributor.level_3_commission || 2.00),
+        sub_retailer_commission: p.sub_retailer_commission !== undefined && p.sub_retailer_commission !== null ? p.sub_retailer_commission : (targetDistributor.sub_retailer_commission || 10.00),
+        customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : (targetDistributor.customer_commission || 5.00),
+        sd_margin: p.sd_margin !== undefined && p.sd_margin !== null ? p.sd_margin : 2.00,
+        dist_margin: p.dist_margin !== undefined && p.dist_margin !== null ? p.dist_margin : 5.00,
+        subd_margin: p.subd_margin !== undefined && p.subd_margin !== null ? p.subd_margin : 10.00,
+        rt_margin: p.rt_margin !== undefined && p.rt_margin !== null ? p.rt_margin : 15.00,
+      }));
     } else {
-      targetItems = items;
+      let catalogItems = productsList?.data || [];
+      if (catalogItems.length < (productsList?.total || 0) || catalogItems.length <= 50) {
+        try {
+          const res = await getAdminProducts({ per_page: 'all' });
+          if (res?.data?.success && res.data.products?.data) {
+            catalogItems = res.data.products.data;
+          }
+        } catch (e) {
+          console.error('Error fetching all products for bulk modal:', e);
+        }
+      }
+
+      let targetItems = [];
+      if (selectedProductIds.length > 0) {
+        targetItems = catalogItems.filter((p) => selectedProductIds.includes(p.id));
+        if (targetItems.length === 0) targetItems = catalogItems;
+      } else {
+        targetItems = catalogItems;
+      }
+
+      if (targetItems.length === 0) {
+        alert('No medicines available to edit. Please add or load medicines first.');
+        return;
+      }
+
+      items = targetItems.map((p) => ({
+        id: p.id,
+        product_id: p.id,
+        name: p.name,
+        subtitle: p.subtitle || p.composition || '',
+        image: p.image,
+        batch_no: p.batch_no || '',
+        category_name: p.category?.name || '',
+        mrp: p.mrp || (p.price ? Number((p.price * 1.25).toFixed(2)) : 0),
+        retail_price: p.retail_price || p.price || 0,
+        wholesale_price: p.wholesale_price || p.retailer_price || 0,
+        sd_price: p.sd_price || (p.base_price ? Number((p.base_price * 1.12).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.45).toFixed(2)) : 0)),
+        dist_price: p.dist_price || (p.sd_price ? Number((p.sd_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.50).toFixed(2)) : 0)),
+        subd_price: p.subd_price || (p.dist_price ? Number((p.dist_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.55).toFixed(2)) : 0)),
+        retailer_price: p.retailer_price || (p.subd_price ? Number((p.subd_price * 1.15).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.65).toFixed(2)) : 0)),
+        stock: p.stock ?? 100,
+        level_1_commission: p.level_1_commission !== undefined && p.level_1_commission !== null ? p.level_1_commission : 10.00,
+        level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : 5.00,
+        level_3_commission: p.level_3_commission !== undefined && p.level_3_commission !== null ? p.level_3_commission : 2.00,
+        sub_retailer_commission: p.sub_retailer_commission !== undefined && p.sub_retailer_commission !== null ? p.sub_retailer_commission : 10.00,
+        customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : 5.00,
+        sd_margin: p.sd_margin !== undefined && p.sd_margin !== null ? p.sd_margin : 2.00,
+        dist_margin: p.dist_margin !== undefined && p.dist_margin !== null ? p.dist_margin : 5.00,
+        subd_margin: p.subd_margin !== undefined && p.subd_margin !== null ? p.subd_margin : 10.00,
+        rt_margin: p.rt_margin !== undefined && p.rt_margin !== null ? p.rt_margin : 15.00,
+      }));
     }
 
-    if (targetItems.length === 0) {
-      alert('No medicines available to edit. Please add or load medicines first.');
-      return;
-    }
-
-    const initialList = targetItems.map((p) => ({
-      id: p.id,
-      name: p.name,
-      subtitle: p.subtitle || p.composition || '',
-      image: p.image,
-      batch_no: p.batch_no || '',
-      category_name: p.category?.name || '',
-      mrp: p.mrp || (p.price ? Number((p.price * 1.25).toFixed(2)) : 0),
-      retail_price: p.retail_price || p.price || 0,
-      wholesale_price: p.wholesale_price || p.retailer_price || 0,
-      sd_price: p.sd_price || (p.base_price ? Number((p.base_price * 1.12).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.45).toFixed(2)) : 0)),
-      dist_price: p.dist_price || (p.sd_price ? Number((p.sd_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.50).toFixed(2)) : 0)),
-      subd_price: p.subd_price || (p.dist_price ? Number((p.dist_price * 1.05).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.55).toFixed(2)) : 0)),
-      retailer_price: p.retailer_price || (p.subd_price ? Number((p.subd_price * 1.15).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.65).toFixed(2)) : 0)),
-      stock: p.stock ?? 100,
-      level_1_commission: p.level_1_commission !== undefined && p.level_1_commission !== null ? p.level_1_commission : 10.00,
-      level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : 5.00,
-      level_3_commission: p.level_3_commission !== undefined && p.level_3_commission !== null ? p.level_3_commission : 2.00,
-      sub_retailer_commission: p.sub_retailer_commission !== undefined && p.sub_retailer_commission !== null ? p.sub_retailer_commission : 10.00,
-      customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : 5.00,
-      sd_margin: p.sd_margin !== undefined && p.sd_margin !== null ? p.sd_margin : 2.00,
-      dist_margin: p.dist_margin !== undefined && p.dist_margin !== null ? p.dist_margin : 5.00,
-      subd_margin: p.subd_margin !== undefined && p.subd_margin !== null ? p.subd_margin : 10.00,
-      rt_margin: p.rt_margin !== undefined && p.rt_margin !== null ? p.rt_margin : 15.00,
-    }));
-
-    setBulkProductsList(initialList);
+    setBulkProductsList(items);
     setShowBulkPricingModal(true);
   };
 
@@ -1110,12 +1123,46 @@ export default function AdminDashboard() {
     if (bulkProductsList.length === 0) return;
     setSavingBulkPricing(true);
     try {
-      const res = await bulkUpdateAdminProductPricing({ products: bulkProductsList });
-      if (res.data.success) {
-        alert(res.data.message || `Successfully updated ${bulkProductsList.length} medicines!`);
-        setShowBulkPricingModal(false);
-        setSelectedProductIds([]);
-        fetchProductsFromDb(productPage, false);
+      if (bulkPricingTargetDistributor) {
+        // Save assigned prices and commissions for this Super Distributor
+        const payload = bulkProductsList.map((item) => ({
+          product_id: item.id || item.product_id,
+          mrp: parseFloat(item.mrp) || 0,
+          product_price: parseFloat(item.sd_price) || 0,
+          retail_price: parseFloat(item.retail_price) || 0,
+          sd_price: parseFloat(item.sd_price) || 0,
+          dist_price: parseFloat(item.dist_price) || 0,
+          subd_price: parseFloat(item.subd_price) || 0,
+          retailer_price: parseFloat(item.retailer_price) || 0,
+          level_1_commission: parseFloat(item.level_1_commission) || 0,
+          level_2_commission: parseFloat(item.level_2_commission) || 0,
+          level_3_commission: parseFloat(item.level_3_commission) || 0,
+          sub_retailer_commission: parseFloat(item.sub_retailer_commission) || 0,
+          customer_commission: parseFloat(item.customer_commission) || 0,
+          sd_margin: parseFloat(item.sd_margin) || 2.0,
+          dist_margin: parseFloat(item.dist_margin) || 5.0,
+          subd_margin: parseFloat(item.subd_margin) || 10.0,
+          rt_margin: parseFloat(item.rt_margin) || 15.0,
+        }));
+
+        const res = await bulkSaveAdminUserProductPrices(bulkPricingTargetDistributor.id, { products: payload });
+        if (res.data.success) {
+          alert(res.data.message || `Assigned rates & commissions saved for ${bulkPricingTargetDistributor.name}!`);
+          setShowBulkPricingModal(false);
+          // Refresh assigned products list in modal
+          const updatedAssigned = await getAdminUserAssignedProducts(bulkPricingTargetDistributor.id);
+          if (updatedAssigned.data.success) {
+            setAssignedProductsList(updatedAssigned.data.products || []);
+          }
+        }
+      } else {
+        const res = await bulkUpdateAdminProductPricing({ products: bulkProductsList });
+        if (res.data.success) {
+          alert(res.data.message || `Successfully updated ${bulkProductsList.length} medicines!`);
+          setShowBulkPricingModal(false);
+          setSelectedProductIds([]);
+          fetchProductsFromDb(productPage);
+        }
       }
     } catch (err) {
       alert(`Failed to save bulk prices: ${err.response?.data?.message || err.message}`);
@@ -3033,7 +3080,6 @@ export default function AdminDashboard() {
                         />
                       </th>
                       <th className="p-2.5 text-center w-10 text-slate-400">SR</th>
-                      <th className="p-2.5 text-center w-12 text-blue-900" title="Storefront Priority Rank / Index Sequence">Rank</th>
                       <th className="p-2.5">Medicine</th>
                       <th className="p-2.5">Category</th>
                       <th className="p-2.5">Batch</th>
@@ -3053,7 +3099,7 @@ export default function AdminDashboard() {
                       if (loadingProducts && items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={13} className="p-12 text-center text-slate-400 space-y-2">
+                            <td colSpan={12} className="p-12 text-center text-slate-400 space-y-2">
                               <Loader2 className="w-6 h-6 animate-spin text-brand-blue-700 mx-auto" />
                               <p className="text-xs font-bold text-slate-600">Querying database & loading medicines...</p>
                             </td>
@@ -3064,7 +3110,7 @@ export default function AdminDashboard() {
                       if (items.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={13} className="p-10 text-center text-slate-400 space-y-2">
+                            <td colSpan={12} className="p-10 text-center text-slate-400 space-y-2">
                               <p className="text-sm font-bold text-slate-700">No medicines found</p>
                               <p className="text-xs text-slate-400">
                                 {productSearchQuery
@@ -3100,31 +3146,9 @@ export default function AdminDashboard() {
                               className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                             />
                           </td>
-                          {/* Serial Number (Row Counter 1, 2, 3... 58) */}
+                          {/* Serial Number (Row Counter taking page into account: 1..50, 51..60, etc.) */}
                           <td className="p-2.5 text-center font-bold text-slate-400 text-xs whitespace-nowrap">
-                            {idx + 1}
-                          </td>
-                          {/* Storefront Priority Rank Sequence Input */}
-                          <td className="p-2.5 text-center">
-                            <input
-                              type="number"
-                              defaultValue={p.sort_order ?? (idx + 1)}
-                              key={`sort-${p.id}-${p.sort_order}`}
-                              onBlur={async (e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val !== p.sort_order) {
-                                  await toggleAdminProductSection(p.id, { section: 'sort_order', value: val });
-                                  fetchProductsFromDb(productPage, false);
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.target.blur();
-                                }
-                              }}
-                              className="w-10 text-center py-1 px-0.5 text-xs font-black border border-slate-200 rounded-lg focus:border-brand-blue-600 focus:outline-none bg-slate-50 focus:bg-white text-brand-blue-900"
-                              title="Storefront Priority Rank. Lower numbers appear first on storefront. Press Enter or click away to save."
-                            />
+                            {(productPage - 1) * (productPerPage === 'all' ? 0 : productPerPage) + idx + 1}
                           </td>
                           <td className="p-2.5 flex items-center space-x-2.5 max-w-[220px]">
                             <img src={p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80'} alt={p.name} className="w-8 h-8 object-contain bg-white rounded-lg border p-0.5 shrink-0" />
@@ -3155,47 +3179,42 @@ export default function AdminDashboard() {
                           </td>
                           {/* 1-Click Homepage Widgets Configuration (Outside List) */}
                           <td className="p-2.5 text-center whitespace-nowrap">
-                            <div className="flex items-center justify-center space-x-1.5 flex-wrap gap-y-1">
-                              {/* 1. Featured Widget Toggle */}
+                            <div className="flex items-center justify-center space-x-1">
                               <button
                                 type="button"
-                                onClick={() => handleToggleProductSection(p.id, 'is_featured', p.is_featured)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                                onClick={() => handleToggleProductSection(p.id, 'featured')}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                                   p.is_featured
-                                    ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs hover:bg-amber-200'
-                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
+                                    ? 'bg-amber-500 text-white shadow-2xs'
+                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                 }`}
-                                title={p.is_featured ? 'Click to remove from Homepage Featured section' : 'Click to show in Homepage Featured section'}
+                                title="Toggle Featured Widget"
                               >
-                                <span>{p.is_featured ? '⭐ Featured' : '☆ + Featured'}</span>
+                                {p.is_featured ? '★ Featured' : '☆ Featured'}
                               </button>
-
-                              {/* 2. Hot Selling / Top Fast-Moving Widget Toggle */}
                               <button
                                 type="button"
-                                onClick={() => handleToggleProductSection(p.id, 'is_trending', p.is_trending)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                                onClick={() => handleToggleProductSection(p.id, 'trending')}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                                   p.is_trending
-                                    ? 'bg-rose-100 text-rose-900 border border-rose-300 shadow-2xs hover:bg-rose-200 font-extrabold'
-                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
+                                    ? 'bg-rose-500 text-white shadow-2xs'
+                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                 }`}
-                                title={p.is_trending ? 'Click to remove from Hot Selling Fast-Moving section' : 'Click to show in Hot Selling Fast-Moving section'}
+                                title="Toggle Hot Selling Widget"
                               >
-                                <span>{p.is_trending ? '🔥 Hot Selling' : '🔥 + Hot'}</span>
+                                {p.is_trending ? '🔥 Hot' : '○ Hot'}
                               </button>
-
-                              {/* 3. Homepage Grid Placement Toggle */}
                               <button
                                 type="button"
-                                onClick={() => handleToggleProductSection(p.id, 'show_on_homepage', p.show_on_homepage !== false)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center space-x-1 transition-all cursor-pointer ${
+                                onClick={() => handleToggleProductSection(p.id, 'homepage')}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                                   p.show_on_homepage !== false
-                                    ? 'bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs hover:bg-blue-200'
-                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200'
+                                    ? 'bg-indigo-600 text-white shadow-2xs'
+                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                 }`}
-                                title={p.show_on_homepage !== false ? 'Shown on Storefront Homepage Grid (Click to Hide)' : 'Hidden from Homepage Grid (Click to Show)'}
+                                title="Toggle Homepage Grid Visibility"
                               >
-                                <span>{p.show_on_homepage !== false ? '🏠 Home: On' : '🏠 Home: Off'}</span>
+                                {p.show_on_homepage !== false ? '🏠 Grid' : '○ Grid'}
                               </button>
                             </div>
                           </td>
@@ -3203,19 +3222,18 @@ export default function AdminDashboard() {
                           <td className="p-2.5 text-center">
                             <button
                               type="button"
-                              onClick={() => handleToggleProductSection(p.id, 'status', p.status === 'Active' ? 'Inactive' : 'Active')}
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer transition-colors whitespace-nowrap ${
-                                p.status === 'Inactive'
-                                  ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-                                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                              onClick={() => handleToggleProductStatus(p.id, p.status)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold cursor-pointer transition-colors ${
+                                p.status === 'Active' || !p.status
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                  : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
                               }`}
-                              title="Click to toggle Active / Inactive"
                             >
                               {p.status || 'Active'}
                             </button>
                           </td>
                           {/* Action Buttons (Sticky Right for guaranteed visibility on all screens) */}
-                          <td className="p-2.5 text-right sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.04)] group-hover:bg-slate-50/90 z-10 whitespace-nowrap space-x-1.5">
+                          <td className="p-2.5 text-right sticky right-0 bg-white/95 group-hover:bg-slate-50 shadow-[-4px_0_8px_rgba(0,0,0,0.04)] z-10 whitespace-nowrap space-x-1.5">
                             <button
                               type="button"
                               onClick={() => handleOpenEditProduct(p)}
@@ -3251,50 +3269,63 @@ export default function AdminDashboard() {
                 </table>
               </div>
 
-              {/* Lazy Loading & Pagination Controls Footer */}
-              <div className="pt-4 border-t space-y-3">
-                {/* 1. Load More / Infinite Scroll Sentinel */}
-                {productsList?.current_page < productsList?.last_page && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-blue-50/70 via-slate-50 to-emerald-50/70 rounded-2xl border border-blue-100 shadow-2xs">
-                    <div className="text-xs text-slate-600 font-medium">
-                      Loaded <strong className="text-slate-900 font-black">{productsList?.data?.length || 0}</strong> of <strong className="text-slate-900 font-black">{productsList?.total || 0}</strong> total medicines from database.
-                    </div>
+              {/* Numbered Page Navigation Bar (Max 50 Medicines Per Page) */}
+              <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-slate-600 font-medium">
+                  Showing <strong className="text-slate-900 font-black">{productsList?.total > 0 ? (productPage - 1) * (productPerPage === 'all' ? productsList.total : productPerPage) + 1 : 0}</strong> to <strong className="text-slate-900 font-black">{productPerPage === 'all' ? (productsList?.total || 0) : Math.min(productPage * productPerPage, productsList?.total || 0)}</strong> of <strong className="text-slate-900 font-black">{productsList?.total || 0}</strong> total medicines
+                </div>
+
+                {productsList?.last_page > 1 && (
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPage = Math.max(1, productPage - 1);
+                        fetchProductsFromDb(newPage);
+                        window.scrollTo({ top: 300, behavior: 'smooth' });
+                      }}
+                      disabled={productPage <= 1 || loadingProducts}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    >
+                      ‹ Previous
+                    </button>
+
+                    {Array.from({ length: productsList.last_page }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => {
+                          fetchProductsFromDb(pageNum);
+                          window.scrollTo({ top: 300, behavior: 'smooth' });
+                        }}
+                        disabled={loadingProducts}
+                        className={`w-8 h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          productPage === pageNum
+                            ? 'bg-[#ff5722] text-white shadow-sm font-black'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
 
                     <button
                       type="button"
-                      onClick={() => fetchProductsFromDb(productsList.current_page + 1, true)}
-                      disabled={loadingMoreProducts}
-                      className="px-5 py-2.5 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl text-xs font-bold flex items-center space-x-2 shadow-xs transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                      onClick={() => {
+                        const newPage = Math.min(productsList.last_page, productPage + 1);
+                        fetchProductsFromDb(newPage);
+                        window.scrollTo({ top: 300, behavior: 'smooth' });
+                      }}
+                      disabled={productPage >= productsList.last_page || loadingProducts}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
-                      {loadingMoreProducts ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Loading Next Page ({productsList.current_page + 1} of {productsList.last_page})...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDownCircle className="w-4 h-4" />
-                          <span>Load More Medicines ({(productsList?.total || 0) - (productsList?.data?.length || 0)} remaining)</span>
-                        </>
-                      )}
+                      Next ›
                     </button>
                   </div>
                 )}
-
-                {productsList?.data?.length >= productsList?.total && productsList?.total > 0 && (
-                  <div className="text-center py-2 text-xs font-semibold text-slate-400">
-                    ✅ All {productsList.total} medicines loaded from database.
-                  </div>
-                )}
-
-                {/* Sentinel element for automatic IntersectionObserver infinite scroll */}
-                <div ref={productBottomObserverRef} className="h-4 w-full" />
               </div>
             </div>
           )}
-
-          {/* ======================================================== */}
-          {/* 4. MARGIN MANAGEMENT                                     */}
           {/* ======================================================== */}
           {currentSection === 'margins' && (
             <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
@@ -7100,6 +7131,21 @@ export default function AdminDashboard() {
               </div>
 
               <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => handleOpenBulkPricingModal(assignTargetUser, selectedAssignProductIds)}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+                  title="Bulk Edit Pricing & Commissions for this Super Distributor"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>⚡ Bulk Set Prices &amp; Commissions</span>
+                  {selectedAssignProductIds.length > 0 && (
+                    <span className="bg-amber-400 text-purple-950 px-1.5 py-0.2 rounded-full text-[10px] font-black">
+                      {selectedAssignProductIds.length}
+                    </span>
+                  )}
+                </button>
+
                 <label className="flex items-center space-x-2 cursor-pointer text-xs font-bold text-slate-700 select-none">
                   <input
                     type="checkbox"
@@ -7796,13 +7842,19 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-base sm:text-lg font-black tracking-tight">Bulk Product Price, Tier Rates &amp; Commission Editor</h3>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">
+                      {bulkPricingTargetDistributor
+                        ? `⚡ Bulk Pricing & Rates for ${bulkPricingTargetDistributor.name} (${bulkPricingTargetDistributor.state || 'All States'})`
+                        : '⚡ Bulk Product Price, Tier Rates & Commission Editor'}
+                    </h3>
                     <span className="bg-amber-400 text-purple-950 px-2.5 py-0.5 rounded-full text-[11px] font-black">
                       {bulkProductsList.length} Medicines in Batch
                     </span>
                   </div>
                   <p className="text-[11px] text-purple-200/80">
-                    Modify printed MRP, customer selling rates, post wholesale prices (SD, Dist, Sub-D, Retailer) &amp; dynamic commissions in one place.
+                    {bulkPricingTargetDistributor
+                      ? `Assign custom Super Distributor rates, downline wholesale tiers & commissions for ${bulkPricingTargetDistributor.name}'s network.`
+                      : 'Modify printed MRP, customer selling rates, post wholesale prices (SD, Dist, Sub-D, Retailer) & dynamic commissions in one place.'}
                   </p>
                 </div>
               </div>
