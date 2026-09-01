@@ -240,9 +240,6 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
               <span className="text-xs font-extrabold text-brand-blue-800 bg-brand-blue-50 px-2.5 py-1 rounded-lg uppercase tracking-wide">
                 {product.category?.name || 'Pharmacy'} • {product.dosage_form}
               </span>
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
-                {product.pack_size}
-              </span>
             </div>
 
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 mt-2.5 tracking-tight">
