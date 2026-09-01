@@ -2644,6 +2644,14 @@ export default function AdminDashboard() {
                                   >
                                     <Edit className="w-3.5 h-3.5" />
                                   </button>
+                                  <button
+                                    onClick={() => handleOpenAssignProductsModal(u)}
+                                    title={`Assign Products & Custom Chain Pricing for ${u.name} (${u.state || 'All States'})`}
+                                    className="inline-flex items-center space-x-1 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95 ml-1"
+                                  >
+                                    <Package className="w-3.5 h-3.5" />
+                                    <span>Assign Products</span>
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -2753,31 +2761,39 @@ export default function AdminDashboard() {
                                       name: u.name,
                                       business_name: u.business_name || '',
                                       email: u.email,
-                                      mobile: u.phone,
-                                      phone: u.phone,
-                                      password: '',
-                                      role: u.role,
-                                      sponsor_code: '',
-                                      address: u.address || '',
-                                      state: u.state || 'GUJRAT',
-                                      city: u.city || 'Surat',
-                                      pincode: u.pincode || '394230',
-                                      pan_number: u.pan_number || '',
-                                      gst_number: u.gst_number || '',
-                                      bank_name: u.bank_name || '',
-                                      account_number: u.account_number || '',
-                                      ifsc_code: u.ifsc_code || '',
-                                      upi_id: u.upi_id || '',
-                                      status: u.status || 'active',
-                                    });
-                                    setShowAddUserModal(true);
-                                  }}
-                                  title="Edit"
-                                  className="p-1.5 text-brand-orange-500 hover:bg-orange-50 rounded-lg"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
+                                        mobile: u.phone,
+                                        phone: u.phone,
+                                        password: '',
+                                        role: u.role,
+                                        sponsor_code: '',
+                                        address: u.address || '',
+                                        state: u.state || 'GUJRAT',
+                                        city: u.city || 'Surat',
+                                        pincode: u.pincode || '394230',
+                                        pan_number: u.pan_number || '',
+                                        gst_number: u.gst_number || '',
+                                        bank_name: u.bank_name || '',
+                                        account_number: u.account_number || '',
+                                        ifsc_code: u.ifsc_code || '',
+                                        upi_id: u.upi_id || '',
+                                        status: u.status || 'active',
+                                      });
+                                      setShowAddUserModal(true);
+                                    }}
+                                    title="Edit"
+                                    className="p-1.5 text-brand-orange-500 hover:bg-orange-50 rounded-lg cursor-pointer"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenAssignProductsModal(u)}
+                                    title={`Assign Products & Custom Chain Pricing for ${u.name} (${u.state || 'All States'})`}
+                                    className="inline-flex items-center space-x-1 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95 ml-1"
+                                  >
+                                    <Package className="w-3.5 h-3.5" />
+                                    <span>Assign Products</span>
+                                  </button>
+                                </td>
                             </tr>
                           );
                         });
@@ -7080,21 +7096,50 @@ export default function AdminDashboard() {
                   <span className="text-xl">📦</span>
                   <h3 className="text-base sm:text-lg font-black tracking-tight">Assign Products</h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAssignFilterOnlyAssigned(!assignFilterOnlyAssigned)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all flex items-center space-x-1.5 ${
-                    assignFilterOnlyAssigned
-                      ? 'bg-white text-[#ff5722] border-white shadow-xs'
-                      : 'bg-white/20 hover:bg-white/30 text-white border-white/30'
-                  }`}
-                >
-                  <span>✕</span>
-                  <span>{assignFilterOnlyAssigned ? 'Showing Assigned Only' : 'Assign to Distributor'}</span>
-                </button>
+                <div className="flex items-center space-x-1 bg-black/25 p-1 rounded-2xl border border-white/20">
+                  <button
+                    type="button"
+                    onClick={() => setAssignFilterOnlyAssigned('all')}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                      assignFilterOnlyAssigned === 'all' || assignFilterOnlyAssigned === false
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-white hover:bg-white/10'
+                    }`}
+                  >
+                    All ({assignedProductsList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignFilterOnlyAssigned('assigned')}
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1 cursor-pointer ${
+                      assignFilterOnlyAssigned === 'assigned' || assignFilterOnlyAssigned === true
+                        ? 'bg-emerald-500 text-white shadow-xs'
+                        : 'text-emerald-200 hover:bg-emerald-600/30'
+                    }`}
+                  >
+                    <span>🟢 Assigned</span>
+                    <span className="bg-emerald-950/40 text-emerald-100 px-1.5 py-0.2 rounded-full text-[10px]">
+                      {assignedProductsList.filter((p) => p.is_assigned).length}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignFilterOnlyAssigned('unassigned')}
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1 cursor-pointer ${
+                      assignFilterOnlyAssigned === 'unassigned'
+                        ? 'bg-rose-500 text-white shadow-xs'
+                        : 'text-rose-200 hover:bg-rose-600/30'
+                    }`}
+                  >
+                    <span>🔴 Not Assigned</span>
+                    <span className="bg-rose-950/40 text-rose-100 px-1.5 py-0.2 rounded-full text-[10px]">
+                      {assignedProductsList.filter((p) => !p.is_assigned).length}
+                    </span>
+                  </button>
+                </div>
               </div>
 
-              {/* Prominent State & Distributor Info (As Requested) */}
+              {/* Prominent State & Distributor Info */}
               <div className="flex items-center space-x-3">
                 <div className="bg-black/25 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/20 text-right">
                   <div className="text-[11px] font-bold text-white flex items-center space-x-1.5 justify-end">
@@ -7110,7 +7155,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowAssignProductsModal(false)}
-                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -7123,7 +7168,7 @@ export default function AdminDashboard() {
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder="Search products by name or category..."
                   value={assignProductsSearch}
                   onChange={(e) => setAssignProductsSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-brand-blue-500 shadow-2xs"
@@ -7134,7 +7179,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => handleOpenBulkPricingModal(assignTargetUser, selectedAssignProductIds)}
-                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer hover:scale-105 active:scale-95"
                   title="Bulk Edit Pricing & Commissions for this Super Distributor"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -7160,7 +7205,7 @@ export default function AdminDashboard() {
                         setSelectedAssignProductIds([]);
                       }
                     }}
-                    className="w-4 h-4 rounded text-[#ff5722] focus:ring-[#ff5722]"
+                    className="w-4 h-4 rounded text-[#ff5722] focus:ring-[#ff5722] cursor-pointer"
                   />
                   <span>Select All</span>
                 </label>
@@ -7174,14 +7219,14 @@ export default function AdminDashboard() {
                     <button
                       type="button"
                       onClick={() => handleBulkAssignSubmit(true)}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                     >
                       Assign Selected
                     </button>
                     <button
                       type="button"
                       onClick={() => handleBulkAssignSubmit(false)}
-                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                     >
                       Remove Selected
                     </button>
@@ -7190,7 +7235,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Products List Body */}
+            {/* Products List Body with Distinct Green vs Red Design */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
               {assignProductsLoading ? (
                 <div className="py-20 text-center text-slate-400 text-xs font-bold flex flex-col items-center justify-center space-y-2">
@@ -7204,33 +7249,40 @@ export default function AdminDashboard() {
                       !assignProductsSearch ||
                       p.name.toLowerCase().includes(assignProductsSearch.toLowerCase()) ||
                       (p.category_name && p.category_name.toLowerCase().includes(assignProductsSearch.toLowerCase()));
-                    const matchAssigned = !assignFilterOnlyAssigned || p.is_assigned;
+                    const matchAssigned =
+                      assignFilterOnlyAssigned === 'all' || assignFilterOnlyAssigned === false
+                        ? true
+                        : (assignFilterOnlyAssigned === 'assigned' || assignFilterOnlyAssigned === true)
+                        ? p.is_assigned
+                        : !p.is_assigned;
                     return matchSearch && matchAssigned;
                   });
 
                   if (filtered.length === 0) {
                     return (
                       <div className="py-16 text-center text-slate-400 text-xs font-medium bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        No products found matching the criteria.
+                        No medicines found matching the selected filter ({assignFilterOnlyAssigned}).
                       </div>
                     );
                   }
 
                   return filtered.map((product) => {
                     const isSelected = selectedAssignProductIds.includes(product.id);
+                    const isAssigned = Boolean(product.is_assigned);
+
                     return (
                       <div
                         key={product.id}
-                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
                           isSelected
-                            ? 'bg-amber-50/40 border-amber-300 shadow-sm'
-                            : product.is_assigned
-                            ? 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
-                            : 'bg-slate-50/70 border-dashed border-slate-300 opacity-75'
+                            ? 'bg-amber-50/50 border-amber-400 shadow-md ring-2 ring-amber-300'
+                            : isAssigned
+                            ? 'bg-emerald-50/35 border-emerald-400 shadow-xs hover:border-emerald-500'
+                            : 'bg-rose-50/25 border-rose-300 shadow-2xs hover:border-rose-400'
                         }`}
                       >
-                        {/* Checkbox & Product Details */}
-                        <div className="flex items-start space-x-3.5 min-w-0">
+                        {/* Checkbox, Status Badge & Product Details */}
+                        <div className="flex items-start space-x-3.5 min-w-0 flex-1">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -7241,15 +7293,31 @@ export default function AdminDashboard() {
                                 setSelectedAssignProductIds((prev) => prev.filter((id) => id !== product.id));
                               }
                             }}
-                            className="w-4 h-4 mt-1 rounded text-[#ff5722] focus:ring-[#ff5722] cursor-pointer"
+                            className="w-4 h-4 mt-1 rounded text-[#ff5722] focus:ring-[#ff5722] cursor-pointer shrink-0"
                           />
 
-                          <div className="space-y-1 min-w-0">
-                            <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight truncate">
-                              {product.name}
-                            </h4>
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                              <h4 className="font-black text-slate-900 text-xs sm:text-sm tracking-tight truncate">
+                                {product.name}
+                              </h4>
+
+                              {/* Green vs Red Status Badge */}
+                              {isAssigned ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-2xs inline-flex items-center space-x-1">
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                  <span>✓ ASSIGNED</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-2xs inline-flex items-center space-x-1">
+                                  <X className="w-3 h-3 stroke-[3]" />
+                                  <span>✗ NOT ASSIGNED</span>
+                                </span>
+                              )}
+                            </div>
+
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-                              <span>{product.category_name || 'Tablets'}</span>
+                              <span className="font-bold text-slate-700">{product.category_name || 'Tablets'}</span>
                               <span>•</span>
                               <span>{product.sub_category_name || 'Medicine'}</span>
                               <span className="text-slate-400">|</span>
@@ -7258,7 +7326,7 @@ export default function AdminDashboard() {
                           </div>
                         </div>
 
-                        {/* Packaging, Pricing, Stock & Buttons */}
+                        {/* Packaging, Pricing, Stock & Action Buttons */}
                         <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 pl-7 sm:pl-0">
                           <div className="text-center">
                             <span className="text-[10px] text-slate-400 block font-semibold">Packaging</span>
@@ -7268,22 +7336,24 @@ export default function AdminDashboard() {
                           </div>
 
                           <div className="text-right">
-                            <div className="text-xs sm:text-sm font-black text-[#ff5722]">
-                              ₹{Number(product.product_price || product.end_user_price || product.base_price || 10).toFixed(2)}
+                            <div className={`text-xs sm:text-sm font-black ${isAssigned ? 'text-emerald-700' : 'text-slate-700'}`}>
+                              ₹{Number(product.product_price || product.sd_price || product.end_user_price || product.base_price || 10).toFixed(2)}
                             </div>
-                            <div className="text-[10px] text-slate-500 font-bold">Configured Rate</div>
+                            <div className="text-[10px] text-slate-500 font-bold">
+                              {isAssigned ? 'Assigned SD Rate' : 'Base Rate'}
+                            </div>
                             <div className="text-[10px] text-slate-400">MRP: ₹{Number(product.mrp || 124).toFixed(2)}</div>
                           </div>
 
                           <div className="text-left hidden md:block">
-                            <div className="flex items-center space-x-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            <div className="flex items-center space-x-1 text-[10px] font-bold text-purple-900 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
                               <span>L1: {product.level_1_commission !== undefined ? product.level_1_commission : 10}%</span>
                               <span>•</span>
                               <span>L2: {product.level_2_commission !== undefined ? product.level_2_commission : 5}%</span>
                               <span>•</span>
                               <span>L3: {product.level_3_commission !== undefined ? product.level_3_commission : 2}%</span>
                             </div>
-                            <span className="text-[9px] text-slate-400 block mt-0.5">3-Level Referral</span>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">Territory Commission</span>
                           </div>
 
                           <div>
@@ -7295,29 +7365,39 @@ export default function AdminDashboard() {
                           </div>
 
                           <div className="flex items-center space-x-2">
-                            {/* Green Set Price Button */}
+                            {/* Set Price / Edit Rate Button */}
                             <button
                               type="button"
                               onClick={() => handleOpenSetPriceModal(product)}
-                              className="px-3 py-1.5 bg-[#00a859] hover:bg-[#008f4c] text-white text-xs font-bold rounded-lg flex items-center space-x-1 shadow-xs transition-all"
+                              className="px-3 py-1.5 bg-brand-blue-700 hover:bg-brand-blue-800 text-white text-xs font-bold rounded-xl flex items-center space-x-1 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95"
+                              title="Edit Individual Product Rates & Commission"
                             >
                               <span>📊</span>
                               <span>Set Price</span>
                             </button>
 
-                            {/* Red Remove / Green Assign Button */}
-                            <button
-                              type="button"
-                              onClick={() => handleToggleProductAssignment(product.id, !product.is_assigned)}
-                              className={`px-3 py-1.5 text-xs font-bold rounded-lg flex items-center space-x-1 shadow-xs transition-all ${
-                                product.is_assigned
-                                  ? 'bg-[#e53935] hover:bg-[#d32f2f] text-white'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                              }`}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>{product.is_assigned ? 'Remove' : 'Assign'}</span>
-                            </button>
+                            {/* Green Assign / Red Remove Button */}
+                            {isAssigned ? (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleProductAssignment(product.id, false)}
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95"
+                                title="Remove this medicine from this distributor's catalog"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Remove</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleProductAssignment(product.id, true)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl flex items-center space-x-1 shadow-xs transition-all cursor-pointer hover:scale-105 active:scale-95"
+                                title="Assign this medicine to this distributor"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>+ Assign</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
