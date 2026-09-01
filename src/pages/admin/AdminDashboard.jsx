@@ -2707,17 +2707,17 @@ export default function AdminDashboard() {
                 <table className="w-full text-xs text-left">
                   <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
                     <tr>
-                      <th className="p-3.5 text-center w-16">Index</th>
-                      <th className="p-3.5">Medicine</th>
-                      <th className="p-3.5">Category</th>
-                      <th className="p-3.5">Batch / SHN</th>
-                      <th className="p-3.5">MRP</th>
-                      <th className="p-3.5">Retail Rate</th>
-                      <th className="p-3.5">Wholesale Rate</th>
-                      <th className="p-3.5">Stock</th>
-                      <th className="p-3.5 text-center min-w-[260px]">Homepage Widgets (1-Click)</th>
-                      <th className="p-3.5">Status</th>
-                      <th className="p-3.5 text-right sticky right-0 bg-slate-50 shadow-[-4px_0_8px_rgba(0,0,0,0.04)] z-10 min-w-[210px]">Actions</th>
+                      <th className="p-2.5 text-center w-12">#</th>
+                      <th className="p-2.5">Medicine</th>
+                      <th className="p-2.5">Category</th>
+                      <th className="p-2.5">Batch</th>
+                      <th className="p-2.5">MRP</th>
+                      <th className="p-2.5">Retail Rate</th>
+                      <th className="p-2.5">Wholesale Rate</th>
+                      <th className="p-2.5 text-center">Stock</th>
+                      <th className="p-2.5 text-center min-w-[240px]">Homepage Widgets (1-Click)</th>
+                      <th className="p-2.5 text-center">Status</th>
+                      <th className="p-2.5 text-right sticky right-0 bg-slate-50 shadow-[-4px_0_8px_rgba(0,0,0,0.04)] z-10 min-w-[190px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2768,7 +2768,7 @@ export default function AdminDashboard() {
                       return filtered.map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50/60 group">
                           {/* Index Sequence Input */}
-                          <td className="p-3.5 text-center">
+                          <td className="p-2.5 text-center">
                             <input
                               type="number"
                               defaultValue={p.sort_order ?? 0}
@@ -2785,39 +2785,39 @@ export default function AdminDashboard() {
                                   e.target.blur();
                                 }
                               }}
-                              className="w-12 text-center py-1 px-1 text-xs font-black border border-slate-200 rounded-lg focus:border-brand-blue-600 focus:outline-none bg-slate-50 focus:bg-white"
+                              className="w-10 text-center py-1 px-0.5 text-xs font-black border border-slate-200 rounded-lg focus:border-brand-blue-600 focus:outline-none bg-slate-50 focus:bg-white"
                               title="Display Sequence Index. Lower numbers appear first on storefront. Press Enter or click away to save."
                             />
                           </td>
-                          <td className="p-3.5 flex items-center space-x-3">
-                            <img src={p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80'} alt={p.name} className="w-9 h-9 object-contain bg-white rounded-lg border p-1" />
-                            <div>
-                              <span className="font-bold text-slate-900 block">{p.name}</span>
-                              <span className="text-[10px] text-slate-400 truncate max-w-xs block">{p.subtitle || p.composition}</span>
+                          <td className="p-2.5 flex items-center space-x-2.5 max-w-[220px]">
+                            <img src={p.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=80'} alt={p.name} className="w-8 h-8 object-contain bg-white rounded-lg border p-0.5 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-900 block truncate text-xs">{p.name}</span>
+                              <span className="text-[10px] text-slate-400 truncate block">{p.subtitle || p.composition}</span>
                             </div>
                           </td>
-                          <td className="p-3.5 font-semibold text-slate-700">
+                          <td className="p-2.5 font-semibold text-slate-700 whitespace-nowrap">
                             {p.category?.name || 'Tablets'}
                           </td>
-                          <td className="p-3.5 font-mono text-slate-600 font-bold">
+                          <td className="p-2.5 font-mono text-slate-600 font-bold whitespace-nowrap text-[11px]">
                             {p.batch_no || 'BT2026001'}
                           </td>
-                          <td className="p-3.5 font-bold text-slate-900">
+                          <td className="p-2.5 font-bold text-slate-900 whitespace-nowrap">
                             ₹{Number(p.mrp || (p.price * 1.25)).toFixed(0)}
                           </td>
-                          <td className="p-3.5 font-bold text-blue-700">
+                          <td className="p-2.5 font-bold text-blue-700 whitespace-nowrap">
                             ₹{Number(p.retail_price || p.price || 0).toFixed(0)}
                             <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || p.unit || 'Unit'}</span>
                           </td>
-                          <td className="p-3.5 font-bold text-emerald-700">
+                          <td className="p-2.5 font-bold text-emerald-700 whitespace-nowrap">
                             ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
                             <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Wholesale'}</span>
                           </td>
-                          <td className="p-3.5 font-bold text-slate-800">
+                          <td className="p-2.5 text-center font-bold text-slate-800">
                             {p.stock}
                           </td>
                           {/* 1-Click Homepage Widgets Configuration (Outside List) */}
-                          <td className="p-3.5 text-center">
+                          <td className="p-2.5 text-center whitespace-nowrap">
                             <div className="flex items-center justify-center space-x-1.5 flex-wrap gap-y-1">
                               {/* 1. Featured Widget Toggle */}
                               <button
@@ -2863,11 +2863,11 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           {/* Interactive Status Toggle */}
-                          <td className="p-3.5">
+                          <td className="p-2.5 text-center">
                             <button
                               type="button"
                               onClick={() => handleToggleProductSection(p.id, 'status', p.status === 'Active' ? 'Inactive' : 'Active')}
-                              className={`text-[10px] font-bold px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer transition-colors whitespace-nowrap ${
                                 p.status === 'Inactive'
                                   ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
                                   : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
@@ -2878,11 +2878,11 @@ export default function AdminDashboard() {
                             </button>
                           </td>
                           {/* Action Buttons (Sticky Right for guaranteed visibility on all screens) */}
-                          <td className="p-3.5 text-right sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.04)] group-hover:bg-slate-50/90 z-10 whitespace-nowrap space-x-1.5">
+                          <td className="p-2.5 text-right sticky right-0 bg-white shadow-[-4px_0_8px_rgba(0,0,0,0.04)] group-hover:bg-slate-50/90 z-10 whitespace-nowrap space-x-1.5">
                             <button
                               type="button"
                               onClick={() => handleOpenEditProduct(p)}
-                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-brand-blue-800 border border-blue-200 rounded-xl font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              className="inline-flex items-center space-x-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-brand-blue-800 border border-blue-200 rounded-lg font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
                               title="Edit Medicine Details & Pricing"
                             >
                               <Edit className="w-3.5 h-3.5" />
@@ -2890,9 +2890,9 @@ export default function AdminDashboard() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleOpenStatePriceModal(p)}
-                              className="inline-flex items-center space-x-1 px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
-                              title="State-Wise Wholesale Pricing"
+                              onClick={() => handleOpenStatePrices(p)}
+                              className="inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Manage State-Wise Wholesale Pricing"
                             >
                               <SlidersHorizontal className="w-3.5 h-3.5" />
                               <span>State</span>
@@ -2900,8 +2900,8 @@ export default function AdminDashboard() {
                             <button
                               type="button"
                               onClick={() => handleDeleteProduct(p.id, p.name)}
-                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
-                              title="Delete this product"
+                              className="inline-flex items-center space-x-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-[11px] transition-all shadow-2xs hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Delete Product"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>Delete</span>
