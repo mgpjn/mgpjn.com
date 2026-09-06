@@ -2067,14 +2067,61 @@ export default function AdminDashboard() {
   };
 
   const handleToggleProductSection = async (productId, section, currentValue) => {
+    const newValue = !currentValue;
+    // Optimistic Instant UI Update
+    setProductsList((prev) => {
+      if (!prev) return prev;
+      const updateItem = (item) => {
+        if (item.id !== productId) return item;
+        if (section === 'featured' || section === 'is_featured') {
+          return { ...item, is_featured: newValue };
+        } else if (section === 'trending' || section === 'is_trending') {
+          return { ...item, is_trending: newValue };
+        } else if (section === 'homepage' || section === 'show_on_homepage') {
+          return { ...item, show_on_homepage: newValue };
+        }
+        return item;
+      };
+      if (Array.isArray(prev)) return prev.map(updateItem);
+      if (prev.data && Array.isArray(prev.data)) {
+        return { ...prev, data: prev.data.map(updateItem) };
+      }
+      return prev;
+    });
+
     try {
-      const newValue = !currentValue;
       await toggleAdminProductSection(productId, { section, value: newValue });
-      toast.success('Product updated successfully!');
+      toast.success(`${section.toUpperCase()} status updated.`);
       fetchProductsFromDb(productPage);
     } catch (err) {
       console.error('Failed to toggle product section:', err);
       toast.error('Failed to update product section.');
+      fetchProductsFromDb(productPage);
+    }
+  };
+
+  const handleToggleProductStatus = async (productId, currentStatus) => {
+    const isActive = currentStatus === 'Active' || currentStatus === 'active' || !currentStatus;
+    const newStatus = isActive ? 'inactive' : 'active';
+    // Optimistic Instant UI Update
+    setProductsList((prev) => {
+      if (!prev) return prev;
+      const updateItem = (item) => (item.id === productId ? { ...item, status: newStatus === 'active' ? 'Active' : 'Inactive' } : item);
+      if (Array.isArray(prev)) return prev.map(updateItem);
+      if (prev.data && Array.isArray(prev.data)) {
+        return { ...prev, data: prev.data.map(updateItem) };
+      }
+      return prev;
+    });
+
+    try {
+      await toggleAdminProductSection(productId, { section: 'status', value: newStatus });
+      toast.success(`Product status marked as ${newStatus === 'active' ? 'Active' : 'Inactive'}`);
+      fetchProductsFromDb(productPage);
+    } catch (err) {
+      console.error('Failed to toggle product status:', err);
+      toast.error('Failed to update product status.');
+      fetchProductsFromDb(productPage);
     }
   };
 
@@ -4308,37 +4355,37 @@ export default function AdminDashboard() {
                             <div className="flex items-center justify-center space-x-1">
                               <button
                                 type="button"
-                                onClick={() => handleToggleProductSection(p.id, 'featured')}
+                                onClick={() => handleToggleProductSection(p.id, 'featured', Boolean(p.is_featured))}
                                 className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                                   p.is_featured
                                     ? 'bg-amber-500 text-white shadow-2xs'
                                     : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                 }`}
-                                title="Toggle Featured Widget"
+                                title="Toggle Featured Widget (Click to turn ON/OFF)"
                               >
                                 {p.is_featured ? '★ Featured' : '☆ Featured'}
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleToggleProductSection(p.id, 'trending')}
+                                onClick={() => handleToggleProductSection(p.id, 'trending', Boolean(p.is_trending))}
                                 className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                                   p.is_trending
                                     ? 'bg-rose-500 text-white shadow-2xs'
                                     : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                 }`}
-                                title="Toggle Hot Selling Widget"
+                                title="Toggle Hot Selling Widget (Click to turn ON/OFF)"
                               >
                                 {p.is_trending ? '🔥 Hot' : '○ Hot'}
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleToggleProductSection(p.id, 'homepage')}
+                                onClick={() => handleToggleProductSection(p.id, 'homepage', p.show_on_homepage !== false)}
                                 className={`px-2 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
                                   p.show_on_homepage !== false
                                     ? 'bg-indigo-600 text-white shadow-2xs'
                                     : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                 }`}
-                                title="Toggle Homepage Grid Visibility"
+                                title="Toggle Homepage Grid Visibility (Click to turn ON/OFF)"
                               >
                                 {p.show_on_homepage !== false ? '🏠 Grid' : '○ Grid'}
                               </button>
@@ -4350,12 +4397,13 @@ export default function AdminDashboard() {
                               type="button"
                               onClick={() => handleToggleProductStatus(p.id, p.status)}
                               className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold cursor-pointer transition-colors ${
-                                p.status === 'Active' || !p.status
+                                p.status === 'Active' || p.status === 'active' || !p.status
                                   ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
                                   : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
                               }`}
+                              title="Click to Toggle Active / Inactive"
                             >
-                              {p.status || 'Active'}
+                              {p.status === 'inactive' || p.status === 'Inactive' ? 'Inactive' : 'Active'}
                             </button>
                           </td>
                           {/* Action Buttons (Sticky Right for guaranteed visibility on all screens) */}
