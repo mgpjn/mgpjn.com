@@ -135,14 +135,15 @@ export default function RegisterPage() {
     setIsBackendPhoneOtp(false);
 
     try {
-      // 1. Try Firebase Phone Auth with 3-second timeout
+      // 1. Try Firebase Phone Auth with 12-second timeout
       const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 3000)
+        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
       );
 
       const confirmation = await Promise.race([firebasePromise, timeoutPromise]);
       setPhoneConfirmation(confirmation);
+      setIsBackendPhoneOtp(false);
       setShowPhoneOtpField(true);
       setPhoneOtpStatus(`SMS OTP sent to +91 ${cleanPhone}`);
     } catch (err) {
@@ -166,27 +167,46 @@ export default function RegisterPage() {
   };
 
   const handleVerifyPhoneOtp = async () => {
-    if (phoneOtpInput.length !== 6) {
+    const cleanOtp = phoneOtpInput.trim();
+    if (cleanOtp.length !== 6) {
       setPhoneOtpError('Please enter the 6-digit SMS OTP.');
       return;
     }
     setPhoneOtpVerifying(true);
     setPhoneOtpError('');
 
-    try {
-      if (phoneConfirmation && !isBackendPhoneOtp) {
-        await phoneConfirmation.confirm(phoneOtpInput);
-      } else {
-        await verifyPhoneOtp({ phone: formData.phone, otp: phoneOtpInput });
+    let isVerified = false;
+
+    // 1. Try Firebase Verification if confirmation exists
+    if (phoneConfirmation) {
+      try {
+        await phoneConfirmation.confirm(cleanOtp);
+        isVerified = true;
+      } catch (fbErr) {
+        console.warn('Firebase confirm failed in registration, checking backend OTP:', fbErr.message);
       }
+    }
+
+    // 2. If Firebase did not verify, verify with Backend OTP
+    if (!isVerified) {
+      try {
+        const res = await verifyPhoneOtp({ phone: formData.phone, otp: cleanOtp });
+        if (res.data?.success) {
+          isVerified = true;
+        }
+      } catch (backendErr) {
+        console.warn('Backend OTP verify failed in registration:', backendErr.response?.data?.message || backendErr.message);
+      }
+    }
+
+    if (isVerified) {
       setPhoneVerified(true);
       setShowPhoneOtpField(false);
       setPhoneOtpStatus('Mobile number verified successfully!');
-    } catch (err) {
-      setPhoneOtpError(err.response?.data?.message || err.message || 'Invalid SMS OTP. Please check and try again.');
-    } finally {
-      setPhoneOtpVerifying(false);
+    } else {
+      setPhoneOtpError('Invalid or expired SMS OTP. Please check your SMS or click Resend.');
     }
+    setPhoneOtpVerifying(false);
   };
 
   const handleSubmit = async (e) => {

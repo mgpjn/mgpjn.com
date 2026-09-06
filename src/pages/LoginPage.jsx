@@ -186,14 +186,15 @@ export default function LoginPage() {
     setIsBackendOtp(false);
 
     try {
-      // 1. Try Firebase Phone Auth with 3-second timeout
+      // 1. Try Firebase Phone Auth with 12-second timeout
       const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 3000)
+        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
       );
 
       const result = await Promise.race([firebasePromise, timeoutPromise]);
       setConfirmationResult(result);
+      setIsBackendOtp(false);
       setPhoneOtpSent(true);
       setPhoneTimer(60);
     } catch (err) {
@@ -216,26 +217,49 @@ export default function LoginPage() {
     }
   };
 
-  // Verify Phone OTP & Login
+  // Verify Phone OTP & Login (Dual Firebase / Backend Verification)
   const handleVerifyPhoneOtp = async (e) => {
     e.preventDefault();
-    if (phoneOtp.length !== 6) {
+    const cleanOtp = phoneOtp.trim();
+    if (cleanOtp.length !== 6) {
       setPhoneError('Please enter the 6-digit OTP received on your mobile.');
       return;
     }
     setPhoneLoading(true);
     setPhoneError('');
 
-    try {
-      if (confirmationResult && !isBackendOtp) {
-        // 1. Confirm OTP with Firebase
-        await confirmationResult.confirm(phoneOtp);
-      } else {
-        // 2. Verify with Backend OTP
-        await verifyPhoneOtp({ phone: phoneNumber, otp: phoneOtp });
-      }
+    let isOtpValid = false;
 
-      // 3. Authorize with Backend
+    // 1. Try Firebase Verification if confirmationResult exists
+    if (confirmationResult) {
+      try {
+        await confirmationResult.confirm(cleanOtp);
+        isOtpValid = true;
+      } catch (fbErr) {
+        console.warn('Firebase confirm failed, checking backend OTP:', fbErr.message);
+      }
+    }
+
+    // 2. If Firebase did not verify, verify with Backend OTP cache or static bypass
+    if (!isOtpValid) {
+      try {
+        const backendRes = await verifyPhoneOtp({ phone: phoneNumber, otp: cleanOtp });
+        if (backendRes.data?.success) {
+          isOtpValid = true;
+        }
+      } catch (backendErr) {
+        console.warn('Backend OTP verification failed:', backendErr.response?.data?.message || backendErr.message);
+      }
+    }
+
+    if (!isOtpValid) {
+      setPhoneLoading(false);
+      setPhoneError('Invalid or expired SMS OTP. Please check your SMS or click Resend.');
+      return;
+    }
+
+    // 3. Authorize with Backend Session
+    try {
       const res = await loginWithPhone({ phone: phoneNumber });
       if (res.data.success) {
         clearRecaptchaVerifier();
@@ -252,8 +276,8 @@ export default function LoginPage() {
         }
       }
     } catch (err) {
-      console.error('Phone verification error:', err);
-      setPhoneError(err.response?.data?.message || err.message || 'Invalid SMS OTP entered. Please try again.');
+      console.error('Phone login session error:', err);
+      setPhoneError(err.response?.data?.message || err.message || 'Failed to complete phone login. Please try again.');
     } finally {
       setPhoneLoading(false);
     }
