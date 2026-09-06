@@ -1290,7 +1290,17 @@ export default function AdminDashboard() {
 
     if (isDistributorMode) {
       // Load products from distributor's assigned list
-      const rawList = assignedProductsList.length > 0 ? assignedProductsList : [];
+      let rawList = assignedProductsList.length > 0 ? assignedProductsList : [];
+      try {
+        const res = await getAdminUserAssignedProducts(validTargetUser.id);
+        if (res.data?.success && res.data.products) {
+          rawList = res.data.products;
+          setAssignedProductsList(rawList);
+        }
+      } catch (e) {
+        console.error('Error fetching assigned products for bulk modal:', e);
+      }
+
       let targetList = rawList;
       if (preSelectedIds && preSelectedIds.length > 0) {
         targetList = rawList.filter((p) => preSelectedIds.includes(p.id));
@@ -1314,7 +1324,8 @@ export default function AdminDashboard() {
         batch_no: p.batch_no || '',
         category_name: p.category_name || p.category?.name || '',
         mrp: p.mrp || (p.price ? Number((p.price * 1.25).toFixed(2)) : 0),
-        wholesale_mrp: p.wholesale_mrp !== undefined && p.wholesale_mrp !== null ? p.wholesale_mrp : (p.mrp ? Number((p.mrp * 10).toFixed(2)) : 0),
+        wholesale_mrp: p.wholesale_mrp !== undefined && p.wholesale_mrp !== null && Number(p.wholesale_mrp) > 0 ? Number(p.wholesale_mrp) : (p.mrp ? Number((p.mrp * 10).toFixed(2)) : 0),
+        base_price: p.base_price || 0,
         retail_price: p.end_user_price || p.retail_price || p.price || 0,
         wholesale_price: p.wholesale_price || p.retailer_price || 0,
         sd_price: p.sd_price || p.product_price || (p.mrp ? Number((p.mrp * 0.45).toFixed(2)) : 0),
