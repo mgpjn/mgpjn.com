@@ -82,6 +82,10 @@ export const toggleAdminProductSection = (id, data) => api.post(`/admin/products
 export const deleteAdminProduct = (id) => api.delete(`/admin/products/${id}`);
 export const getAdminOrders = (params) => api.get('/admin/orders', { params });
 export const updateAdminOrderStatus = (id, data) => api.put(`/admin/orders/${id}`, data);
+export const getAdminPayments = (params) => api.get('/admin/payments', { params });
+export const reconcileAdminPayment = (id, data) => api.post(`/admin/payments/${id}/reconcile`, data);
+export const checkAdminGatewayStatus = (id) => api.post(`/admin/payments/${id}/check-gateway-status`);
+export const refundAdminPayment = (id, data) => api.post(`/admin/payments/${id}/refund`, data);
 export const getAdminPrescriptions = (params) => api.get('/admin/prescriptions', { params });
 export const updateAdminPrescriptionStatus = (id, data) => api.put(`/admin/prescriptions/${id}`, data);
 export const getAdminPayouts = (params) => api.get('/admin/payouts', { params });

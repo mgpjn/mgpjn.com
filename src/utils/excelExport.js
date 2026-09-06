@@ -211,6 +211,53 @@ export function exportCommissionsReport(commissions = [], meta = {}) {
 }
 
 /**
+ * 3.5. Multi-Mode Financial Transactions & Payment Reconciliation Report
+ */
+export function exportPaymentsReport(payments = [], meta = {}) {
+  const columns = [
+    { header: 'S.No', accessor: (_, idx) => idx + 1 },
+    { header: 'Date & Time', accessor: (p) => p.created_at ? new Date(p.created_at).toLocaleString('en-IN') : 'N/A' },
+    { header: 'Order ID', accessor: (p) => p.order_number || `ORD#${p.id}` },
+    { header: 'Invoice Number', accessor: (p) => p.invoice_number || 'N/A' },
+    { header: 'Customer Name', accessor: (p) => p.customer_name || 'N/A' },
+    { header: 'Phone Number', accessor: (p) => p.phone || 'N/A' },
+    { header: 'City & State', accessor: (p) => `${p.city || ''} (${p.state || ''})` },
+    { header: 'Payment Method', accessor: (p) => (p.payment_method || 'N/A').toUpperCase() },
+    { header: 'Secondary / Gateway Mode', accessor: (p) => (p.other_payment_method || '-').toUpperCase() },
+    { header: 'Payment Status', accessor: (p) => (p.payment_status || 'PENDING').toUpperCase() },
+    { header: 'Order Status', accessor: (p) => (p.order_status || 'PENDING').toUpperCase() },
+    { header: 'Wallet Used (₹)', accessor: (p) => Number(p.wallet_amount_used || 0).toFixed(2) },
+    { header: 'Gateway / Other Paid (₹)', accessor: (p) => Number(p.paid_by_other_mode || (p.total_amount - (p.wallet_amount_used || 0))).toFixed(2) },
+    { header: 'Total Value (₹)', accessor: (p) => Number(p.total_amount || 0).toFixed(2) },
+    { header: 'Transaction Reference / Notes', accessor: (p) => p.notes || '' }
+  ];
+
+  const totalCollected = payments.filter(p => p.payment_status === 'paid').reduce((sum, p) => sum + (Number(p.total_amount) || 0), 0);
+  const totalWallet = payments.filter(p => p.payment_status === 'paid').reduce((sum, p) => sum + (Number(p.wallet_amount_used) || 0), 0);
+  const totalOther = totalCollected - totalWallet;
+
+  const totalsRow = [
+    'TOTALS',
+    `Total Transactions: ${payments.length}`,
+    '', '', '', '', '', '', '', '', '',
+    `₹${totalWallet.toFixed(2)}`,
+    `₹${totalOther.toFixed(2)}`,
+    `₹${totalCollected.toFixed(2)} (Captured)`,
+    ''
+  ];
+
+  downloadBrandedExcel({
+    reportTitle: 'Financial Transactions & Gateway Reconciliation Report',
+    subtitle: `Multi-Mode Gateway & Wallet Settlement Ledger (Total Settled: ₹${totalCollected.toFixed(2)})`,
+    columns,
+    data: payments,
+    totals: totalsRow,
+    fileName: 'MediGlaxo_Payments_Reconciliation_Report',
+    generatedBy: meta.userName || 'Super Admin'
+  });
+}
+
+/**
  * 4. Medicine Purchase Orders (PO) Report Exporter
  */
 export function exportPurchaseOrdersReport(purchaseOrders = [], meta = {}) {

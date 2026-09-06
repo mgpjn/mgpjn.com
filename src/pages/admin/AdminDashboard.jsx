@@ -10,13 +10,14 @@ import {
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
   CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download,
-  FileText, CreditCard, Building2, PhoneCall, Loader2
+  FileText, CreditCard, Building2, PhoneCall, Loader2, Banknote, QrCode
 } from 'lucide-react';
 import { EarningsSalesChart, StockInventoryChart } from '../../components/common/DashboardCharts';
 import {
   exportSalesReport,
   exportStockReport,
   exportCommissionsReport,
+  exportPaymentsReport,
   exportPurchaseOrdersReport,
   exportMembersReport
 } from '../../utils/excelExport';
@@ -39,6 +40,7 @@ import {
   getAdminUserAssignedProducts, toggleAdminUserProductAssignment, bulkAssignAdminUserProducts, saveAdminUserProductPrice, bulkSaveAdminUserProductPrices,
   bulkUpdateAdminProductPricing,
   getAdminOrders, updateAdminOrderStatus,
+  getAdminPayments, reconcileAdminPayment, checkAdminGatewayStatus, refundAdminPayment,
   getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
   getAdminPrescriptions, updateAdminPrescriptionStatus,
   getAdminPayouts, processAdminPayout,
@@ -406,6 +408,50 @@ export default function AdminDashboard() {
   const [poApprovalQuantities, setPoApprovalQuantities] = useState({});
   const [poAdminNotes, setPoAdminNotes] = useState('');
 
+  // Payments & Gateway Repair Portal States
+  const [paymentsList, setPaymentsList] = useState({ data: [], total: 0, current_page: 1, last_page: 1 });
+  const [paymentStats, setPaymentStats] = useState({
+    total_collected: 0,
+    gateway_volume: 0,
+    wallet_volume: 0,
+    cod_volume: 0,
+    takeaway_volume: 0,
+    failed_count: 0,
+    failed_amount: 0,
+    pending_repair_count: 0,
+    refunded_count: 0,
+    refunded_amount: 0,
+  });
+  const [paymentFilterStatus, setPaymentFilterStatus] = useState('all');
+  const [paymentFilterMethod, setPaymentFilterMethod] = useState('all');
+  const [paymentDateRange, setPaymentDateRange] = useState('all');
+  const [paymentSearchQuery, setPaymentSearchQuery] = useState('');
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [paymentPage, setPaymentPage] = useState(1);
+
+  // Payment Modals
+  const [inspectPayment, setInspectPayment] = useState(null);
+  const [reconcileModalTarget, setReconcileModalTarget] = useState(null);
+  const [reconcileForm, setReconcileForm] = useState({
+    transaction_id: '',
+    payment_method: 'online',
+    admin_note: '',
+    trigger_mlm: true,
+  });
+  const [reconcilingLoading, setReconcilingLoading] = useState(false);
+
+  const [gatewayProbeTarget, setGatewayProbeTarget] = useState(null);
+  const [gatewayProbeLoading, setGatewayProbeLoading] = useState(false);
+  const [gatewayProbeResult, setGatewayProbeResult] = useState(null);
+
+  const [refundModalTarget, setRefundModalTarget] = useState(null);
+  const [refundForm, setRefundForm] = useState({
+    refund_amount: '',
+    refund_mode: 'wallet',
+    reason: '',
+  });
+  const [refundingLoading, setRefundingLoading] = useState(false);
+
   const menuItems = [
     { key: 'dashboard', label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { key: 'super-distributors', label: 'Super Distributors', path: '/admin/super-distributors', icon: Users, roleType: 'super_distributor' },
@@ -425,6 +471,7 @@ export default function AdminDashboard() {
     { key: 'products', label: 'Products', path: '/admin/products', icon: Package },
     { key: 'categories', label: 'Categories', path: '/admin/categories', icon: FolderTree },
     { key: 'orders', label: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+    { key: 'payments', label: 'Payments & Repair Portal', path: '/admin/payments', icon: CreditCard, badge: paymentStats?.failed_count > 0 ? `${paymentStats.failed_count} Issues` : null },
     { key: 'wallet', label: 'Commission Wallet', path: '/admin/wallet', icon: Wallet },
     { key: 'banners', label: 'Banner Management', path: '/admin/banners', icon: Image },
     { key: 'reports', label: 'Reports', path: '/admin/reports', icon: BarChart3 },
@@ -494,6 +541,8 @@ export default function AdminDashboard() {
       } else if (currentSection === 'orders') {
         const res = await getAdminOrders();
         if (res.data.success) setOrdersList(res.data.orders);
+      } else if (currentSection === 'payments') {
+        await fetchPaymentsData(paymentPage);
       } else if (currentSection === 'wallet') {
         const res = await getAdminPayouts();
         if (res.data.success) setPayoutsList(res.data.payouts);
@@ -516,6 +565,103 @@ export default function AdminDashboard() {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch Payments & Transactions Ledger with Filters
+  const fetchPaymentsData = useCallback(async (page = 1, overrideFilters = {}) => {
+    setIsPaymentLoading(true);
+    try {
+      const params = {
+        page,
+        status: overrideFilters.status !== undefined ? overrideFilters.status : paymentFilterStatus,
+        method: overrideFilters.method !== undefined ? overrideFilters.method : paymentFilterMethod,
+        date_range: overrideFilters.dateRange !== undefined ? overrideFilters.dateRange : paymentDateRange,
+        search: overrideFilters.search !== undefined ? overrideFilters.search : paymentSearchQuery,
+      };
+      const res = await getAdminPayments(params);
+      if (res?.data?.success) {
+        setPaymentsList(res.data.payments || { data: [] });
+        if (res.data.stats) {
+          setPaymentStats(res.data.stats);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching payments ledger:', err);
+    } finally {
+      setIsPaymentLoading(false);
+    }
+  }, [paymentFilterStatus, paymentFilterMethod, paymentDateRange, paymentSearchQuery]);
+
+  // Trigger payments refetch on filter change when active
+  useEffect(() => {
+    if (currentSection === 'payments') {
+      fetchPaymentsData(paymentPage);
+    }
+  }, [currentSection, paymentPage, paymentFilterStatus, paymentFilterMethod, paymentDateRange, fetchPaymentsData]);
+
+  // Payment Reconciliation / Repair Submit
+  const handleReconcileSubmit = async (e) => {
+    e.preventDefault();
+    if (!reconcileModalTarget) return;
+    setReconcilingLoading(true);
+    try {
+      const res = await reconcileAdminPayment(reconcileModalTarget.id, reconcileForm);
+      if (res.data?.success) {
+        setReconcileModalTarget(null);
+        setReconcileForm({ transaction_id: '', payment_method: 'online', admin_note: '', trigger_mlm: true });
+        fetchPaymentsData(paymentPage);
+        alert(res.data.message || 'Payment successfully reconciled and marked as PAID!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to reconcile payment.');
+    } finally {
+      setReconcilingLoading(false);
+    }
+  };
+
+  // Live Gateway API Probe & Auto-Repair
+  const handleGatewayProbe = async (order) => {
+    setGatewayProbeTarget(order);
+    setGatewayProbeLoading(true);
+    setGatewayProbeResult(null);
+    try {
+      const res = await checkAdminGatewayStatus(order.id);
+      if (res.data?.success) {
+        setGatewayProbeResult(res.data);
+        if (res.data.captured) {
+          fetchPaymentsData(paymentPage);
+        }
+      } else {
+        setGatewayProbeResult({ captured: false, status_message: res.data?.message || 'Gateway status check failed' });
+      }
+    } catch (err) {
+      setGatewayProbeResult({
+        captured: false,
+        status_message: err.response?.data?.message || err.message || 'Error communicating with Razorpay API'
+      });
+    } finally {
+      setGatewayProbeLoading(false);
+    }
+  };
+
+  // Refund Order Submit
+  const handleRefundSubmit = async (e) => {
+    e.preventDefault();
+    if (!refundModalTarget) return;
+    setRefundingLoading(true);
+    try {
+      const res = await refundAdminPayment(refundModalTarget.id, refundForm);
+      if (res.data?.success) {
+        setRefundModalTarget(null);
+        setRefundForm({ refund_amount: '', refund_mode: 'wallet', reason: '' });
+        fetchPaymentsData(paymentPage);
+        alert(res.data.message || 'Refund successfully recorded!');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to process refund.');
+    } finally {
+      setRefundingLoading(false);
     }
   };
 
@@ -4082,6 +4228,509 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* PAYMENTS & GATEWAY REPAIR PORTAL                         */}
+          {/* ======================================================== */}
+          {currentSection === 'payments' && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 flex items-center space-x-2.5">
+                    <CreditCard className="w-6 h-6 text-brand-blue-800" />
+                    <span>Payments &amp; Gateway Repair Console</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Real-time payment settlements, multi-mode reconciliation (Razorpay Gateway, Instant UPI QR, Wallet Split, COD, Takeaway), automated webhook sync, and manual transaction repair.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => fetchPaymentsData(paymentPage)}
+                    className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs flex items-center space-x-1.5 transition-all cursor-pointer"
+                    title="Refresh Payment Records"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isPaymentLoading ? 'animate-spin text-brand-blue-600' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportPaymentsReport(paymentsList?.data || [], { userName: user?.name })}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                    title="Export All Payment Records to MediGlaxo Branded Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export Payments (Excel)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 6 Key Performance Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+                {/* 1. Razorpay Gateway Volume */}
+                <div className="bg-gradient-to-br from-blue-900 to-indigo-900 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                  <div className="absolute top-2 right-2 opacity-10">
+                    <CreditCard className="w-12 h-12" />
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block">Razorpay Gateway</span>
+                  <div className="text-lg font-black mt-1">₹{Number(paymentStats?.gateway_volume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <span className="text-[10px] text-blue-200 mt-1 block">Live UPI, Cards &amp; Netbanking</span>
+                </div>
+
+                {/* 2. Wallet Volume */}
+                <div className="bg-gradient-to-br from-purple-800 to-indigo-900 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                  <div className="absolute top-2 right-2 opacity-10">
+                    <Wallet className="w-12 h-12" />
+                  </div>
+                  <span className="text-[10px] font-bold text-purple-200 uppercase tracking-wider block">Wallet Balance Paid</span>
+                  <div className="text-lg font-black mt-1">₹{Number(paymentStats?.wallet_volume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <span className="text-[10px] text-purple-200 mt-1 block">Referral Commissions Used</span>
+                </div>
+
+                {/* 3. Cash on Delivery (COD) */}
+                <div className="bg-gradient-to-br from-amber-700 to-amber-900 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                  <div className="absolute top-2 right-2 opacity-10">
+                    <Banknote className="w-12 h-12" />
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-200 uppercase tracking-wider block">Cash on Delivery</span>
+                  <div className="text-lg font-black mt-1">₹{Number(paymentStats?.cod_volume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <span className="text-[10px] text-amber-200 mt-1 block">Doorstep Cash Orders</span>
+                </div>
+
+                {/* 4. Store Counter Takeaway */}
+                <div className="bg-gradient-to-br from-emerald-800 to-teal-900 text-white p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                  <div className="absolute top-2 right-2 opacity-10">
+                    <Store className="w-12 h-12" />
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider block">Store Takeaway</span>
+                  <div className="text-lg font-black mt-1">₹{Number(paymentStats?.takeaway_volume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <span className="text-[10px] text-emerald-200 mt-1 block">Counter Self Pickup</span>
+                </div>
+
+                {/* 5. Failed / Discrepancy Issues */}
+                <div className={`p-4 rounded-2xl shadow-sm relative overflow-hidden border ${
+                  paymentStats?.failed_count > 0 || paymentStats?.pending_repair_count > 0
+                    ? 'bg-rose-50 border-rose-300 text-rose-950'
+                    : 'bg-white border-slate-200 text-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Payment Issues</span>
+                    {(paymentStats?.failed_count > 0 || paymentStats?.pending_repair_count > 0) && (
+                      <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+                    )}
+                  </div>
+                  <div className="text-lg font-black text-rose-700 mt-1">
+                    {paymentStats?.failed_count || 0} Failed <span className="text-xs font-normal text-slate-500">({paymentStats?.pending_repair_count || 0} pending)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    ₹{Number(paymentStats?.failed_amount || 0).toFixed(2)} needing repair
+                  </span>
+                </div>
+
+                {/* 6. Total Refunds */}
+                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Refunds</span>
+                  <div className="text-lg font-black text-slate-800 mt-1">₹{Number(paymentStats?.refunded_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                  <span className="text-[10px] text-slate-400 mt-1 block">{paymentStats?.refunded_count || 0} orders refunded</span>
+                </div>
+              </div>
+
+              {/* Filters, Status Tabs & Live Search Bar */}
+              <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm space-y-4">
+                {/* Status Tabs */}
+                <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-100">
+                  <span className="text-xs font-bold text-slate-500 mr-2 flex items-center space-x-1">
+                    <Filter className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Status:</span>
+                  </span>
+                  {[
+                    { key: 'all', label: 'All Transactions' },
+                    { key: 'paid', label: '🟢 Paid & Captured' },
+                    { key: 'pending', label: '🟡 Pending Gateway' },
+                    { key: 'failed', label: '🔴 Failed / Repair Needed' },
+                    { key: 'refunded', label: '🔵 Refunded' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        setPaymentFilterStatus(tab.key);
+                        setPaymentPage(1);
+                      }}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                        paymentFilterStatus === tab.key
+                          ? 'bg-brand-blue-800 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Payment Method Pills & Date & Search Controls */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+                  {/* Method Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { key: 'all', label: 'All Modes' },
+                      { key: 'online', label: '⚡ Razorpay Gateway' },
+                      { key: 'upi_qr', label: '📲 Instant UPI QR' },
+                      { key: 'wallet', label: '👛 Wallet & Split' },
+                      { key: 'cod', label: '💵 COD' },
+                      { key: 'takeaway', label: '🏬 Takeaway' },
+                    ].map((m) => (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => {
+                          setPaymentFilterMethod(m.key);
+                          setPaymentPage(1);
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          paymentFilterMethod === m.key
+                            ? 'bg-slate-900 text-white shadow-2xs'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Date Range & Live Search Input */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={paymentDateRange}
+                      onChange={(e) => {
+                        setPaymentDateRange(e.target.value);
+                        setPaymentPage(1);
+                      }}
+                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-brand-blue-600 cursor-pointer"
+                    >
+                      <option value="all">📅 All Dates</option>
+                      <option value="today">📅 Today</option>
+                      <option value="week">📅 Last 7 Days</option>
+                      <option value="month">📅 Last 30 Days</option>
+                    </select>
+
+                    <div className="relative min-w-[220px]">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={paymentSearchQuery}
+                        onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            setPaymentPage(1);
+                            fetchPaymentsData(1);
+                          }
+                        }}
+                        placeholder="Search Order #, Name, UTR..."
+                        className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 outline-none focus:bg-white focus:border-brand-blue-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transactions & Payment Records Table */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b pb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-extrabold text-xs text-slate-900">
+                      Payment Transactions Ledger
+                    </span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      {paymentsList?.total || paymentsList?.data?.length || 0} Records
+                    </span>
+                  </div>
+                  {isPaymentLoading && (
+                    <span className="text-xs font-bold text-brand-blue-800 flex items-center space-x-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Syncing ledger...</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
+                      <tr>
+                        <th className="p-3">Order / Txn ID</th>
+                        <th className="p-3">Customer &amp; Location</th>
+                        <th className="p-3">Payment Mode</th>
+                        <th className="p-3">Amount Breakdown</th>
+                        <th className="p-3">Payment Status</th>
+                        <th className="p-3">Gateway Ref / Notes</th>
+                        <th className="p-3">MLM Status</th>
+                        <th className="p-3 text-right">Actions &amp; Repair</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paymentsList?.data?.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="p-8 text-center text-slate-400 text-xs">
+                            No payment transactions found matching the selected filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        paymentsList?.data?.map((ord) => {
+                          const isOnline = ord.payment_method === 'online' || ord.other_payment_method === 'online';
+                          const isUpi = ord.payment_method === 'upi_qr' || ord.other_payment_method === 'upi_qr';
+                          const isWallet = ord.payment_method === 'wallet' || ord.payment_method === 'wallet_split' || ord.wallet_amount_used > 0;
+                          const isCod = ord.payment_method === 'cod' || ord.other_payment_method === 'cod';
+                          const isTakeaway = ord.payment_method === 'takeaway' || ord.other_payment_method === 'takeaway';
+
+                          const isPaid = ord.payment_status === 'paid';
+                          const isFailed = ord.payment_status === 'failed';
+                          const isPending = ord.payment_status === 'pending';
+                          const isRefunded = ord.payment_status === 'refunded';
+
+                          const commissionsCount = ord.commissions?.length || 0;
+
+                          return (
+                            <tr key={ord.id} className="hover:bg-slate-50/80 transition-colors">
+                              {/* 1. Order ID & Date */}
+                              <td className="p-3">
+                                <span className="font-extrabold text-brand-blue-800 block text-xs">
+                                  #{ord.order_number}
+                                </span>
+                                {ord.invoice_number && (
+                                  <span className="text-[10px] font-mono text-slate-400 block">{ord.invoice_number}</span>
+                                )}
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  {ord.created_at ? new Date(ord.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                                </span>
+                              </td>
+
+                              {/* 2. Customer & Hub */}
+                              <td className="p-3">
+                                <span className="font-bold text-slate-900 block">{ord.customer_name}</span>
+                                <span className="text-[10px] font-mono text-slate-500 block">{ord.phone}</span>
+                                <span className="text-[10px] text-slate-400 block">{ord.city} ({ord.pincode})</span>
+                                {ord.assigned_sub_retailer && (
+                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                    📍 Hub: {ord.assigned_sub_retailer.name}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 3. Payment Mode */}
+                              <td className="p-3">
+                                {isWallet && ord.wallet_amount_used > 0 && ord.paid_by_other_mode > 0 ? (
+                                  <div className="space-y-1">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 block text-center">
+                                      👛 Split Wallet
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-800 block text-center uppercase">
+                                      + {ord.other_payment_method || 'Gateway'}
+                                    </span>
+                                  </div>
+                                ) : isWallet && ord.wallet_amount_used >= ord.total_amount ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 inline-flex items-center space-x-1">
+                                    <Wallet className="w-3 h-3" />
+                                    <span>100% Wallet</span>
+                                  </span>
+                                ) : isUpi ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-teal-100 text-teal-800 inline-flex items-center space-x-1">
+                                    <QrCode className="w-3 h-3" />
+                                    <span>Instant UPI QR</span>
+                                  </span>
+                                ) : isOnline ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 inline-flex items-center space-x-1">
+                                    <CreditCard className="w-3 h-3" />
+                                    <span>Razorpay Online</span>
+                                  </span>
+                                ) : isTakeaway ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 inline-flex items-center space-x-1">
+                                    <Store className="w-3 h-3" />
+                                    <span>Store Takeaway</span>
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 inline-flex items-center space-x-1">
+                                    <Banknote className="w-3 h-3" />
+                                    <span>Cash on Delivery</span>
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 4. Amount Breakdown */}
+                              <td className="p-3">
+                                <span className="font-black text-slate-900 block text-sm">
+                                  ₹{Number(ord.total_amount).toFixed(2)}
+                                </span>
+                                {ord.wallet_amount_used > 0 && (
+                                  <span className="text-[10px] font-medium text-purple-700 block">
+                                    Wallet: ₹{Number(ord.wallet_amount_used).toFixed(2)}
+                                  </span>
+                                )}
+                                {ord.paid_by_other_mode > 0 && (
+                                  <span className="text-[10px] font-medium text-blue-700 block">
+                                    Gateway/Cash: ₹{Number(ord.paid_by_other_mode).toFixed(2)}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 5. Payment Status */}
+                              <td className="p-3">
+                                {isPaid ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 inline-flex items-center space-x-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    <span>PAID / CAPTURED</span>
+                                  </span>
+                                ) : isFailed ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 inline-flex items-center space-x-1">
+                                    <XCircle className="w-3 h-3 text-rose-600" />
+                                    <span>FAILED / DISCREPANCY</span>
+                                  </span>
+                                ) : isRefunded ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-sky-100 text-sky-800 inline-flex items-center space-x-1">
+                                    <RefreshCw className="w-3 h-3 text-sky-600" />
+                                    <span>REFUNDED</span>
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 inline-flex items-center space-x-1">
+                                    <AlertCircle className="w-3 h-3 text-amber-600" />
+                                    <span>PENDING</span>
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 6. Gateway Ref / Notes */}
+                              <td className="p-3 max-w-[200px]">
+                                <span className="text-[10px] text-slate-600 line-clamp-2 font-mono leading-tight">
+                                  {ord.notes || '—'}
+                                </span>
+                              </td>
+
+                              {/* 7. MLM Status */}
+                              <td className="p-3">
+                                {commissionsCount > 0 ? (
+                                  <span className="px-2 py-0.5 rounded font-black text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    ✓ {commissionsCount} Uplines Paid
+                                  </span>
+                                ) : isPaid ? (
+                                  <span className="text-[9px] font-medium text-slate-400">Processed</span>
+                                ) : (
+                                  <span className="text-[9px] font-medium text-amber-600">Pending Payment</span>
+                                )}
+                              </td>
+
+                              {/* 8. Action Buttons */}
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
+                                  {/* Inspect */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setInspectPayment(ord)}
+                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    title="View Full Payment Trail"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Live Razorpay Check Probe */}
+                                  {(isOnline || isUpi || ord.payment_status === 'pending' || ord.payment_status === 'failed') && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleGatewayProbe(ord)}
+                                      className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-extrabold border border-blue-200 transition-all cursor-pointer flex items-center space-x-1"
+                                      title="Query Live Razorpay Gateway Status"
+                                    >
+                                      <RefreshCw className="w-3 h-3" />
+                                      <span>Check Live</span>
+                                    </button>
+                                  )}
+
+                                  {/* Manual Repair / Reconcile */}
+                                  {!isPaid && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setReconcileModalTarget(ord);
+                                        setReconcileForm({
+                                          transaction_id: '',
+                                          payment_method: ord.other_payment_method || ord.payment_method || 'online',
+                                          admin_note: '',
+                                          trigger_mlm: true,
+                                        });
+                                      }}
+                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black shadow-xs transition-all cursor-pointer flex items-center space-x-1"
+                                      title="Manually Reconcile & Mark as Paid"
+                                    >
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      <span>Reconcile</span>
+                                    </button>
+                                  )}
+
+                                  {/* Refund */}
+                                  {isPaid && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setRefundModalTarget(ord);
+                                        setRefundForm({
+                                          refund_amount: ord.total_amount,
+                                          refund_mode: 'wallet',
+                                          reason: '',
+                                        });
+                                      }}
+                                      className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                                      title="Record Refund"
+                                    >
+                                      <span>Refund</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {paymentsList?.last_page > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                    <span className="text-xs text-slate-500 font-medium">
+                      Page {paymentsList?.current_page} of {paymentsList?.last_page} ({paymentsList?.total} total records)
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        disabled={paymentPage <= 1 || isPaymentLoading}
+                        onClick={() => {
+                          const prev = Math.max(1, paymentPage - 1);
+                          setPaymentPage(prev);
+                          fetchPaymentsData(prev);
+                        }}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        disabled={paymentPage >= paymentsList?.last_page || isPaymentLoading}
+                        onClick={() => {
+                          const next = paymentPage + 1;
+                          setPaymentPage(next);
+                          fetchPaymentsData(next);
+                        }}
+                        className="px-3 py-1.5 bg-brand-blue-800 hover:bg-brand-blue-900 disabled:opacity-40 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -8778,39 +9427,538 @@ export default function AdminDashboard() {
 
             {/* Modal Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
-              <div className="text-xs text-slate-500 font-semibold flex items-center space-x-1.5">
-                <span className="text-emerald-600">✓</span>
-                <span>All updates will be applied instantly to the database in a single transaction.</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 1. PAYMENT INSPECTOR MODAL                               */}
+      {/* ======================================================== */}
+      {inspectPayment && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-6 bg-gradient-to-r from-slate-900 to-brand-blue-950 text-white flex items-start justify-between">
+              <div>
+                <div className="flex items-center space-x-2.5">
+                  <CreditCard className="w-5 h-5 text-brand-blue-400" />
+                  <h3 className="text-lg font-black tracking-tight">
+                    Payment Transaction Audit #{inspectPayment.order_number}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Complete transaction footprint, gateway receipt, itemized billing, and referral commissions breakdown.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectPayment(null)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              {/* Status Overview Banner */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Payment Status</span>
+                  <span className={`text-xs font-black uppercase mt-0.5 inline-block ${
+                    inspectPayment.payment_status === 'paid' ? 'text-emerald-700' :
+                    inspectPayment.payment_status === 'failed' ? 'text-rose-700' :
+                    inspectPayment.payment_status === 'refunded' ? 'text-sky-700' : 'text-amber-700'
+                  }`}>
+                    {inspectPayment.payment_status}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Payment Method</span>
+                  <span className="text-xs font-black text-slate-800 uppercase mt-0.5 inline-block">
+                    {inspectPayment.payment_method} {inspectPayment.other_payment_method ? `(${inspectPayment.other_payment_method})` : ''}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Order Status</span>
+                  <span className="text-xs font-black text-slate-800 uppercase mt-0.5 inline-block">
+                    {inspectPayment.order_status}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Settled</span>
+                  <span className="text-xs font-black text-slate-900 mt-0.5 inline-block">
+                    ₹{Number(inspectPayment.total_amount).toFixed(2)}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center space-x-3">
+              {/* Customer & Location Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                  <h4 className="text-xs font-extrabold text-slate-900 flex items-center space-x-1.5">
+                    <User className="w-3.5 h-3.5 text-brand-blue-800" />
+                    <span>Customer Details</span>
+                  </h4>
+                  <div className="text-xs space-y-1 text-slate-600">
+                    <div><strong>Name:</strong> {inspectPayment.customer_name}</div>
+                    <div><strong>Mobile:</strong> {inspectPayment.phone}</div>
+                    {inspectPayment.email && <div><strong>Email:</strong> {inspectPayment.email}</div>}
+                    <div><strong>Role:</strong> {(inspectPayment.user?.role || 'Customer').toUpperCase()}</div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2">
+                  <h4 className="text-xs font-extrabold text-slate-900 flex items-center space-x-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-brand-blue-800" />
+                    <span>Delivery &amp; Fulfillment Hub</span>
+                  </h4>
+                  <div className="text-xs space-y-1 text-slate-600">
+                    <div><strong>Address:</strong> {inspectPayment.shipping_address}</div>
+                    <div><strong>City/State:</strong> {inspectPayment.city}, {inspectPayment.state} ({inspectPayment.pincode})</div>
+                    <div>
+                      <strong>Assigned Hub:</strong> {inspectPayment.assigned_sub_retailer ? `${inspectPayment.assigned_sub_retailer.name} (${inspectPayment.assigned_sub_retailer.phone})` : 'Central Warehouse'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial & Settlement Breakdown */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <h4 className="text-xs font-extrabold text-slate-900 flex items-center space-x-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Financial Breakdown &amp; Mode Settlement</span>
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-bold">Subtotal</span>
+                    <span className="font-black text-slate-800">₹{Number(inspectPayment.subtotal || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-bold">Delivery Fee</span>
+                    <span className="font-black text-slate-800">₹{Number(inspectPayment.delivery_charge || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-purple-200 bg-purple-50/30">
+                    <span className="text-[10px] text-purple-700 block font-bold">Wallet Amount Used</span>
+                    <span className="font-black text-purple-900">₹{Number(inspectPayment.wallet_amount_used || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-blue-200 bg-blue-50/30">
+                    <span className="text-[10px] text-blue-700 block font-bold">Gateway / Other Paid</span>
+                    <span className="font-black text-blue-900">₹{Number(inspectPayment.paid_by_other_mode || (inspectPayment.total_amount - (inspectPayment.wallet_amount_used || 0))).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gateway Audit Logs / Notes */}
+              <div className="p-4 rounded-2xl bg-slate-900 text-slate-200 space-y-1.5">
+                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Transaction Audit Trail &amp; Gateway Logs</span>
+                </h4>
+                <pre className="text-[11px] font-mono whitespace-pre-wrap bg-black/40 p-3 rounded-xl border border-white/10 text-slate-300 leading-relaxed">
+                  {inspectPayment.notes || 'No gateway or manual notes recorded for this transaction.'}
+                </pre>
+              </div>
+
+              {/* 3-Level MLM Referral Commission Distribution */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-extrabold text-slate-900 flex items-center space-x-1.5">
+                  <Users className="w-3.5 h-3.5 text-brand-blue-800" />
+                  <span>3-Level Referral Commissions Distributed</span>
+                </h4>
+                {inspectPayment.commissions && inspectPayment.commissions.length > 0 ? (
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden text-xs">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
+                        <tr>
+                          <th className="p-2.5">Level</th>
+                          <th className="p-2.5">Upline Beneficiary</th>
+                          <th className="p-2.5">Role</th>
+                          <th className="p-2.5">Rate (%)</th>
+                          <th className="p-2.5">Commission (₹)</th>
+                          <th className="p-2.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {inspectPayment.commissions.map((comm) => (
+                          <tr key={comm.id} className="hover:bg-slate-50">
+                            <td className="p-2.5 font-bold text-brand-blue-800">Level {comm.level}</td>
+                            <td className="p-2.5 font-bold text-slate-900">{comm.user?.name || `Partner #${comm.user_id}`}</td>
+                            <td className="p-2.5 uppercase text-[10px] font-bold text-slate-500">{comm.user?.role?.replace('_', ' ')}</td>
+                            <td className="p-2.5 font-mono">{Number(comm.percentage || 0).toFixed(1)}%</td>
+                            <td className="p-2.5 font-black text-emerald-700">₹{Number(comm.commission_amount || comm.amount || 0).toFixed(2)}</td>
+                            <td className="p-2.5">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800">
+                                {comm.status || 'PAID'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-400">
+                    {inspectPayment.payment_status === 'paid'
+                      ? 'No referral downline commissions were configured or applicable for this direct order.'
+                      : 'Referral commissions will be automatically distributed upon payment capture / reconcile.'}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setInspectPayment(null)}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+              >
+                Close Audit View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 2. RECONCILE / MANUAL REPAIR MODAL                       */}
+      {/* ======================================================== */}
+      {reconcileModalTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-6 bg-gradient-to-r from-emerald-800 to-teal-900 text-white flex items-start justify-between">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                  <h3 className="text-lg font-black tracking-tight">
+                    Reconcile &amp; Repair Payment #{reconcileModalTarget.order_number}
+                  </h3>
+                </div>
+                <p className="text-xs text-emerald-100 mt-1">
+                  Mark transaction as PAID, attach Bank UTR / Payment ID, and trigger 3-level upline commissions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReconcileModalTarget(null)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleReconcileSubmit} className="p-6 space-y-4 text-xs">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-950 font-bold">
+                <span>Total Payable Amount:</span>
+                <span className="text-sm font-black text-emerald-900">₹{Number(reconcileModalTarget.total_amount).toFixed(2)}</span>
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">
+                  Bank UTR / Razorpay Payment ID / Transaction Ref *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={reconcileForm.transaction_id}
+                  onChange={(e) => setReconcileForm({ ...reconcileForm, transaction_id: e.target.value })}
+                  placeholder="e.g. UTR1234567890 / pay_QW4567..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">
+                  Verified Payment Mode
+                </label>
+                <select
+                  value={reconcileForm.payment_method}
+                  onChange={(e) => setReconcileForm({ ...reconcileForm, payment_method: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none cursor-pointer"
+                >
+                  <option value="online">⚡ Razorpay Online Gateway / Card / Netbanking</option>
+                  <option value="upi_qr">📲 Instant UPI QR / GooglePay / PhonePe</option>
+                  <option value="bank_transfer">🏦 Direct Bank IMPS / NEFT / RTGS</option>
+                  <option value="wallet">👛 MediGlaxo Wallet</option>
+                  <option value="cod">💵 Cash on Delivery Collected</option>
+                  <option value="takeaway">🏬 Counter Takeaway Cash / POS</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">
+                  Super Admin Reconcile Reason / Note
+                </label>
+                <textarea
+                  rows="2"
+                  value={reconcileForm.admin_note}
+                  onChange={(e) => setReconcileForm({ ...reconcileForm, admin_note: e.target.value })}
+                  placeholder="e.g. Verified with HDFC Bank statement / Customer shared payment screenshot."
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                ></textarea>
+              </div>
+
+              <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={reconcileForm.trigger_mlm}
+                  onChange={(e) => setReconcileForm({ ...reconcileForm, trigger_mlm: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="font-bold text-slate-800">
+                  Distribute 3-Level Referral Commissions to upline partners immediately
+                </span>
+              </label>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end space-x-3 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowBulkPricingModal(false)}
-                  className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                  onClick={() => setReconcileModalTarget(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  disabled={savingBulkPricing || bulkProductsList.length === 0}
-                  onClick={handleSaveBulkPricing}
-                  className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl font-black text-xs shadow-lg shadow-purple-800/20 transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                  type="submit"
+                  disabled={reconcilingLoading}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold shadow-sm transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
                 >
-                  {savingBulkPricing ? (
+                  {reconcilingLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving All Changes to Database...</span>
+                      <span>Reconciling Payment...</span>
                     </>
                   ) : (
                     <>
-                      <CheckCheck className="w-4 h-4" />
-                      <span>Save All Changes ({bulkProductsList.length} Medicines)</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Mark Paid &amp; Distribute Commissions</span>
                     </>
                   )}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 3. LIVE GATEWAY API STATUS PROBE MODAL                   */}
+      {/* ======================================================== */}
+      {gatewayProbeTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-6 bg-gradient-to-r from-blue-900 to-indigo-950 text-white flex items-start justify-between">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className={`w-5 h-5 text-blue-300 ${gatewayProbeLoading ? 'animate-spin' : ''}`} />
+                  <h3 className="text-lg font-black tracking-tight">
+                    Live Razorpay Status Inspector
+                  </h3>
+                </div>
+                <p className="text-xs text-blue-200 mt-1">
+                  Order #{gatewayProbeTarget.order_number} • Target Amount: ₹{Number(gatewayProbeTarget.total_amount).toFixed(2)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGatewayProbeTarget(null)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
+
+            {/* Probe Content */}
+            <div className="p-6 space-y-4 text-xs">
+              {gatewayProbeLoading ? (
+                <div className="py-12 text-center space-y-3">
+                  <Loader2 className="w-8 h-8 text-brand-blue-800 animate-spin mx-auto" />
+                  <p className="font-bold text-slate-700">Connecting to Razorpay Live Gateway API...</p>
+                  <p className="text-[11px] text-slate-400">Inspecting transaction records for Order #{gatewayProbeTarget.order_number}</p>
+                </div>
+              ) : gatewayProbeResult?.captured ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-950 space-y-2">
+                    <div className="flex items-center space-x-2 font-black text-sm text-emerald-800">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <span>Payment Verified &amp; Captured on Razorpay!</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-relaxed">
+                      {gatewayProbeResult.status_message || 'Payment has been successfully verified on Razorpay.'}
+                    </p>
+                  </div>
+
+                  {gatewayProbeResult.gateway_data && (
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 font-mono text-[11px]">
+                      <div><strong>Payment ID:</strong> {gatewayProbeResult.gateway_data.id}</div>
+                      <div><strong>Amount:</strong> ₹{(gatewayProbeResult.gateway_data.amount / 100).toFixed(2)} {gatewayProbeResult.gateway_data.currency}</div>
+                      <div><strong>Payment Method:</strong> {gatewayProbeResult.gateway_data.method?.toUpperCase()}</div>
+                      {gatewayProbeResult.gateway_data.vpa && <div><strong>UPI VPA:</strong> {gatewayProbeResult.gateway_data.vpa}</div>}
+                      {gatewayProbeResult.gateway_data.bank && <div><strong>Bank:</strong> {gatewayProbeResult.gateway_data.bank}</div>}
+                      {gatewayProbeResult.gateway_data.email && <div><strong>Email:</strong> {gatewayProbeResult.gateway_data.email}</div>}
+                      {gatewayProbeResult.gateway_data.contact && <div><strong>Contact:</strong> {gatewayProbeResult.gateway_data.contact}</div>}
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] font-medium flex items-center space-x-2">
+                    <Check className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                    <span>Database order status synchronized to <strong>PAID</strong> and referral commissions distributed!</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-amber-950 space-y-2">
+                    <div className="flex items-center space-x-2 font-black text-sm text-amber-800">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                      <span>No Captured Payment on Razorpay</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      {gatewayProbeResult?.status_message || 'No captured payment transaction was detected on the gateway for this order.'}
+                    </p>
+                  </div>
+
+                  {gatewayProbeResult?.gateway_data && (
+                    <pre className="p-3 bg-slate-900 text-slate-200 rounded-xl font-mono text-[10px] whitespace-pre-wrap overflow-x-auto">
+                      {JSON.stringify(gatewayProbeResult.gateway_data, null, 2)}
+                    </pre>
+                  )}
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-600 text-[11px]">
+                    💡 <strong>Next Step:</strong> If customer made payment via direct UPI/NEFT or bank transfer, use the <strong>Reconcile</strong> button to enter the Bank UTR and mark it Paid manually.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => handleGatewayProbe(gatewayProbeTarget)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center space-x-1.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Probe Again</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGatewayProbeTarget(null)}
+                className="px-5 py-2 bg-brand-blue-800 hover:bg-brand-blue-900 text-white font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 4. REFUND ORDER MODAL                                    */}
+      {/* ======================================================== */}
+      {refundModalTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-6 bg-gradient-to-r from-slate-900 to-rose-950 text-white flex items-start justify-between">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className="w-5 h-5 text-rose-400" />
+                  <h3 className="text-lg font-black tracking-tight">
+                    Issue Order Refund
+                  </h3>
+                </div>
+                <p className="text-xs text-rose-200 mt-1">
+                  Order #{refundModalTarget.order_number} • Customer: {refundModalTarget.customer_name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRefundModalTarget(null)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleRefundSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">
+                  Refund Amount (₹) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={refundForm.refund_amount}
+                  onChange={(e) => setRefundForm({ ...refundForm, refund_amount: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 focus:bg-white focus:border-rose-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">
+                  Refund Settlement Mode
+                </label>
+                <select
+                  value={refundForm.refund_mode}
+                  onChange={(e) => setRefundForm({ ...refundForm, refund_mode: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-rose-600 focus:outline-none cursor-pointer"
+                >
+                  <option value="wallet">👛 Instant MediGlaxo Wallet Credit (Auto-Added)</option>
+                  <option value="gateway_manual">⚡ Razorpay / Gateway Direct Refund</option>
+                  <option value="cash">💵 Cash / Counter Refund</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-extrabold text-slate-800 block mb-1">
+                  Reason for Refund *
+                </label>
+                <textarea
+                  rows="3"
+                  required
+                  value={refundForm.reason}
+                  onChange={(e) => setRefundForm({ ...refundForm, reason: e.target.value })}
+                  placeholder="e.g. Order cancelled upon customer request / medicine out of stock."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:border-rose-600 focus:outline-none"
+                ></textarea>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end space-x-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setRefundModalTarget(null)}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={refundingLoading}
+                  className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-extrabold shadow-sm transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50"
+                >
+                  {refundingLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Processing Refund...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Confirm &amp; Record Refund</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
