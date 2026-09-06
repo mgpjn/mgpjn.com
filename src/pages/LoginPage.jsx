@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert } from 'lucide-react';
+import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
@@ -37,6 +37,7 @@ export default function LoginPage() {
   // Password Login State
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -219,9 +220,9 @@ export default function LoginPage() {
   };
 
   // Verify Phone OTP & Login (Dual Firebase / Backend Verification)
-  const handleVerifyPhoneOtp = async (e) => {
-    e.preventDefault();
-    const cleanOtp = phoneOtp.trim();
+  const handleVerifyPhoneOtp = async (e, otpOverride) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const cleanOtp = (otpOverride || phoneOtp).trim();
     if (cleanOtp.length !== 6) {
       setPhoneError('Please enter the 6-digit OTP received on your mobile.');
       return;
@@ -241,7 +242,7 @@ export default function LoginPage() {
       }
     }
 
-    // 2. If Firebase did not verify, verify with Backend OTP cache or static bypass
+    // 2. If Firebase did not verify, verify with Backend OTP cache
     if (!isOtpValid) {
       try {
         const backendRes = await verifyPhoneOtp({ phone: phoneNumber, otp: cleanOtp });
@@ -261,10 +262,15 @@ export default function LoginPage() {
 
     // 3. Authorize with Backend Session
     try {
-      const res = await loginWithPhone({ phone: phoneNumber });
+      const res = await loginWithPhone({
+        phone: phoneNumber,
+        otp: cleanOtp,
+        firebase_verified: Boolean(confirmationResult),
+      });
       if (res.data.success) {
         clearRecaptchaVerifier();
         setDirectSession(res.data.token, res.data.user);
+        toast.success(res.data.message || 'Login successful!');
         const role = res.data.user.role;
         if (role === 'admin' || role === 'super_admin') {
           navigate('/admin');
@@ -514,17 +520,26 @@ export default function LoginPage() {
                         Forgot Password?
                       </button>
                     </div>
-                    <input
-                      type="password"
-                      name="password"
-                      id="password-input"
-                      autoComplete="current-password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        id="password-input"
+                        autoComplete="current-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -605,7 +620,13 @@ export default function LoginPage() {
                         required
                         autoFocus
                         value={phoneOtp}
-                        onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setPhoneOtp(val);
+                          if (val.length === 6) {
+                            handleVerifyPhoneOtp(null, val);
+                          }
+                        }}
                         placeholder="e.g. 123456"
                         className="w-full text-center tracking-[8px] font-mono text-lg font-black py-2.5 bg-orange-50/50 border-2 border-orange-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:border-brand-orange-500"
                       />

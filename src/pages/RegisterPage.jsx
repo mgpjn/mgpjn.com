@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw, Smartphone, X, UserCheck, AlertCircle, Building2 } from 'lucide-react';
+import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw, Smartphone, X, UserCheck, AlertCircle, Building2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { sendRegisterOtp, verifyOtp, verifySponsor, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
@@ -53,6 +53,16 @@ export default function RegisterPage() {
     sponsor_code: detectedSponsor,
     role: 'customer',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [phoneResendTimer, setPhoneResendTimer] = useState(0);
+
+  useEffect(() => {
+    let interval = null;
+    if (phoneResendTimer > 0) {
+      interval = setInterval(() => setPhoneResendTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [phoneResendTimer]);
 
   // Sync detected sponsor when query parameter or storage changes
   useEffect(() => {
@@ -146,6 +156,7 @@ export default function RegisterPage() {
       setPhoneConfirmation(confirmation);
       setIsBackendPhoneOtp(false);
       setShowPhoneOtpField(true);
+      setPhoneResendTimer(60);
       setPhoneOtpStatus(`SMS OTP sent to +91 ${cleanPhone}`);
     } catch (err) {
       console.warn('Firebase SMS unavailable, switching to backend SMS OTP service:', err.message);
@@ -155,6 +166,7 @@ export default function RegisterPage() {
         if (res.data.success) {
           setIsBackendPhoneOtp(true);
           setShowPhoneOtpField(true);
+          setPhoneResendTimer(60);
           setPhoneOtpStatus(res.data.message || `SMS OTP sent to +91 ${cleanPhone}`);
         } else {
           setPhoneOtpError(res.data.message || 'Failed to send SMS OTP.');
@@ -167,8 +179,8 @@ export default function RegisterPage() {
     }
   };
 
-  const handleVerifyPhoneOtp = async () => {
-    const cleanOtp = phoneOtpInput.trim();
+  const handleVerifyPhoneOtp = async (cleanOtpOverride) => {
+    const cleanOtp = (cleanOtpOverride || phoneOtpInput).trim();
     if (cleanOtp.length !== 6) {
       setPhoneOtpError('Please enter the 6-digit SMS OTP.');
       return;
@@ -204,6 +216,7 @@ export default function RegisterPage() {
       setPhoneVerified(true);
       setShowPhoneOtpField(false);
       setPhoneOtpStatus('Mobile number verified successfully!');
+      toast.success('Mobile number verified successfully!');
     } else {
       setPhoneOtpError('Invalid or expired SMS OTP. Please check your SMS or click Resend.');
     }
@@ -333,31 +346,52 @@ export default function RegisterPage() {
             <div className="p-3.5 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2 animate-in fade-in">
               <div className="flex items-center justify-between text-xs font-bold text-orange-950">
                 <span>Enter 6-Digit SMS OTP:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPhoneOtpField(false);
-                    setPhoneOtpError('');
-                    setPhoneOtpStatus('');
-                  }}
-                  className="text-[10px] text-rose-600 hover:text-rose-700 font-bold flex items-center space-x-0.5 cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Skip Mobile Verification</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  {phoneResendTimer > 0 ? (
+                    <span className="text-[10px] text-slate-500 font-semibold">Resend in {phoneResendTimer}s</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSendPhoneOtp}
+                      disabled={phoneOtpSending}
+                      className="text-[10px] text-brand-orange-600 hover:text-brand-orange-700 font-bold underline cursor-pointer"
+                    >
+                      Resend OTP
+                    </button>
+                  )}
+                  <span className="text-slate-300">•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPhoneOtpField(false);
+                      setPhoneOtpError('');
+                      setPhoneOtpStatus('');
+                    }}
+                    className="text-[10px] text-rose-600 hover:text-rose-700 font-bold flex items-center space-x-0.5 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Skip</span>
+                  </button>
+                </div>
               </div>
               <div className="flex space-x-2">
                 <input
                   type="text"
                   maxLength={6}
                   value={phoneOtpInput}
-                  onChange={(e) => setPhoneOtpInput(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setPhoneOtpInput(val);
+                    if (val.length === 6) {
+                      handleVerifyPhoneOtp(val);
+                    }
+                  }}
                   placeholder="SMS Code"
                   className="w-2/3 px-3 py-2 bg-white border border-orange-300 rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-brand-orange-500"
                 />
                 <button
                   type="button"
-                  onClick={handleVerifyPhoneOtp}
+                  onClick={() => handleVerifyPhoneOtp()}
                   disabled={phoneOtpVerifying || phoneOtpInput.length !== 6}
                   className="w-1/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1 disabled:opacity-50 cursor-pointer"
                 >
@@ -384,16 +418,25 @@ export default function RegisterPage() {
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Create Password *</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Min 6 characters"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={6}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Min 6 characters"
+                className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Referral / Sponsor Code Section */}
