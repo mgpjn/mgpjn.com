@@ -1859,19 +1859,8 @@ export default function AdminDashboard() {
     try {
       const newValue = !currentValue;
       await toggleAdminProductSection(productId, { section, value: newValue });
-      setProductsList((prev) => {
-        if (!prev) return prev;
-        if (Array.isArray(prev)) {
-          return prev.map((p) => p.id === productId ? { ...p, [section]: newValue } : p);
-        }
-        if (prev.data && Array.isArray(prev.data)) {
-          return {
-            ...prev,
-            data: prev.data.map((p) => p.id === productId ? { ...p, [section]: newValue } : p)
-          };
-        }
-        return prev;
-      });
+      toast.success('Product updated successfully!');
+      fetchProductsFromDb(productPage);
     } catch (err) {
       console.error('Failed to toggle product section:', err);
       toast.error('Failed to update product section.');
