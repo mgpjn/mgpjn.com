@@ -175,7 +175,7 @@ export default function LoginPage() {
     }
   };
 
-  // Send Mobile Phone OTP (Hybrid: Firebase -> Backend fallback)
+  // Send Mobile Phone OTP for Login (Checks DB first -> Backend SMS / Firebase)
   const handleSendPhoneOtp = async (e) => {
     if (e) e.preventDefault();
     const cleanNumber = phoneNumber.replace(/\D/g, '');
@@ -188,32 +188,37 @@ export default function LoginPage() {
     setIsBackendOtp(false);
 
     try {
-      // 1. Try Firebase Phone Auth with 12-second timeout
-      const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-      );
+      // 1. Verify phone is registered in DB and initiate backend OTP
+      const res = await sendPhoneOtp({ phone: cleanNumber, type: 'login' });
+      if (!res.data?.success) {
+        const errMsg = res.data?.message || 'This mobile number is not registered with us. Please register first.';
+        setPhoneError(errMsg);
+        toast.error(errMsg);
+        setPhoneLoading(false);
+        return;
+      }
 
-      const result = await Promise.race([firebasePromise, timeoutPromise]);
-      setConfirmationResult(result);
-      setIsBackendOtp(false);
+      // 2. Also attempt Firebase SMS if available
+      try {
+        const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
+        );
+        const result = await Promise.race([firebasePromise, timeoutPromise]);
+        setConfirmationResult(result);
+        setIsBackendOtp(false);
+      } catch (fbErr) {
+        console.warn('Firebase SMS unavailable, using backend SMS OTP:', fbErr.message);
+        setIsBackendOtp(true);
+      }
+
       setPhoneOtpSent(true);
       setPhoneTimer(60);
+      toast.success(res.data?.message || `SMS OTP sent to +91 ${cleanNumber}`);
     } catch (err) {
-      console.warn('Firebase SMS unavailable, switching to backend SMS OTP service:', err.message);
-      // 2. Seamlessly fall back to Backend SMS OTP
-      try {
-        const res = await sendPhoneOtp({ phone: cleanNumber });
-        if (res.data.success) {
-          setIsBackendOtp(true);
-          setPhoneOtpSent(true);
-          setPhoneTimer(60);
-        } else {
-          setPhoneError(res.data.message || 'Failed to send SMS OTP.');
-        }
-      } catch (backendErr) {
-        setPhoneError(backendErr.response?.data?.message || 'Failed to send SMS OTP. Please check mobile number.');
-      }
+      const errMsg = err.response?.data?.message || 'This mobile number is not registered with us. Please register first.';
+      setPhoneError(errMsg);
+      toast.error(errMsg);
     } finally {
       setPhoneLoading(false);
     }

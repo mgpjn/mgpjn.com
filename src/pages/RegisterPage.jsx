@@ -146,34 +146,38 @@ export default function RegisterPage() {
     setIsBackendPhoneOtp(false);
 
     try {
-      // 1. Try Firebase Phone Auth with 12-second timeout
-      const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-      );
+      // 1. Verify that phone is NOT already registered in database
+      const res = await sendPhoneOtp({ phone: cleanPhone, type: 'register' });
+      if (!res.data?.success) {
+        const msg = res.data?.message || 'This mobile number is already registered. Please log in.';
+        setPhoneOtpError(msg);
+        toast.error(msg);
+        setPhoneOtpSending(false);
+        return;
+      }
 
-      const confirmation = await Promise.race([firebasePromise, timeoutPromise]);
-      setPhoneConfirmation(confirmation);
-      setIsBackendPhoneOtp(false);
+      // 2. Try Firebase Phone Auth with 12-second timeout
+      try {
+        const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
+        );
+        const confirmation = await Promise.race([firebasePromise, timeoutPromise]);
+        setPhoneConfirmation(confirmation);
+        setIsBackendPhoneOtp(false);
+      } catch (fbErr) {
+        console.warn('Firebase SMS unavailable, switching to backend SMS OTP service:', fbErr.message);
+        setIsBackendPhoneOtp(true);
+      }
+
       setShowPhoneOtpField(true);
       setPhoneResendTimer(60);
       setPhoneOtpStatus(`SMS OTP sent to +91 ${cleanPhone}`);
+      toast.success(`SMS OTP sent to +91 ${cleanPhone}`);
     } catch (err) {
-      console.warn('Firebase SMS unavailable, switching to backend SMS OTP service:', err.message);
-      // 2. Fall back to backend SMS OTP
-      try {
-        const res = await sendPhoneOtp({ phone: cleanPhone });
-        if (res.data.success) {
-          setIsBackendPhoneOtp(true);
-          setShowPhoneOtpField(true);
-          setPhoneResendTimer(60);
-          setPhoneOtpStatus(res.data.message || `SMS OTP sent to +91 ${cleanPhone}`);
-        } else {
-          setPhoneOtpError(res.data.message || 'Failed to send SMS OTP.');
-        }
-      } catch (backendErr) {
-        setPhoneOtpError(backendErr.response?.data?.message || 'Failed to send SMS OTP. Please check mobile number.');
-      }
+      const msg = err.response?.data?.message || 'This mobile number is already registered with an existing account. Please log in.';
+      setPhoneOtpError(msg);
+      toast.error(msg);
     } finally {
       setPhoneOtpSending(false);
     }
