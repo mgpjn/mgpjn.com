@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -200,6 +200,24 @@ export default function AdminDashboard() {
     active: 0,
     inactive: 0,
   });
+
+  const derivedProductStats = useMemo(() => {
+    if (productStats && productStats.all_total > 0) {
+      return productStats;
+    }
+    const items = productsList?.data || [];
+    const total = productsList?.total || items.length;
+    return {
+      all_total: total,
+      featured: items.filter((p) => Boolean(p.is_featured)).length,
+      trending: items.filter((p) => Boolean(p.is_trending)).length,
+      homepage: items.filter((p) => Boolean(p.show_on_homepage)).length,
+      active: items.filter((p) => (p.status || '').toLowerCase() === 'active').length,
+      inactive: items.filter((p) => (p.status || '').toLowerCase() !== 'active').length,
+    };
+  }, [productStats, productsList]);
+
+  const displayProductStats = (productStats && productStats.all_total > 0) ? productStats : derivedProductStats;
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
   const productBottomObserverRef = useRef(null);
@@ -539,7 +557,7 @@ export default function AdminDashboard() {
       } else if (currentSection === 'products') {
         const catRes = await getAdminCategories();
         if (catRes.data.success) setCategoriesList(catRes.data.categories);
-        await fetchProductsFromDb(1, false);
+        await fetchProductsFromDb(1, {});
       } else if (currentSection === 'categories') {
         const res = await getAdminCategories();
         if (res.data.success) setCategoriesList(res.data.categories);
@@ -3347,7 +3365,7 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:bg-white focus:border-brand-blue-600 focus:outline-none transition-all shadow-2xs"
                       title="Items per page"
                     >
-                      <option value="all">Show All ({productStats?.all_total || productsList?.total || 0})</option>
+                      <option value="all">Show All ({displayProductStats?.all_total || productsList?.total || 0})</option>
                       <option value={50}>50 per page</option>
                       <option value={100}>100 per page</option>
                       <option value={25}>25 per page</option>
@@ -3368,7 +3386,7 @@ export default function AdminDashboard() {
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      All ({productStats?.all_total ?? productsList?.total ?? 0})
+                      All ({displayProductStats?.all_total ?? productsList?.total ?? 0})
                     </button>
                     <button
                       type="button"
@@ -3380,7 +3398,7 @@ export default function AdminDashboard() {
                       }`}
                       title="Filter by Featured Products"
                     >
-                      <span>⭐ Featured ({productStats?.featured ?? 0})</span>
+                      <span>⭐ Featured ({displayProductStats?.featured ?? 0})</span>
                     </button>
                     <button
                       type="button"
@@ -3392,7 +3410,7 @@ export default function AdminDashboard() {
                       }`}
                       title="Filter by Hot Selling / Top Products"
                     >
-                      <span>🔥 Hot Selling ({productStats?.trending ?? 0})</span>
+                      <span>🔥 Hot Selling ({displayProductStats?.trending ?? 0})</span>
                     </button>
                     <button
                       type="button"
@@ -3404,7 +3422,7 @@ export default function AdminDashboard() {
                       }`}
                       title="Filter by Visible on Storefront Homepage"
                     >
-                      <span>🏠 Home Grid ({productStats?.homepage ?? 0})</span>
+                      <span>🏠 Home Grid ({displayProductStats?.homepage ?? 0})</span>
                     </button>
                     <button
                       type="button"
@@ -3415,7 +3433,7 @@ export default function AdminDashboard() {
                           : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
                       }`}
                     >
-                      Active ({productStats?.active ?? 0})
+                      Active ({displayProductStats?.active ?? 0})
                     </button>
                     <button
                       type="button"
@@ -3426,7 +3444,7 @@ export default function AdminDashboard() {
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                       }`}
                     >
-                      Inactive ({productStats?.inactive ?? 0})
+                      Inactive ({displayProductStats?.inactive ?? 0})
                     </button>
                   </div>
 
