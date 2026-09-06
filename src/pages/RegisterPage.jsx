@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || searchParams.get('return_url');
 
   useEffect(() => {
     return () => {
@@ -19,6 +20,10 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (user) {
+      if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
+        return;
+      }
       const role = user.role;
       if (role === 'admin' || role === 'super_admin') {
         navigate('/admin', { replace: true });
@@ -30,7 +35,7 @@ export default function RegisterPage() {
         navigate('/shop', { replace: true });
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectUrl]);
 
   // Read sponsor code from query params OR persisted browser storage
   const querySponsor =
@@ -237,7 +242,9 @@ export default function RegisterPage() {
       const data = await register(formData);
       console.log('Registration success data:', data);
       toast.success('Account created successfully! Welcome to MediGlaxo.');
-      if (data.user.role === 'customer') {
+      if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
+      } else if (data.user?.role === 'customer') {
         navigate('/shop');
       } else {
         navigate('/');
@@ -538,7 +545,7 @@ export default function RegisterPage() {
 
         <div className="text-center text-xs text-slate-500">
           Already have an account?{' '}
-          <Link to="/login" className="text-brand-blue-800 font-bold hover:underline">
+          <Link to={redirectUrl ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : '/login'} className="text-brand-blue-800 font-bold hover:underline">
             Sign In
           </Link>
         </div>

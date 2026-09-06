@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -9,6 +9,8 @@ import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase
 export default function LoginPage() {
   const { user, login, setDirectSession } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || searchParams.get('return_url');
 
   useEffect(() => {
     return () => {
@@ -18,6 +20,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
+      if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
+        return;
+      }
       const role = user.role;
       if (role === 'admin' || role === 'super_admin') {
         navigate('/admin', { replace: true });
@@ -29,7 +35,7 @@ export default function LoginPage() {
         navigate('/shop', { replace: true });
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectUrl]);
 
   // Login Modes: 'password' | 'phone_otp'
   const [loginMode, setLoginMode] = useState('password');
@@ -110,6 +116,11 @@ export default function LoginPage() {
         setSuperAdminEmail(data.full_email || loginInput);
         setSuperAdminMaskedEmail(data.email || 'your email');
         setLoading(false);
+        return;
+      }
+
+      if (redirectUrl) {
+        navigate(redirectUrl, { replace: true });
         return;
       }
 
@@ -276,6 +287,11 @@ export default function LoginPage() {
         clearRecaptchaVerifier();
         setDirectSession(res.data.token, res.data.user);
         toast.success(res.data.message || 'Login successful!');
+        if (redirectUrl) {
+          navigate(redirectUrl, { replace: true });
+          return;
+        }
+
         const role = res.data.user.role;
         if (role === 'admin' || role === 'super_admin') {
           navigate('/admin');
@@ -668,7 +684,7 @@ export default function LoginPage() {
 
         <div className="text-center text-xs text-slate-500">
           Don't have an account?{' '}
-          <Link to="/register" className="text-brand-orange-500 font-bold hover:underline">
+          <Link to={redirectUrl ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : '/register'} className="text-brand-orange-500 font-bold hover:underline">
             Create Free Customer Account
           </Link>
         </div>

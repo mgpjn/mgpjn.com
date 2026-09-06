@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ShieldCheck, CreditCard, QrCode, Banknote, ArrowRight,
-  Truck, CheckCircle2, Lock, Sparkles, Store, Wallet
+  Truck, CheckCircle2, Lock, Sparkles, Store, Wallet, AlertCircle
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -93,6 +94,13 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
+
+    if (!user) {
+      toast.error('Please sign in or create an account to place your order.');
+      navigate('/login?redirect=/checkout');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -228,6 +236,38 @@ export default function CheckoutPage() {
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Shipping & Payment Details */}
         <div className="lg:col-span-8 space-y-6">
+          {!user && (
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-300 rounded-3xl p-6 shadow-sm space-y-3.5 animate-in fade-in">
+              <div className="flex items-start space-x-3.5">
+                <div className="w-10 h-10 bg-amber-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
+                  <Lock className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-black text-amber-950">Account Verification Required to Place Order</h3>
+                  <p className="text-xs text-amber-900/80 leading-relaxed font-medium">
+                    Please sign in or create a customer account. Your medicine order, GST tax invoice, and live shipment tracking will be securely linked to your account.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                <Link
+                  to="/login?redirect=/checkout"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-brand-orange-500 hover:bg-brand-orange-600 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-orange-500/20 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                >
+                  <span>Sign In with Mobile / Password</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  to="/register?redirect=/checkout"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-white border border-amber-300 hover:bg-amber-100/50 text-amber-950 font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                >
+                  <span>Create New Account</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* 1. Delivery Address */}
           <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-4">
             <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
@@ -581,30 +621,45 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand-blue-800 hover:bg-brand-blue-900 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-blue-800/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? (
-              <span>Placing Order...</span>
-            ) : (
-              <>
-                <span>
-                  {isFullWallet
-                    ? `Pay ₹${payableTotal.toFixed(2)} with Wallet Balance (100% Full Payment)`
-                    : walletAmountUsed > 0
-                    ? `Pay ₹${remainingPayable.toFixed(2)} via ${formData.payment_method.toUpperCase()} + ₹${walletAmountUsed.toFixed(2)} from Wallet`
-                    : isTakeaway
-                    ? `Confirm Store Takeaway (Self Pickup) • ₹${payableTotal.toFixed(2)}`
-                    : formData.payment_method === 'cod'
-                    ? `Confirm Cash on Delivery (COD) Order • ₹${payableTotal.toFixed(2)}`
-                    : `Place Order & Pay ₹${payableTotal.toFixed(2)}`}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+          {!user ? (
+            <button
+              type="button"
+              onClick={() => {
+                toast.error('Please sign in or create an account to place your order.');
+                navigate('/login?redirect=/checkout');
+              }}
+              className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all cursor-pointer"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Sign In / Register to Place Order • ₹{payableTotal.toFixed(2)}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-blue-800 hover:bg-brand-blue-900 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-blue-800/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? (
+                <span>Placing Order...</span>
+              ) : (
+                <>
+                  <span>
+                    {isFullWallet
+                      ? `Pay ₹${payableTotal.toFixed(2)} with Wallet Balance (100% Full Payment)`
+                      : walletAmountUsed > 0
+                      ? `Pay ₹${remainingPayable.toFixed(2)} via ${formData.payment_method.toUpperCase()} + ₹${walletAmountUsed.toFixed(2)} from Wallet`
+                      : isTakeaway
+                      ? `Confirm Store Takeaway (Self Pickup) • ₹${payableTotal.toFixed(2)}`
+                      : formData.payment_method === 'cod'
+                      ? `Confirm Cash on Delivery (COD) Order • ₹${payableTotal.toFixed(2)}`
+                      : `Place Order & Pay ₹${payableTotal.toFixed(2)}`}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          )}
         </div>
       </form>
     </div>
