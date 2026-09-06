@@ -415,14 +415,30 @@ export default function AdminDashboard() {
   const [selectedReassignParentId, setSelectedReassignParentId] = useState('');
   const [deletingUser, setDeletingUser] = useState(false);
 
-  // Assign Direct Customer to Sub-Retailer State (Super Admin Only)
+  // Assign Direct Customer / Unassigned User State (Super Admin Only)
   const [showAssignCustomerModal, setShowAssignCustomerModal] = useState(false);
   const [assignTargetCustomer, setAssignTargetCustomer] = useState(null);
   const [subRetailersList, setSubRetailersList] = useState([]);
-  const [subRetailerSearch, setSubRetailerSearch] = useState('');
+  const [sponsorsList, setSponsorsList] = useState([]);
+  const [assignSearch, setAssignSearch] = useState('');
   const [selectedSubRetailerId, setSelectedSubRetailerId] = useState('');
+  const [assignRoleTarget, setAssignRoleTarget] = useState('');
   const [assigningLoading, setAssigningLoading] = useState(false);
   const [unassignedCount, setUnassignedCount] = useState(0);
+
+  // Dashboard Live Order & Unassigned Leads Date Filters & Feeds
+  const [dashboardOrderDateFilter, setDashboardOrderDateFilter] = useState('all');
+  const [dashboardOrderDateFrom, setDashboardOrderDateFrom] = useState('');
+  const [dashboardOrderDateTo, setDashboardOrderDateTo] = useState('');
+  const [isDashboardOrderLoading, setIsDashboardOrderLoading] = useState(false);
+
+  const [dashboardUnassignedDateFilter, setDashboardUnassignedDateFilter] = useState('all');
+  const [dashboardUnassignedDateFrom, setDashboardUnassignedDateFrom] = useState('');
+  const [dashboardUnassignedDateTo, setDashboardUnassignedDateTo] = useState('');
+  const [isDashboardUnassignedLoading, setIsDashboardUnassignedLoading] = useState(false);
+
+  const [dashboardOrdersList, setDashboardOrdersList] = useState([]);
+  const [dashboardUnassignedUsersList, setDashboardUnassignedUsersList] = useState([]);
 
   // Medicine Purchase Orders (PO)
   const [purchaseOrdersList, setPurchaseOrdersList] = useState({ data: [] });
@@ -520,8 +536,26 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       if (currentSection === 'dashboard' || currentSection === '') {
-        const [statsRes, prodRes] = await Promise.all([getAdminStats(), getAdminProducts()]);
-        if (statsRes.data.success) setStats(statsRes.data.stats);
+        const [statsRes, prodRes] = await Promise.all([
+          getAdminStats({
+            date_filter: dashboardOrderDateFilter,
+            date_from: dashboardOrderDateFrom,
+            date_to: dashboardOrderDateTo,
+          }),
+          getAdminProducts(),
+        ]);
+        if (statsRes.data.success) {
+          setStats(statsRes.data.stats);
+          if (statsRes.data.recentUnassignedUsers) {
+            setDashboardUnassignedUsersList(statsRes.data.recentUnassignedUsers);
+          }
+          if (statsRes.data.recentOrders) {
+            setDashboardOrdersList(statsRes.data.recentOrders);
+          }
+          if (statsRes.data.stats?.unassigned_users_count !== undefined) {
+            setUnassignedCount(statsRes.data.stats.total_unassigned_all_time ?? statsRes.data.stats.unassigned_users_count);
+          }
+        }
         if (prodRes.data.success) setProductsList(prodRes.data.products);
       } else if (NETWORK_ROLE_SECTIONS.includes(currentSection)) {
         const item = menuItems.find(m => m.key === currentSection);
@@ -916,36 +950,44 @@ export default function AdminDashboard() {
     }
   };
 
-  // Open Assign Customer Modal (Super Admin Only)
+  // Open Assign Customer / User Modal (Super Admin Only)
   const handleOpenAssignSubretailerModal = async (targetCustomer) => {
     setAssignTargetCustomer(targetCustomer);
     setSelectedSubRetailerId('');
-    setSubRetailerSearch('');
+    setAssignSearch('');
+    setAssignRoleTarget(targetCustomer?.role || 'customer');
     setShowAssignCustomerModal(true);
     try {
       const res = await getAdminSubRetailersForAssignment();
       if (res.data?.success) {
         setSubRetailersList(res.data.sub_retailers || []);
+        setSponsorsList(res.data.sponsors || res.data.sub_retailers || []);
       }
     } catch (e) {
-      console.error('Failed to load sub-retailers:', e);
+      console.error('Failed to load sub-retailers/sponsors:', e);
     }
   };
 
-  // Execute Customer Assignment to Sub-Retailer
+  // Execute Customer / User Assignment to Sponsor or Sub-Retailer
   const handleExecuteCustomerAssignment = async (e) => {
     e.preventDefault();
-    if (!selectedSubRetailerId || !assignTargetCustomer) return;
+    if (!selectedSubRetailerId || !assignTargetCustomer) {
+      toast.error('Please select a sponsor or sub-retailer hub.');
+      return;
+    }
     setAssigningLoading(true);
     try {
       const res = await assignCustomerSubRetailer(assignTargetCustomer.id, {
         sub_retailer_id: selectedSubRetailerId,
+        sponsor_id: selectedSubRetailerId,
+        role: assignRoleTarget || assignTargetCustomer.role,
       });
       if (res.data?.success) {
-        toast.success(res.data.message || 'Customer successfully assigned to Sub-Retailer!');
+        toast.success(res.data.message || 'User successfully assigned to Sponsor / Hub!');
         setShowAssignCustomerModal(false);
         setAssignTargetCustomer(null);
         fetchData();
+        fetchDashboardUnassignedStats(dashboardUnassignedDateFilter, dashboardUnassignedDateFrom, dashboardUnassignedDateTo);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Assignment failed');
@@ -953,6 +995,52 @@ export default function AdminDashboard() {
       setAssigningLoading(false);
     }
   };
+
+  // Dashboard Live Order Stats Fetcher (Supports Instant Date Filters)
+  const fetchDashboardOrderStats = useCallback(async (filterKey, dateFrom = '', dateTo = '') => {
+    setIsDashboardOrderLoading(true);
+    try {
+      const res = await getAdminStats({
+        date_filter: filterKey,
+        date_from: dateFrom,
+        date_to: dateTo,
+      });
+      if (res?.data?.success) {
+        setStats(prev => ({ ...prev, ...res.data.stats }));
+        if (res.data.recentOrders) {
+          setDashboardOrdersList(res.data.recentOrders);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch dashboard order stats:', e);
+    } finally {
+      setIsDashboardOrderLoading(false);
+    }
+  }, []);
+
+  // Dashboard Unassigned Users Fetcher (Supports Instant Date Filters)
+  const fetchDashboardUnassignedStats = useCallback(async (filterKey, dateFrom = '', dateTo = '') => {
+    setIsDashboardUnassignedLoading(true);
+    try {
+      const res = await getAdminStats({
+        date_filter: filterKey,
+        date_from: dateFrom,
+        date_to: dateTo,
+      });
+      if (res?.data?.success) {
+        if (res.data.recentUnassignedUsers) {
+          setDashboardUnassignedUsersList(res.data.recentUnassignedUsers);
+        }
+        if (res.data.stats?.unassigned_users_count !== undefined) {
+          setUnassignedCount(res.data.stats.total_unassigned_all_time ?? res.data.stats.unassigned_users_count);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch unassigned stats:', e);
+    } finally {
+      setIsDashboardUnassignedLoading(false);
+    }
+  }, []);
 
   // Fetch eligible parent users for strict hierarchy creation
   const fetchHierarchyParentsForRole = async (targetRole) => {
@@ -2243,6 +2331,442 @@ export default function AdminDashboard() {
                     <Download className="w-3.5 h-3.5 text-purple-300" />
                     <span>PO Register</span>
                   </button>
+                </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* 1. UNASSIGNED DIRECT REGISTRATIONS (PENDING SPONSOR HUB) */}
+              {/* ======================================================== */}
+              <div className="bg-white rounded-3xl p-6 border border-amber-200/80 shadow-md shadow-amber-500/5 space-y-5 animate-card-in">
+                {/* Header & Date Filter Bar */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div className="flex items-start sm:items-center space-x-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-orange-500/20">
+                      <UserPlus className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-black text-slate-900 text-base">Direct Registrations (Pending Assignment)</h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-800 border border-amber-300/80 animate-pulse">
+                          {stats?.unassigned_users_count ?? unassignedCount ?? 0} Awaiting Hub
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        New IDs created directly without a sponsor referral code. Assign them to Downline Partners &amp; Sub-Retailers to activate commissions.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Date Filter & View All Link */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs">
+                      {[
+                        { key: 'all', label: 'All Time' },
+                        { key: 'today', label: 'Today' },
+                        { key: 'yesterday', label: 'Yesterday' },
+                        { key: 'last_7_days', label: '7 Days' },
+                        { key: 'this_month', label: 'This Month' },
+                        { key: 'custom', label: 'Custom' },
+                      ].map((tf) => (
+                        <button
+                          key={tf.key}
+                          type="button"
+                          onClick={() => {
+                            setDashboardUnassignedDateFilter(tf.key);
+                            if (tf.key !== 'custom') {
+                              fetchDashboardUnassignedStats(tf.key);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer ${
+                            dashboardUnassignedDateFilter === tf.key
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {tf.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Link
+                      to="/admin/unassigned-customers"
+                      className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-black text-xs rounded-xl flex items-center space-x-1.5 border border-amber-200 transition-colors"
+                    >
+                      <span>View All Leads</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Custom Date Filter Range Inputs (if Custom selected) */}
+                {dashboardUnassignedDateFilter === 'custom' && (
+                  <div className="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200/80 flex flex-wrap items-center gap-3 animate-in fade-in">
+                    <span className="text-xs font-bold text-amber-900 flex items-center space-x-1">
+                      <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Custom Registered Date Range:</span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="date"
+                        value={dashboardUnassignedDateFrom}
+                        onChange={(e) => setDashboardUnassignedDateFrom(e.target.value)}
+                        className="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                      />
+                      <span className="text-xs text-slate-400 font-bold">to</span>
+                      <input
+                        type="date"
+                        value={dashboardUnassignedDateTo}
+                        onChange={(e) => setDashboardUnassignedDateTo(e.target.value)}
+                        className="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fetchDashboardUnassignedStats('custom', dashboardUnassignedDateFrom, dashboardUnassignedDateTo)}
+                        className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs"
+                      >
+                        Apply Filter
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Unassigned Users Grid / List */}
+                {isDashboardUnassignedLoading ? (
+                  <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center space-x-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+                    <span>Loading direct registrations...</span>
+                  </div>
+                ) : (dashboardUnassignedUsersList?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {dashboardUnassignedUsersList.slice(0, 6).map((u) => (
+                      <div
+                        key={u.id}
+                        className="p-4 bg-gradient-to-br from-[#fffdf7] to-white hover:from-amber-50/50 hover:to-orange-50/30 rounded-2xl border border-amber-100/90 shadow-2xs hover:shadow-xs transition-all space-y-3 flex flex-col justify-between"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-black text-sm text-slate-900 truncate">{u.name}</h4>
+                              <p className="text-xs font-mono text-slate-500 truncate">{u.phone} {u.email ? `• ${u.email}` : ''}</p>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 flex-shrink-0">
+                              {u.role?.replace(/_/g, ' ') || 'Customer'}
+                            </span>
+                          </div>
+
+                          <div className="text-[11px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-100">
+                            <div className="flex items-center space-x-1 text-slate-600">
+                              <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              <span className="truncate">{u.city || 'N/A'}, {u.state || 'India'}</span>
+                            </div>
+                            <div className="flex items-center space-x-1 text-slate-400 text-[10px]">
+                              <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              <span>Joined {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAssignSubretailerModal(u)}
+                          className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black rounded-xl flex items-center justify-center space-x-1.5 shadow-sm shadow-orange-500/20 transition-all cursor-pointer hover:scale-[1.02]"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>Assign Sponsor / Hub</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 bg-emerald-50/70 border border-emerald-100 rounded-2xl text-center space-y-1">
+                    <p className="text-xs font-black text-emerald-900">🎉 All Direct Registrations Assigned!</p>
+                    <p className="text-[11px] text-emerald-700">No unassigned registrations for the selected period.</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* ======================================================== */}
+              {/* 2. LIVE ORDER DETAILS & REVENUE OPERATIONS DASHBOARD     */}
+              {/* ======================================================== */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5 animate-card-in-2">
+                {/* Header & Date Filter Bar */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div className="flex items-start sm:items-center space-x-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#004e89] to-[#0284c7] text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20">
+                      <ShoppingCart className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-black text-slate-900 text-base">Order Details &amp; Live Fulfillment</h3>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-100 text-brand-blue-900 border border-blue-200">
+                          {stats?.total_orders ?? ordersList?.total ?? 0} Total Orders
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Live medicine orders, instant dispatch queue, revenue settlement &amp; delivery routing.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Date Filter & Manage Orders Link */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80 text-xs">
+                      {[
+                        { key: 'all', label: 'All Time' },
+                        { key: 'today', label: 'Today' },
+                        { key: 'yesterday', label: 'Yesterday' },
+                        { key: 'last_7_days', label: '7 Days' },
+                        { key: 'this_month', label: 'This Month' },
+                        { key: 'custom', label: 'Custom' },
+                      ].map((tf) => (
+                        <button
+                          key={tf.key}
+                          type="button"
+                          onClick={() => {
+                            setDashboardOrderDateFilter(tf.key);
+                            if (tf.key !== 'custom') {
+                              fetchDashboardOrderStats(tf.key);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-xl font-bold transition-all cursor-pointer ${
+                            dashboardOrderDateFilter === tf.key
+                              ? 'bg-[#004e89] text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {tf.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate('/admin/orders')}
+                      className="px-3.5 py-2 bg-[#004e89] hover:bg-[#003d6b] text-white font-black text-xs rounded-xl flex items-center space-x-1.5 shadow-sm shadow-blue-900/20 transition-all cursor-pointer"
+                    >
+                      <span>Open Orders Portal</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Custom Date Filter Inputs (if Custom selected) */}
+                {dashboardOrderDateFilter === 'custom' && (
+                  <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200/80 flex flex-wrap items-center gap-3 animate-in fade-in">
+                    <span className="text-xs font-bold text-brand-blue-950 flex items-center space-x-1">
+                      <Calendar className="w-3.5 h-3.5 text-brand-blue-700" />
+                      <span>Custom Orders Date Range:</span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="date"
+                        value={dashboardOrderDateFrom}
+                        onChange={(e) => setDashboardOrderDateFrom(e.target.value)}
+                        className="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                      />
+                      <span className="text-xs text-slate-400 font-bold">to</span>
+                      <input
+                        type="date"
+                        value={dashboardOrderDateTo}
+                        onChange={(e) => setDashboardOrderDateTo(e.target.value)}
+                        className="px-2.5 py-1 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fetchDashboardOrderStats('custom', dashboardOrderDateFrom, dashboardOrderDateTo)}
+                        className="px-3 py-1 bg-[#004e89] hover:bg-[#003d6b] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs"
+                      >
+                        Apply Filter
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6 Clickable Interactive KPI Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+                  {/* Card 1: Total Revenue */}
+                  <div
+                    onClick={() => navigate('/admin/orders')}
+                    className="p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 hover:from-emerald-500/15 hover:to-emerald-600/10 rounded-2xl border border-emerald-200/80 cursor-pointer transition-all hover:scale-[1.02] group"
+                  >
+                    <div className="flex items-center justify-between text-emerald-800 text-xs font-black">
+                      <span>Total Revenue</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <div className="text-lg lg:text-xl font-black text-emerald-700 mt-1">
+                      ₹{Number(stats?.total_revenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <span className="text-[10px] text-emerald-600/80 font-medium">Settled Sales</span>
+                  </div>
+
+                  {/* Card 2: Total Orders */}
+                  <div
+                    onClick={() => {
+                      setOrderFilterStatus('all');
+                      navigate('/admin/orders');
+                    }}
+                    className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 hover:from-blue-500/15 hover:to-blue-600/10 rounded-2xl border border-blue-200/80 cursor-pointer transition-all hover:scale-[1.02] group"
+                  >
+                    <div className="flex items-center justify-between text-blue-800 text-xs font-black">
+                      <span>Total Orders</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <div className="text-lg lg:text-xl font-black text-blue-900 mt-1">
+                      {stats?.total_orders ?? ordersList?.total ?? 0}
+                    </div>
+                    <span className="text-[10px] text-blue-600/80 font-medium">All status orders</span>
+                  </div>
+
+                  {/* Card 3: Pending Orders */}
+                  <div
+                    onClick={() => {
+                      setOrderFilterStatus('pending');
+                      navigate('/admin/orders');
+                    }}
+                    className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-600/5 hover:from-amber-500/15 hover:to-amber-600/10 rounded-2xl border border-amber-200/80 cursor-pointer transition-all hover:scale-[1.02] group"
+                  >
+                    <div className="flex items-center justify-between text-amber-900 text-xs font-black">
+                      <span>Pending Orders</span>
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                    </div>
+                    <div className="text-lg lg:text-xl font-black text-amber-700 mt-1">
+                      {stats?.pending_orders ?? stats?.order_counts?.pending ?? 0}
+                    </div>
+                    <span className="text-[10px] text-amber-700 font-medium">Action Required</span>
+                  </div>
+
+                  {/* Card 4: Dispatched / Shipped */}
+                  <div
+                    onClick={() => {
+                      setOrderFilterStatus('dispatched');
+                      navigate('/admin/orders');
+                    }}
+                    className="p-4 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 hover:from-indigo-500/15 hover:to-indigo-600/10 rounded-2xl border border-indigo-200/80 cursor-pointer transition-all hover:scale-[1.02] group"
+                  >
+                    <div className="flex items-center justify-between text-indigo-900 text-xs font-black">
+                      <span>Dispatched</span>
+                      <Truck className="w-3.5 h-3.5 text-indigo-600" />
+                    </div>
+                    <div className="text-lg lg:text-xl font-black text-indigo-900 mt-1">
+                      {(stats?.dispatched_orders || stats?.order_counts?.shipped || stats?.order_counts?.dispatched || 0)}
+                    </div>
+                    <span className="text-[10px] text-indigo-600/80 font-medium">In Transit</span>
+                  </div>
+
+                  {/* Card 5: Delivered */}
+                  <div
+                    onClick={() => {
+                      setOrderFilterStatus('delivered');
+                      navigate('/admin/orders');
+                    }}
+                    className="p-4 bg-gradient-to-br from-teal-500/10 to-teal-600/5 hover:from-teal-500/15 hover:to-teal-600/10 rounded-2xl border border-teal-200/80 cursor-pointer transition-all hover:scale-[1.02] group"
+                  >
+                    <div className="flex items-center justify-between text-teal-900 text-xs font-black">
+                      <span>Delivered</span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+                    </div>
+                    <div className="text-lg lg:text-xl font-black text-teal-900 mt-1">
+                      {stats?.delivered_orders ?? stats?.order_counts?.delivered ?? 0}
+                    </div>
+                    <span className="text-[10px] text-teal-600/80 font-medium">Completed</span>
+                  </div>
+
+                  {/* Card 6: Cancelled / Issues */}
+                  <div
+                    onClick={() => {
+                      setOrderFilterStatus('cancelled');
+                      navigate('/admin/orders');
+                    }}
+                    className="p-4 bg-gradient-to-br from-rose-500/10 to-rose-600/5 hover:from-rose-500/15 hover:to-rose-600/10 rounded-2xl border border-rose-200/80 cursor-pointer transition-all hover:scale-[1.02] group"
+                  >
+                    <div className="flex items-center justify-between text-rose-900 text-xs font-black">
+                      <span>Cancelled</span>
+                      <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                    </div>
+                    <div className="text-lg lg:text-xl font-black text-rose-700 mt-1">
+                      {stats?.cancelled_orders ?? stats?.order_counts?.cancelled ?? 0}
+                    </div>
+                    <span className="text-[10px] text-rose-600/80 font-medium">Refunded / Void</span>
+                  </div>
+                </div>
+
+                {/* Recent Orders Live Table / Feed */}
+                <div className="space-y-2.5 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-xs text-slate-800 uppercase tracking-wider">Recent Orders Feed</h4>
+                    <span className="text-[11px] text-slate-400">Showing latest orders</span>
+                  </div>
+
+                  {isDashboardOrderLoading ? (
+                    <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center space-x-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#004e89]" />
+                      <span>Loading orders feed...</span>
+                    </div>
+                  ) : ((dashboardOrdersList?.length > 0 ? dashboardOrdersList : (ordersList?.data || [])).slice(0, 5).length > 0 ? (
+                    <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
+                          <tr>
+                            <th className="py-2.5 px-3">Order #</th>
+                            <th className="py-2.5 px-3">Customer / Buyer</th>
+                            <th className="py-2.5 px-3">City &amp; State</th>
+                            <th className="py-2.5 px-3">Amount</th>
+                            <th className="py-2.5 px-3">Status</th>
+                            <th className="py-2.5 px-3">Date</th>
+                            <th className="py-2.5 px-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white font-medium">
+                          {(dashboardOrdersList?.length > 0 ? dashboardOrdersList : (ordersList?.data || [])).slice(0, 5).map((ord) => (
+                            <tr key={ord.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-2.5 px-3 font-mono font-bold text-brand-blue-900">
+                                {ord.order_number || `#${ord.id}`}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-bold text-slate-900">{ord.customer_name || ord.user?.name || 'Customer'}</div>
+                                <div className="text-[10px] text-slate-400">{ord.phone || ord.user?.phone || 'N/A'}</div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600">
+                                {ord.city || 'N/A'}, {ord.state || ''}
+                              </td>
+                              <td className="py-2.5 px-3 font-bold text-slate-900">
+                                ₹{Number(ord.total_amount || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                                  ord.order_status === 'delivered' ? 'bg-emerald-100 text-emerald-800' :
+                                  ord.order_status === 'dispatched' ? 'bg-blue-100 text-blue-800' :
+                                  ord.order_status === 'cancelled' ? 'bg-rose-100 text-rose-800' :
+                                  'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {ord.order_status || 'Pending'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-400 text-[11px]">
+                                {new Date(ord.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedInvoiceOrderId(ord.id);
+                                    navigate('/admin/orders');
+                                  }}
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] cursor-pointer"
+                                >
+                                  Manage
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl text-center text-xs text-slate-400">
+                      No orders found for the selected period.
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -8619,7 +9143,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: ASSIGN DIRECT CUSTOMER TO SUB-RETAILER            */}
+      {/* MODAL: ASSIGN DIRECT USER / LEAD TO SPONSOR OR HUB       */}
       {/* ======================================================== */}
       {showAssignCustomerModal && assignTargetCustomer && isSuperAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
@@ -8631,8 +9155,8 @@ export default function AdminDashboard() {
                   <UserPlus className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black tracking-tight">Assign Customer to Sub-Retailer</h3>
-                  <p className="text-xs text-orange-100 font-medium">Map direct registered web lead into Partner Downline</p>
+                  <h3 className="text-base font-black tracking-tight">Assign Downline Sponsor / Hub</h3>
+                  <p className="text-xs text-orange-100 font-medium">Map direct registered ID into Partner Network</p>
                 </div>
               </div>
               <button
@@ -8649,44 +9173,63 @@ export default function AdminDashboard() {
 
             {/* Modal Body */}
             <div className="p-6 space-y-4 overflow-y-auto">
-              {/* Customer Info Summary Card */}
+              {/* User Info Summary Card */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Customer (Web Lead)</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Registration (Direct Lead)</span>
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-black text-slate-900">{assignTargetCustomer.name}</h4>
-                    <p className="text-xs text-slate-500 font-mono">{assignTargetCustomer.email} • {assignTargetCustomer.phone}</p>
+                    <p className="text-xs text-slate-500 font-mono">{assignTargetCustomer.phone} {assignTargetCustomer.email ? `• ${assignTargetCustomer.email}` : ''}</p>
                   </div>
-                  <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full">
-                    {assignTargetCustomer.referral_code || `CUST${assignTargetCustomer.id}`}
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">
+                    {assignTargetCustomer.role?.replace(/_/g, ' ') || 'Customer'}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
-                  <span>Location: <strong>{assignTargetCustomer.city || 'Surat'}, {assignTargetCustomer.state || 'Gujarat'} ({assignTargetCustomer.pincode || '394230'})</strong></span>
-                  <span>Total Spent: <strong className="text-emerald-700">₹{Number(assignTargetCustomer.total_spent || 0).toFixed(2)}</strong></span>
+                  <span>Location: <strong>{assignTargetCustomer.city || 'N/A'}, {assignTargetCustomer.state || 'India'}</strong></span>
+                  <span>Joined: <strong>{new Date(assignTargetCustomer.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></span>
                 </div>
               </div>
 
               {/* Assignment Form */}
               <form onSubmit={handleExecuteCustomerAssignment} className="space-y-4">
+                {/* Role Confirmation / Assignment */}
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Select Target Sub-Retailer / Partner Hub *
+                    Assign / Confirm Network Role
+                  </label>
+                  <select
+                    value={assignRoleTarget}
+                    onChange={(e) => setAssignRoleTarget(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-brand-orange-500"
+                  >
+                    <option value="customer">Customer (Direct Consumer / Patient)</option>
+                    <option value="sub_retailer">Sub-Retailer (Pincode &amp; Local Hub)</option>
+                    <option value="retailer">Retailer (Chemist &amp; Pharmacy)</option>
+                    <option value="sub_distributor">Sub-Distributor (Town Stockist)</option>
+                    <option value="distributor">Distributor (City Master)</option>
+                    <option value="super_distributor">Super Distributor (State Partner)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Select Target Sponsor / Partner Hub *
                   </label>
                   <div className="space-y-2">
                     <input
                       type="text"
-                      placeholder="Search Sub-Retailer by Name, Code, City, Pincode..."
-                      value={subRetailerSearch}
-                      onChange={(e) => setSubRetailerSearch(e.target.value)}
+                      placeholder="Search Partner by Name, Code, City, Pincode..."
+                      value={assignSearch}
+                      onChange={(e) => setAssignSearch(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-brand-orange-500"
                     />
 
                     <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 bg-white">
-                      {subRetailersList
+                      {(sponsorsList.length > 0 ? sponsorsList : subRetailersList)
                         .filter((sr) => {
-                          if (!subRetailerSearch) return true;
-                          const q = subRetailerSearch.toLowerCase();
+                          if (!assignSearch) return true;
+                          const q = assignSearch.toLowerCase();
                           return (
                             sr.name?.toLowerCase().includes(q) ||
                             sr.business_name?.toLowerCase().includes(q) ||
@@ -8709,22 +9252,19 @@ export default function AdminDashboard() {
                               <div className="space-y-0.5">
                                 <div className="flex items-center space-x-2">
                                   <span className="font-black text-slate-900">{sr.name}</span>
-                                  <span className="text-[10px] font-bold font-mono text-brand-orange-600 bg-orange-100/70 px-1.5 py-0.5 rounded">
-                                    {sr.referral_code}
-                                  </span>
+                                  {sr.referral_code && (
+                                    <span className="text-[10px] font-bold font-mono text-brand-orange-600 bg-orange-100/70 px-1.5 py-0.5 rounded">
+                                      {sr.referral_code}
+                                    </span>
+                                  )}
                                   <span className="text-[9px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                    {sr.role}
+                                    {sr.role?.replace(/_/g, ' ')}
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-slate-500">
                                   {sr.business_name && <span>{sr.business_name} • </span>}
                                   📍 {sr.city || 'N/A'}, {sr.state || ''} {sr.pincode ? `(${sr.pincode})` : ''} • 📞 {sr.phone}
                                 </p>
-                                {sr.sponsor && (
-                                  <p className="text-[10px] text-slate-400">
-                                    Upline: {sr.sponsor.name} ({sr.sponsor.referral_code})
-                                  </p>
-                                )}
                               </div>
                               <div className="flex items-center">
                                 <input
@@ -8738,9 +9278,9 @@ export default function AdminDashboard() {
                             </div>
                           );
                         })}
-                      {subRetailersList.length === 0 && (
+                      {sponsorsList.length === 0 && subRetailersList.length === 0 && (
                         <div className="p-4 text-center text-xs text-slate-400">
-                          Loading active Sub-Retailers...
+                          Loading active partners &amp; hubs...
                         </div>
                       )}
                     </div>
@@ -8748,7 +9288,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed font-medium">
-                  💡 <strong>Hierarchy Impact:</strong> Customer will immediately be attached under the selected Sub-Retailer. All future medicine orders from this customer will automatically trigger commissions across this Sub-Retailer's Retailer and Distributor upline chain.
+                  💡 <strong>Network Impact:</strong> This user will immediately be attached under the selected Sponsor / Hub. All future medicine orders from this account will automatically generate multi-tier commissions across the partner chain.
                 </div>
 
                 <div className="flex space-x-2 pt-2">

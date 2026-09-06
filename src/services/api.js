@@ -70,7 +70,7 @@ export const getWalletTransactions = (page = 1) => api.get(`/mlm/wallet?page=${p
 export const requestPayout = (payoutData) => api.post('/mlm/payout-request', payoutData);
 
 // Admin Control Panel
-export const getAdminStats = () => api.get('/admin/stats');
+export const getAdminStats = (params) => api.get('/admin/stats', { params });
 export const getAdminCategories = () => api.get('/admin/categories');
 export const storeAdminCategory = (data) => api.post('/admin/categories', data);
 export const updateAdminCategory = (id, data) => api.put(`/admin/categories/${id}`, data);
