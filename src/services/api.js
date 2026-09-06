@@ -90,6 +90,10 @@ export const getAdminPrescriptions = (params) => api.get('/admin/prescriptions',
 export const updateAdminPrescriptionStatus = (id, data) => api.put(`/admin/prescriptions/${id}`, data);
 export const getAdminPayouts = (params) => api.get('/admin/payouts', { params });
 export const processAdminPayout = (id, data) => api.post(`/admin/payouts/${id}/process`, data);
+export const getAdminWalletStats = () => api.get('/admin/wallets/stats');
+export const getAdminWalletUsers = (params) => api.get('/admin/wallets/users', { params });
+export const getAdminWalletTransactions = (params) => api.get('/admin/wallets/transactions', { params });
+export const adjustAdminUserWallet = (id, data) => api.post(`/admin/wallets/${id}/adjust`, data);
 
 // Super Admin Suite APIs
 export const getAdminUsersByRole = (params) => api.get('/admin/users-by-role', { params });

@@ -11,7 +11,8 @@ import {
   Layers, Lock, ExternalLink, Calendar, DollarSign, ArrowRight, MapPin,
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
   CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download,
-  FileText, CreditCard, Building2, PhoneCall, Loader2, Banknote, QrCode, Activity
+  FileText, CreditCard, Building2, PhoneCall, Loader2, Banknote, QrCode, Activity,
+  Minus, History, ArrowDownRight, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { EarningsSalesChart, StockInventoryChart } from '../../components/common/DashboardCharts';
 import {
@@ -45,6 +46,7 @@ import {
   getPurchaseOrders, approvePurchaseOrder, rejectPurchaseOrder,
   getAdminPrescriptions, updateAdminPrescriptionStatus,
   getAdminPayouts, processAdminPayout,
+  getAdminWalletStats, getAdminWalletUsers, getAdminWalletTransactions, adjustAdminUserWallet,
   getAdminBanners, storeAdminBanner, deleteAdminBanner,
   getAdminReports,
   getAdminEmployees, storeAdminEmployee, updateAdminEmployee,
@@ -279,6 +281,39 @@ export default function AdminDashboard() {
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [trackingTargetOrder, setTrackingTargetOrder] = useState(null);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
+
+  // Super Admin Wallet Control Center States
+  const [walletTab, setWalletTab] = useState('users'); // 'users', 'payouts', 'transactions'
+  const [walletUsersList, setWalletUsersList] = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
+  const [walletStatsData, setWalletStatsData] = useState({
+    total_wallet_liability: 0,
+    total_earned_commission: 0,
+    total_payouts_requested: 0,
+    pending_payouts: 0,
+    settled_payouts: 0,
+    active_wallet_users: 0,
+  });
+  const [walletUserSearchQuery, setWalletUserSearchQuery] = useState('');
+  const [walletUserRoleFilter, setWalletUserRoleFilter] = useState('all');
+  const [walletUserSort, setWalletUserSort] = useState('balance_desc');
+  const [walletUserPage, setWalletUserPage] = useState(1);
+  const [isWalletLoading, setIsWalletLoading] = useState(false);
+
+  const [walletTransactionsList, setWalletTransactionsList] = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
+  const [walletTxnSearchQuery, setWalletTxnSearchQuery] = useState('');
+  const [walletTxnTypeFilter, setWalletTxnTypeFilter] = useState('all');
+  const [walletTxnPage, setWalletTxnPage] = useState(1);
+
+  // Direct Wallet Adjust Modal
+  const [showAdjustWalletModal, setShowAdjustWalletModal] = useState(false);
+  const [adjustWalletUser, setAdjustWalletUser] = useState(null);
+  const [adjustWalletForm, setAdjustWalletForm] = useState({
+    action: 'credit', // 'credit', 'debit', 'set'
+    amount: '',
+    reason: '',
+    admin_notes: '',
+  });
+  const [isAdjustingWallet, setIsAdjustingWallet] = useState(false);
 
   // Banners & Reports
   const [bannersList, setBannersList] = useState([]);
@@ -609,8 +644,7 @@ export default function AdminDashboard() {
       } else if (currentSection === 'payments') {
         await fetchPaymentsData(paymentPage);
       } else if (currentSection === 'wallet') {
-        const res = await getAdminPayouts();
-        if (res.data.success) setPayoutsList(res.data.payouts);
+        await fetchWalletData(walletUserPage);
       } else if (currentSection === 'banners') {
         const res = await getAdminBanners();
         if (res.data.success) setBannersList(res.data.banners);
@@ -754,6 +788,103 @@ export default function AdminDashboard() {
       toast.error(err.response?.data?.message || err.message || 'Failed to process refund.');
     } finally {
       setRefundingLoading(false);
+    }
+  };
+
+  // Super Admin Wallet Data Fetcher (Users, Stats, Payouts, Transactions)
+  const fetchWalletData = useCallback(async (page = 1, customParams = {}) => {
+    setIsWalletLoading(true);
+    try {
+      const q = customParams.q !== undefined ? customParams.q : walletUserSearchQuery;
+      const role = customParams.role !== undefined ? customParams.role : walletUserRoleFilter;
+      const sort = customParams.sort !== undefined ? customParams.sort : walletUserSort;
+
+      const [statsRes, usersRes, payoutsRes, txnsRes] = await Promise.all([
+        getAdminWalletStats().catch(() => ({ data: { success: false } })),
+        getAdminWalletUsers({
+          page,
+          q,
+          role,
+          sort,
+        }).catch(() => ({ data: { success: false } })),
+        getAdminPayouts().catch(() => ({ data: { success: false } })),
+        getAdminWalletTransactions({
+          page: walletTxnPage,
+          q: walletTxnSearchQuery,
+          type: walletTxnTypeFilter,
+        }).catch(() => ({ data: { success: false } })),
+      ]);
+
+      if (statsRes.data?.success && statsRes.data.stats) {
+        setWalletStatsData(statsRes.data.stats);
+      }
+      if (usersRes.data?.success && usersRes.data.users) {
+        setWalletUsersList(usersRes.data.users);
+      }
+      if (payoutsRes.data?.success && payoutsRes.data.payouts) {
+        setPayoutsList(payoutsRes.data.payouts);
+      }
+      if (txnsRes.data?.success && txnsRes.data.transactions) {
+        setWalletTransactionsList(txnsRes.data.transactions);
+      }
+    } catch (err) {
+      console.error('Error fetching wallet data:', err);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  }, [walletUserSearchQuery, walletUserRoleFilter, walletUserSort, walletTxnPage, walletTxnSearchQuery, walletTxnTypeFilter]);
+
+  const handleOpenAdjustWalletModal = (userItem, defaultAction = 'credit') => {
+    setAdjustWalletUser(userItem);
+    setAdjustWalletForm({
+      action: defaultAction,
+      amount: '',
+      reason: defaultAction === 'credit' ? 'Promotional Credit Bonus' : (defaultAction === 'debit' ? 'Manual Wallet Deduction' : 'Balance Calibration'),
+      admin_notes: '',
+    });
+    setShowAdjustWalletModal(true);
+  };
+
+  const handleExecuteWalletAdjustment = async (e) => {
+    e.preventDefault();
+    if (!adjustWalletUser) {
+      toast.error('Please select a user.');
+      return;
+    }
+
+    const amt = parseFloat(adjustWalletForm.amount);
+    if (isNaN(amt) || amt <= 0) {
+      toast.error('Please enter a valid amount greater than 0.');
+      return;
+    }
+
+    const currBal = parseFloat(adjustWalletUser.wallet_balance || 0);
+    if (adjustWalletForm.action === 'debit' && amt > currBal) {
+      toast.error(`Cannot deduct ₹${amt.toFixed(2)}. User balance is only ₹${currBal.toFixed(2)}.`);
+      return;
+    }
+
+    setIsAdjustingWallet(true);
+    try {
+      const res = await adjustAdminUserWallet(adjustWalletUser.id, {
+        action: adjustWalletForm.action,
+        amount: amt,
+        reason: adjustWalletForm.reason || 'Super Admin Adjustment',
+        admin_notes: adjustWalletForm.admin_notes,
+      });
+
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Wallet balance updated successfully!');
+        setShowAdjustWalletModal(false);
+        fetchWalletData(walletUserPage);
+      } else {
+        toast.error(res.data?.message || 'Failed to adjust wallet.');
+      }
+    } catch (err) {
+      console.error('Failed to adjust wallet balance:', err);
+      toast.error(err.response?.data?.message || 'Error executing wallet adjustment.');
+    } finally {
+      setIsAdjustingWallet(false);
     }
   };
 
@@ -5884,172 +6015,613 @@ export default function AdminDashboard() {
 
           {currentSection === 'wallet' && (
             <div className="space-y-6">
-              {/* Top 4 Wallet Metric Cards */}
+              {/* Top 5 Wallet Metric Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-[#ff5722]">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Total Payouts Requested</span>
-                  <div className="text-2xl font-black text-slate-900">
-                    ₹{payoutsList?.data?.reduce((acc, p) => acc + parseFloat(p.amount || 0), 0).toFixed(2) || '0.00'}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500">System Wallet Liability</span>
+                    <span className="p-1.5 bg-orange-50 text-[#ff5722] rounded-lg">
+                      <Wallet className="w-4 h-4" />
+                    </span>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-semibold">{payoutsList?.data?.length || 0} total requests</span>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Pending Clearance</span>
-                  <div className="text-2xl font-black text-amber-500">
-                    ₹{payoutsList?.data?.filter(p => p.status === 'pending').reduce((acc, p) => acc + parseFloat(p.amount || 0), 0).toFixed(2) || '0.00'}
+                  <div className="text-2xl font-black text-slate-900 mt-2">
+                    ₹{Number(walletStatsData?.total_wallet_liability || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <span className="text-[11px] text-amber-600 font-semibold">
-                    {payoutsList?.data?.filter(p => p.status === 'pending').length || 0} pending review
+                  <span className="text-[11px] text-slate-400 font-semibold block mt-1">
+                    Total unspent balances across all user accounts
                   </span>
                 </div>
 
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-emerald-500">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Settled &amp; Paid (Bank)</span>
-                  <div className="text-2xl font-black text-emerald-600">
-                    ₹{payoutsList?.data?.filter(p => p.status === 'approved').reduce((acc, p) => acc + parseFloat(p.amount || 0), 0).toFixed(2) || '0.00'}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500">Lifetime Commissions</span>
+                    <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                      <TrendingUp className="w-4 h-4" />
+                    </span>
                   </div>
-                  <span className="text-[11px] text-emerald-700 font-semibold">
-                    {payoutsList?.data?.filter(p => p.status === 'approved').length || 0} completed
+                  <div className="text-2xl font-black text-emerald-600 mt-2">
+                    ₹{Number(walletStatsData?.total_earned_commission || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <span className="text-[11px] text-emerald-700/80 font-semibold block mt-1">
+                    Distributed via downline referral networks
                   </span>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-purple-600">
-                  <span className="text-xs font-bold text-slate-500 block mb-1">Quick Action</span>
-                  <button
-                    onClick={() => {
-                      setTransferMode('wallet_transfer');
-                      setShowTransferModal(true);
-                    }}
-                    className="mt-1 w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold py-2 rounded-xl text-xs transition-colors flex items-center justify-center space-x-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Direct Wallet Adjust</span>
-                  </button>
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-amber-500">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500">Pending Withdrawals</span>
+                    <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+                      <Banknote className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-black text-amber-500 mt-2">
+                    ₹{Number(walletStatsData?.pending_payouts || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <span className="text-[11px] text-amber-600 font-semibold block mt-1">
+                    {payoutsList?.data?.filter(p => p.status === 'pending').length || 0} payout requests awaiting bank clearance
+                  </span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-blue-600">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500">Settled &amp; Paid (Bank)</span>
+                    <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="text-2xl font-black text-blue-600 mt-2">
+                    ₹{Number(walletStatsData?.settled_payouts || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <span className="text-[11px] text-blue-700/80 font-semibold block mt-1">
+                    {payoutsList?.data?.filter(p => p.status === 'approved').length || 0} withdrawals transferred
+                  </span>
                 </div>
               </div>
 
-              {/* Commission Wallet Table */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
-                  <div>
-                    <h3 className="font-black text-slate-900 text-base">Partner Commission Payouts &amp; Bank Transfers</h3>
-                    <p className="text-xs text-slate-500">Review, verify and process downline distributor withdrawal requests.</p>
-                  </div>
+              {/* Navigation Tabs for Wallet Section */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setWalletTab('users')}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2 transition-all cursor-pointer ${
+                      walletTab === 'users'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>User Wallets &amp; Balance Control</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${walletTab === 'users' ? 'bg-[#ff5722] text-white' : 'bg-slate-200 text-slate-700'}`}>
+                      {walletUsersList?.total || 0}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setWalletTab('payouts')}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2 transition-all cursor-pointer ${
+                      walletTab === 'payouts'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Banknote className="w-4 h-4" />
+                    <span>Payout &amp; Withdrawal Requests</span>
+                    {payoutsList?.data?.filter(p => p.status === 'pending').length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
+                        {payoutsList?.data?.filter(p => p.status === 'pending').length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setWalletTab('transactions')}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center space-x-2 transition-all cursor-pointer ${
+                      walletTab === 'transactions'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <History className="w-4 h-4" />
+                    <span>Wallet Ledger &amp; Audit Trail</span>
+                  </button>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
-                    onClick={() => exportCommissionsReport(payoutsList?.data || [], { userName: user?.name })}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
-                    title="Export Payouts & Commission History to MediGlaxo Excel"
+                    onClick={() => fetchWalletData(walletUserPage)}
+                    disabled={isWalletLoading}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center space-x-1.5 transition-all cursor-pointer"
+                    title="Refresh wallet balances"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Export Payouts (Excel)</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isWalletLoading ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setTransferMode('wallet_transfer');
-                      setShowTransferModal(true);
-                    }}
-                    className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Credit / Debit Wallet</span>
-                  </button>
-                </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
-                      <tr>
-                        <th className="p-3.5">REQUEST ID</th>
-                        <th className="p-3.5">PARTNER</th>
-                        <th className="p-3.5">GROSS WITHDRAWAL</th>
-                        <th className="p-3.5">TDS / CHARGES (5%)</th>
-                        <th className="p-3.5">NET PAYABLE</th>
-                        <th className="p-3.5">BANK ACCOUNT / UPI</th>
-                        <th className="p-3.5">STATUS</th>
-                        <th className="p-3.5 text-right">ACTION</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {payoutsList?.data?.length === 0 ? (
-                        <tr><td colSpan="8" className="p-8 text-center text-slate-400">No payout requests in the ledger.</td></tr>
-                      ) : (
-                        payoutsList?.data?.map((pay) => {
-                          const gross = parseFloat(pay.amount || 0);
-                          const fee = pay.admin_fee ? parseFloat(pay.admin_fee) : round(gross * 0.05, 2);
-                          const net = pay.net_payable ? parseFloat(pay.net_payable) : (gross - fee);
-                          return (
-                            <tr key={pay.id} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="p-3.5 font-bold text-brand-blue-800">#PAY-{pay.id}</td>
-                              <td className="p-3.5">
-                                <span className="font-bold text-slate-900 block">{pay.user?.name || 'Partner'}</span>
-                                <span className="text-[10px] text-slate-400 font-mono">{pay.user?.referral_code} • {pay.user?.phone}</span>
-                              </td>
-                              <td className="p-3.5 font-black text-slate-900">₹{gross.toFixed(2)}</td>
-                              <td className="p-3.5 text-rose-600 font-semibold">-₹{fee.toFixed(2)}</td>
-                              <td className="p-3.5 font-black text-emerald-600">₹{net.toFixed(2)}</td>
-                              <td className="p-3.5 font-mono text-[11px] max-w-[200px] truncate" title={pay.account_details}>
-                                {pay.account_details}
-                              </td>
-                              <td className="p-3.5">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                  pay.status === 'approved'
-                                    ? 'bg-emerald-50 text-emerald-700'
-                                    : pay.status === 'pending'
-                                    ? 'bg-amber-50 text-amber-700'
-                                    : 'bg-rose-50 text-rose-700'
-                                }`}>
-                                  {pay.status}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-right space-x-1.5">
-                                {pay.status === 'pending' ? (
-                                  <>
-                                    <button
-                                      onClick={async () => {
-                                        const ref = prompt('Enter Bank UTR / Transaction Reference ID:', 'UTR' + Date.now().toString().slice(-8));
-                                        if (ref !== null) {
-                                          await processAdminPayout(pay.id, { action: 'approve', transaction_ref: ref });
-                                          fetchData();
-                                          toast.success('Payout marked as Approved & Settled.');
-                                        }
-                                      }}
-                                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg font-bold text-[11px] shadow-xs"
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={async () => {
-                                        const note = prompt('Reason for rejection (Funds will be refunded automatically to partner wallet):', 'Account details mismatched');
-                                        if (note !== null) {
-                                          await processAdminPayout(pay.id, { action: 'reject', admin_note: note });
-                                          fetchData();
-                                          toast.success('Payout rejected and ₹' + pay.amount + ' refunded to partner wallet.');
-                                        }
-                                      }}
-                                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1 rounded-lg font-bold text-[11px]"
-                                    >
-                                      Reject &amp; Refund
-                                    </button>
-                                  </>
-                                ) : (
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {pay.transaction_ref || pay.admin_note || 'Completed'}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                  {walletTab === 'payouts' && (
+                    <button
+                      type="button"
+                      onClick={() => exportCommissionsReport(payoutsList?.data || [], { userName: user?.name })}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                      title="Export Payouts & Commission History to Excel"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export Payouts (Excel)</span>
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* TAB 1: USER WALLETS & LIVE BALANCE CONTROL */}
+              {walletTab === 'users' && (
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5">
+                  {/* Search and Filter Controls */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base flex items-center space-x-2">
+                        <span>User Wallet Directory &amp; Direct Balance Manager</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+                          Super Admin Only
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Search any user by Referral Code, Mobile Number, Name or Email to view or adjust their live wallet balance.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Search Input */}
+                      <div className="relative min-w-[260px] sm:min-w-[320px]">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={walletUserSearchQuery}
+                          onChange={(e) => setWalletUserSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setWalletUserPage(1);
+                              fetchWalletData(1, { q: walletUserSearchQuery });
+                            }
+                          }}
+                          placeholder="Search Referral Code, Mobile, Name..."
+                          className="w-full pl-9 pr-8 py-2 bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#ff5722]/30 focus:border-[#ff5722] transition-all"
+                        />
+                        {walletUserSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWalletUserSearchQuery('');
+                              setWalletUserPage(1);
+                              fetchWalletData(1, { q: '' });
+                            }}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWalletUserPage(1);
+                          fetchWalletData(1, { q: walletUserSearchQuery });
+                        }}
+                        className="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1 cursor-pointer"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                        <span>Search</span>
+                      </button>
+
+                      {/* Role Filter */}
+                      <select
+                        value={walletUserRoleFilter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setWalletUserRoleFilter(val);
+                          setWalletUserPage(1);
+                          fetchWalletData(1, { role: val });
+                        }}
+                        className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-[#ff5722]/30"
+                      >
+                        <option value="all">All Roles</option>
+                        <option value="Super Distributor">Super Distributor</option>
+                        <option value="Distributor">Distributor</option>
+                        <option value="Retailer">Retailer</option>
+                        <option value="Customer">Customer</option>
+                      </select>
+
+                      {/* Sort Filter */}
+                      <select
+                        value={walletUserSort}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setWalletUserSort(val);
+                          setWalletUserPage(1);
+                          fetchWalletData(1, { sort: val });
+                        }}
+                        className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer focus:ring-2 focus:ring-[#ff5722]/30"
+                      >
+                        <option value="balance_desc">Highest Balance First</option>
+                        <option value="balance_asc">Lowest Balance First</option>
+                        <option value="highest_earned">Highest Commissions Earned</option>
+                        <option value="newest">Recently Joined</option>
+                        <option value="name_asc">Name (A-Z)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Users Table */}
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500 border-b border-slate-100">
+                        <tr>
+                          <th className="p-3.5">USER / PARTNER</th>
+                          <th className="p-3.5">CONTACT &amp; REFERRAL CODE</th>
+                          <th className="p-3.5">ROLE &amp; STATUS</th>
+                          <th className="p-3.5 text-right">CURRENT WALLET BALANCE</th>
+                          <th className="p-3.5 text-right">LIFETIME COMMISSIONS</th>
+                          <th className="p-3.5 text-right">SUPER ADMIN ACTIONS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {isWalletLoading ? (
+                          <tr>
+                            <td colSpan="6" className="p-12 text-center text-slate-400">
+                              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-[#ff5722]" />
+                              <span>Loading user wallets...</span>
+                            </td>
+                          </tr>
+                        ) : (walletUsersList?.data?.length === 0) ? (
+                          <tr>
+                            <td colSpan="6" className="p-12 text-center text-slate-400">
+                              <div className="max-w-xs mx-auto space-y-2">
+                                <Wallet className="w-8 h-8 text-slate-300 mx-auto" />
+                                <p className="font-bold text-slate-700">No users found matching your search</p>
+                                <p className="text-[11px] text-slate-400">Try searching with a different referral code, phone number or name.</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          walletUsersList?.data?.map((u) => {
+                            const bal = parseFloat(u.wallet_balance || 0);
+                            const earned = parseFloat(u.total_earned_commission || 0);
+                            const roleColor =
+                              u.role === 'Super Distributor' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                              u.role === 'Distributor' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              u.role === 'Retailer' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              'bg-slate-100 text-slate-700 border-slate-200';
+
+                            return (
+                              <tr key={u.id} className="hover:bg-slate-50/70 transition-colors group">
+                                <td className="p-3.5">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-9 h-9 rounded-xl bg-slate-900 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                                      {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                                    </div>
+                                    <div>
+                                      <span className="font-bold text-slate-900 block text-sm">{u.name}</span>
+                                      <span className="text-[11px] text-slate-400 block">{u.email || 'No email registered'}</span>
+                                      {u.business_name && (
+                                        <span className="text-[10px] text-slate-500 font-medium">{u.business_name}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="p-3.5">
+                                  <div className="space-y-1">
+                                    <div className="font-bold text-slate-800 flex items-center space-x-1 font-mono text-xs">
+                                      <span>📞 {u.phone || 'N/A'}</span>
+                                    </div>
+                                    {u.referral_code ? (
+                                      <div className="inline-flex items-center space-x-1 bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold">
+                                        <span>REF:</span>
+                                        <span className="font-black">{u.referral_code}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400 italic">No Referral Code</span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                <td className="p-3.5">
+                                  <div className="space-y-1">
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${roleColor}`}>
+                                      {u.role || 'Customer'}
+                                    </span>
+                                    <div>
+                                      <span className={`inline-flex items-center space-x-1 text-[10px] font-bold ${u.status === 'Active' || u.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'Active' || u.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                        <span>{u.status || 'Active'}</span>
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="p-3.5 text-right">
+                                  <div className={`text-base font-black ${bal > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
+                                    ₹{bal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </div>
+                                  {bal > 0 && (
+                                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.2 rounded">
+                                      Available Funds
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td className="p-3.5 text-right">
+                                  <div className="text-xs font-bold text-emerald-600">
+                                    ₹{earned.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </div>
+                                  <span className="text-[10px] text-slate-400">All-time</span>
+                                </td>
+
+                                <td className="p-3.5 text-right">
+                                  <div className="flex items-center justify-end space-x-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAdjustWalletModal(u, 'credit')}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-xl font-bold text-[11px] shadow-xs flex items-center space-x-1 transition-all cursor-pointer"
+                                      title="Add money / Credit to this user wallet"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      <span>Add Balance</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAdjustWalletModal(u, 'debit')}
+                                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-1.5 rounded-xl font-bold text-[11px] flex items-center space-x-1 transition-all cursor-pointer"
+                                      title="Deduct money / Debit from this user wallet"
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                      <span>Deduct</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAdjustWalletModal(u, 'set')}
+                                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer"
+                                      title="Set exact wallet balance"
+                                    >
+                                      <span>Set</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {walletUsersList?.last_page > 1 && (
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                      <span className="text-slate-500 font-medium">
+                        Showing page <span className="font-bold text-slate-900">{walletUsersList.current_page}</span> of <span className="font-bold text-slate-900">{walletUsersList.last_page}</span> ({walletUsersList.total} total users)
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          disabled={walletUsersList.current_page <= 1}
+                          onClick={() => {
+                            const newP = walletUsersList.current_page - 1;
+                            setWalletUserPage(newP);
+                            fetchWalletData(newP);
+                          }}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 font-bold disabled:opacity-40 hover:bg-slate-50 transition-all"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          type="button"
+                          disabled={walletUsersList.current_page >= walletUsersList.last_page}
+                          onClick={() => {
+                            const newP = walletUsersList.current_page + 1;
+                            setWalletUserPage(newP);
+                            fetchWalletData(newP);
+                          }}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 font-bold disabled:opacity-40 hover:bg-slate-50 transition-all"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: PAYOUT & WITHDRAWAL REQUESTS */}
+              {walletTab === 'payouts' && (
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base">Partner Commission Payouts &amp; Bank Transfers</h3>
+                      <p className="text-xs text-slate-500">Review, verify and process downline distributor withdrawal requests.</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500 border-b border-slate-100">
+                        <tr>
+                          <th className="p-3.5">REQUEST ID</th>
+                          <th className="p-3.5">PARTNER</th>
+                          <th className="p-3.5">GROSS WITHDRAWAL</th>
+                          <th className="p-3.5">TDS / CHARGES (5%)</th>
+                          <th className="p-3.5">NET PAYABLE</th>
+                          <th className="p-3.5">BANK ACCOUNT / UPI</th>
+                          <th className="p-3.5">STATUS</th>
+                          <th className="p-3.5 text-right">ACTION</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {payoutsList?.data?.length === 0 ? (
+                          <tr><td colSpan="8" className="p-8 text-center text-slate-400">No payout requests in the ledger.</td></tr>
+                        ) : (
+                          payoutsList?.data?.map((pay) => {
+                            const gross = parseFloat(pay.amount || 0);
+                            const fee = pay.admin_fee ? parseFloat(pay.admin_fee) : Math.round(gross * 0.05 * 100) / 100;
+                            const net = pay.net_payable ? parseFloat(pay.net_payable) : (gross - fee);
+                            return (
+                              <tr key={pay.id} className="hover:bg-slate-50/60 transition-colors">
+                                <td className="p-3.5 font-bold text-[#ff5722]">#PAY-{pay.id}</td>
+                                <td className="p-3.5">
+                                  <span className="font-bold text-slate-900 block">{pay.user?.name || 'Partner'}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono">{pay.user?.referral_code ? `REF: ${pay.user?.referral_code} • ` : ''}{pay.user?.phone}</span>
+                                </td>
+                                <td className="p-3.5 font-black text-slate-900">₹{gross.toFixed(2)}</td>
+                                <td className="p-3.5 text-rose-600 font-semibold">-₹{fee.toFixed(2)}</td>
+                                <td className="p-3.5 font-black text-emerald-600">₹{net.toFixed(2)}</td>
+                                <td className="p-3.5 font-mono text-[11px] max-w-[200px] truncate" title={pay.account_details}>
+                                  {pay.account_details}
+                                </td>
+                                <td className="p-3.5">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    pay.status === 'approved'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : pay.status === 'pending'
+                                      ? 'bg-amber-50 text-amber-700'
+                                      : 'bg-rose-50 text-rose-700'
+                                  }`}>
+                                    {pay.status}
+                                  </span>
+                                </td>
+                                <td className="p-3.5 text-right space-x-1.5">
+                                  {pay.status === 'pending' ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const ref = prompt('Enter Bank UTR / Transaction Reference ID:', 'UTR' + Date.now().toString().slice(-8));
+                                          if (ref !== null) {
+                                            await processAdminPayout(pay.id, { action: 'approve', transaction_ref: ref });
+                                            fetchWalletData();
+                                            toast.success('Payout marked as Approved & Settled.');
+                                          }
+                                        }}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg font-bold text-[11px] shadow-xs cursor-pointer"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const note = prompt('Reason for rejection (Funds will be refunded automatically to partner wallet):', 'Account details mismatched');
+                                          if (note !== null) {
+                                            await processAdminPayout(pay.id, { action: 'reject', admin_note: note });
+                                            fetchWalletData();
+                                            toast.success('Payout rejected and ₹' + pay.amount + ' refunded to partner wallet.');
+                                          }
+                                        }}
+                                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1 rounded-lg font-bold text-[11px] cursor-pointer"
+                                      >
+                                        Reject &amp; Refund
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      {pay.transaction_ref || pay.admin_note || 'Completed'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: SYSTEM WALLET LEDGER & AUDIT TRAIL */}
+              {walletTab === 'transactions' && (
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="font-black text-slate-900 text-base">System-wide Wallet Audit Ledger</h3>
+                      <p className="text-xs text-slate-500">Chronological history of all balance additions, deductions, commission payouts and adjustments.</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500 border-b border-slate-100">
+                        <tr>
+                          <th className="p-3.5">TRANSACTION ID / DATE</th>
+                          <th className="p-3.5">USER</th>
+                          <th className="p-3.5">TYPE</th>
+                          <th className="p-3.5 text-right">AMOUNT</th>
+                          <th className="p-3.5 text-right">BALANCE FLOW</th>
+                          <th className="p-3.5">DESCRIPTION / REASON</th>
+                          <th className="p-3.5">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {walletTransactionsList?.data?.length === 0 ? (
+                          <tr><td colSpan="7" className="p-8 text-center text-slate-400">No transaction logs available.</td></tr>
+                        ) : (
+                          walletTransactionsList?.data?.map((t) => {
+                            const isCredit = t.type === 'credit' || t.type === 'commission';
+                            const amt = parseFloat(t.amount || 0);
+                            return (
+                              <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
+                                <td className="p-3.5">
+                                  <span className="font-mono font-bold text-slate-800 block">#TXN-{t.id}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {t.created_at ? new Date(t.created_at).toLocaleString('en-IN') : 'N/A'}
+                                  </span>
+                                </td>
+                                <td className="p-3.5">
+                                  <span className="font-bold text-slate-900 block">{t.user?.name || `User #${t.user_id}`}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono">{t.user?.phone || ''} {t.user?.referral_code ? `• ${t.user?.referral_code}` : ''}</span>
+                                </td>
+                                <td className="p-3.5">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    isCredit ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                                  }`}>
+                                    {t.type || 'adjustment'}
+                                  </span>
+                                </td>
+                                <td className={`p-3.5 text-right font-black text-xs ${isCredit ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {isCredit ? '+' : '-'}₹{amt.toFixed(2)}
+                                </td>
+                                <td className="p-3.5 text-right font-mono text-[11px]">
+                                  {t.balance_after !== undefined ? (
+                                    <span className="font-bold text-slate-800">
+                                      ₹{parseFloat(t.balance_after || 0).toFixed(2)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">-</span>
+                                  )}
+                                </td>
+                                <td className="p-3.5 max-w-xs truncate" title={t.description || t.reason}>
+                                  <span className="text-slate-700 block font-medium">{t.description || t.reason || 'Admin Adjustment'}</span>
+                                  {t.admin_notes && (
+                                    <span className="text-[10px] text-slate-400 block italic">Note: {t.admin_notes}</span>
+                                  )}
+                                </td>
+                                <td className="p-3.5">
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
+                                    {t.status || 'Completed'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -8408,6 +8980,292 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: SUPER ADMIN DIRECT WALLET BALANCE CONTROL         */}
+      {/* ======================================================== */}
+      {showAdjustWalletModal && adjustWalletUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-150 border border-slate-100 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-gradient-to-tr from-[#ff5722] to-amber-500 text-white rounded-xl shadow-xs">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Direct Wallet Balance Control</h3>
+                  <p className="text-xs text-slate-500">Super Admin Manual Balance Adjustment</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdjustWalletModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target User Info Card */}
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                    {adjustWalletUser.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900">{adjustWalletUser.name}</h4>
+                    <span className="text-xs text-slate-500 font-mono">
+                      📞 {adjustWalletUser.phone || 'N/A'} {adjustWalletUser.referral_code ? `• REF: ${adjustWalletUser.referral_code}` : ''}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Current Balance</span>
+                  <span className="text-lg font-black text-slate-900">
+                    ₹{parseFloat(adjustWalletUser.wallet_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 pt-2 border-t border-slate-200/60 text-[11px]">
+                <span className="px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700">
+                  {adjustWalletUser.role || 'Customer'}
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-600 truncate">{adjustWalletUser.email || 'No email registered'}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleExecuteWalletAdjustment} className="space-y-4 text-xs">
+              {/* Action Mode Switcher */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1.5">Select Action Type *</label>
+                <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-2xl font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setAdjustWalletForm(prev => ({
+                      ...prev,
+                      action: 'credit',
+                      reason: prev.reason || 'Promotional Credit Bonus'
+                    }))}
+                    className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                      adjustWalletForm.action === 'credit'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Credit (Add)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAdjustWalletForm(prev => ({
+                      ...prev,
+                      action: 'debit',
+                      reason: prev.reason || 'Manual Wallet Deduction'
+                    }))}
+                    className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                      adjustWalletForm.action === 'debit'
+                        ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                    <span>Debit (Deduct)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAdjustWalletForm(prev => ({
+                      ...prev,
+                      action: 'set',
+                      reason: prev.reason || 'Balance Calibration'
+                    }))}
+                    className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+                      adjustWalletForm.action === 'set'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Set Exact</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-slate-700">
+                    {adjustWalletForm.action === 'set' ? 'New Exact Balance Amount (₹) *' : 'Adjustment Amount (₹) *'}
+                  </label>
+                  <div className="flex items-center space-x-1">
+                    {[100, 500, 1000, 5000].map((quickAmt) => (
+                      <button
+                        key={quickAmt}
+                        type="button"
+                        onClick={() => setAdjustWalletForm(prev => ({ ...prev, amount: quickAmt.toString() }))}
+                        className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[10px] transition-colors"
+                      >
+                        +₹{quickAmt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">₹</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={adjustWalletForm.action === 'set' ? '0' : '0.01'}
+                    required
+                    value={adjustWalletForm.amount}
+                    onChange={(e) => setAdjustWalletForm({ ...adjustWalletForm, amount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#ff5722]/30 focus:border-[#ff5722] transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Preset Reason Selector */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Reason / Description *</label>
+                <select
+                  value={adjustWalletForm.reason}
+                  onChange={(e) => setAdjustWalletForm({ ...adjustWalletForm, reason: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#ff5722]/30"
+                >
+                  {adjustWalletForm.action === 'credit' && (
+                    <>
+                      <option value="Promotional Credit Bonus">Promotional Credit Bonus</option>
+                      <option value="Referral Commission Compensation">Referral Commission Compensation</option>
+                      <option value="Order Refund / Return Credit">Order Refund / Return Credit</option>
+                      <option value="Incentive / Performance Reward">Incentive / Performance Reward</option>
+                      <option value="Cashback Credit">Cashback Credit</option>
+                      <option value="Manual Correction">Manual Correction</option>
+                    </>
+                  )}
+                  {adjustWalletForm.action === 'debit' && (
+                    <>
+                      <option value="Manual Wallet Deduction">Manual Wallet Deduction</option>
+                      <option value="Chargeback / Penalty Recovery">Chargeback / Penalty Recovery</option>
+                      <option value="Payout Processing Settlement">Payout Processing Settlement</option>
+                      <option value="Disputed Commission Reversal">Disputed Commission Reversal</option>
+                      <option value="Accounting Correction">Accounting Correction</option>
+                    </>
+                  )}
+                  {adjustWalletForm.action === 'set' && (
+                    <>
+                      <option value="Balance Calibration">Balance Calibration</option>
+                      <option value="Account Reset & Verification">Account Reset &amp; Verification</option>
+                      <option value="Audit Settlement">Audit Settlement</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Admin Notes */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Super Admin Internal Notes (Optional)</label>
+                <textarea
+                  rows="2"
+                  value={adjustWalletForm.admin_notes}
+                  onChange={(e) => setAdjustWalletForm({ ...adjustWalletForm, admin_notes: e.target.value })}
+                  placeholder="Reference UTR, ticket ID, or reason for audit ledger..."
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#ff5722]/30"
+                />
+              </div>
+
+              {/* Live Calculation Simulation Box */}
+              {adjustWalletForm.amount && !isNaN(parseFloat(adjustWalletForm.amount)) && (
+                <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Live Calculation Preview
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300">Current Balance:</span>
+                    <span className="font-bold font-mono">
+                      ₹{parseFloat(adjustWalletUser.wallet_balance || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300">
+                      {adjustWalletForm.action === 'credit' ? 'Amount To Add:' : adjustWalletForm.action === 'debit' ? 'Amount To Deduct:' : 'New Set Target:'}
+                    </span>
+                    <span className={`font-bold font-mono ${
+                      adjustWalletForm.action === 'credit' ? 'text-emerald-400' : adjustWalletForm.action === 'debit' ? 'text-rose-400' : 'text-blue-400'
+                    }`}>
+                      {adjustWalletForm.action === 'credit' ? '+' : adjustWalletForm.action === 'debit' ? '-' : '='}₹{parseFloat(adjustWalletForm.amount).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                    <span className="font-bold text-slate-300">Projected New Balance:</span>
+                    <span className="font-black text-sm text-amber-400 font-mono">
+                      ₹{(() => {
+                        const cur = parseFloat(adjustWalletUser.wallet_balance || 0);
+                        const delta = parseFloat(adjustWalletForm.amount || 0);
+                        if (adjustWalletForm.action === 'credit') return (cur + delta).toFixed(2);
+                        if (adjustWalletForm.action === 'debit') return Math.max(0, cur - delta).toFixed(2);
+                        return delta.toFixed(2);
+                      })()}
+                    </span>
+                  </div>
+
+                  {adjustWalletForm.action === 'debit' && parseFloat(adjustWalletForm.amount) > parseFloat(adjustWalletUser.wallet_balance || 0) && (
+                    <div className="bg-rose-500/20 border border-rose-500/50 rounded-xl p-2.5 text-rose-300 text-[11px] font-bold flex items-center space-x-1.5">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>Warning: Deduct amount exceeds current balance. User will be restricted.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdjustWalletModal(false)}
+                  disabled={isAdjustingWallet}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAdjustingWallet || !adjustWalletForm.amount || parseFloat(adjustWalletForm.amount) <= 0 || (adjustWalletForm.action === 'debit' && parseFloat(adjustWalletForm.amount) > parseFloat(adjustWalletUser.wallet_balance || 0))}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                    adjustWalletForm.action === 'credit'
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
+                      : adjustWalletForm.action === 'debit'
+                      ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
+                      : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/30'
+                  }`}
+                >
+                  {isAdjustingWallet ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Updating Balance...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>
+                        {adjustWalletForm.action === 'credit'
+                          ? `Credit ₹${parseFloat(adjustWalletForm.amount || 0).toFixed(2)}`
+                          : adjustWalletForm.action === 'debit'
+                          ? `Debit ₹${parseFloat(adjustWalletForm.amount || 0).toFixed(2)}`
+                          : `Set Balance to ₹${parseFloat(adjustWalletForm.amount || 0).toFixed(2)}`}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
