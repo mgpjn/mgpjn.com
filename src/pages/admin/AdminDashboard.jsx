@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   LayoutDashboard, Users, UserCheck, UserPlus, Store, Users2,
   Calculator, ArrowLeftRight, FileSpreadsheet, Package, FolderTree,
@@ -250,6 +251,10 @@ export default function AdminDashboard() {
 
   // Orders & Payouts
   const [ordersList, setOrdersList] = useState({ data: [] });
+  const [orderFilterStatus, setOrderFilterStatus] = useState('all');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderPage, setOrderPage] = useState(1);
+  const [isOrderLoading, setIsOrderLoading] = useState(false);
   const [payoutsList, setPayoutsList] = useState({ data: [] });
   const [selectedInvoiceOrderId, setSelectedInvoiceOrderId] = useState(null);
   const [dispatchTargetOrder, setDispatchTargetOrder] = useState(null);
@@ -539,8 +544,7 @@ export default function AdminDashboard() {
         const res = await getAdminCategories();
         if (res.data.success) setCategoriesList(res.data.categories);
       } else if (currentSection === 'orders') {
-        const res = await getAdminOrders();
-        if (res.data.success) setOrdersList(res.data.orders);
+        await fetchOrdersData(orderPage);
       } else if (currentSection === 'payments') {
         await fetchPaymentsData(paymentPage);
       } else if (currentSection === 'wallet') {
@@ -567,6 +571,33 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  // Fetch Orders with Filters and Pagination
+  const fetchOrdersData = useCallback(async (page = 1, overrideFilters = {}) => {
+    setIsOrderLoading(true);
+    try {
+      const params = {
+        page,
+        status: overrideFilters.status !== undefined ? overrideFilters.status : orderFilterStatus,
+        search: overrideFilters.search !== undefined ? overrideFilters.search : orderSearchQuery,
+      };
+      const res = await getAdminOrders(params);
+      if (res?.data?.success) {
+        setOrdersList(res.data.orders || { data: [] });
+      }
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    } finally {
+      setIsOrderLoading(false);
+    }
+  }, [orderFilterStatus, orderSearchQuery]);
+
+  // Trigger orders refetch on filter change when active
+  useEffect(() => {
+    if (currentSection === 'orders') {
+      fetchOrdersData(orderPage);
+    }
+  }, [currentSection, orderPage, orderFilterStatus, fetchOrdersData]);
 
   // Fetch Payments & Transactions Ledger with Filters
   const fetchPaymentsData = useCallback(async (page = 1, overrideFilters = {}) => {
@@ -611,10 +642,10 @@ export default function AdminDashboard() {
         setReconcileModalTarget(null);
         setReconcileForm({ transaction_id: '', payment_method: 'online', admin_note: '', trigger_mlm: true });
         fetchPaymentsData(paymentPage);
-        alert(res.data.message || 'Payment successfully reconciled and marked as PAID!');
+        toast.success(res.data.message || 'Payment successfully reconciled and marked as PAID!');
       }
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Failed to reconcile payment.');
+      toast.error(err.response?.data?.message || err.message || 'Failed to reconcile payment.');
     } finally {
       setReconcilingLoading(false);
     }
@@ -656,10 +687,10 @@ export default function AdminDashboard() {
         setRefundModalTarget(null);
         setRefundForm({ refund_amount: '', refund_mode: 'wallet', reason: '' });
         fetchPaymentsData(paymentPage);
-        alert(res.data.message || 'Refund successfully recorded!');
+        toast.success(res.data.message || 'Refund successfully recorded!');
       }
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Failed to process refund.');
+      toast.error(err.response?.data?.message || err.message || 'Failed to process refund.');
     } finally {
       setRefundingLoading(false);
     }
@@ -733,11 +764,11 @@ export default function AdminDashboard() {
     try {
       const res = await resetAdminUserPassword(passwordTargetUser.id, { password: newPasswordInput });
       if (res.data.success) {
-        alert(`Success: ${res.data.message}`);
+        toast.success(res.data.message || 'Operation successful');
         setShowPasswordModal(false);
       }
     } catch (err) {
-      alert(`Failed to reset password: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to reset password.');
     }
   };
 
@@ -746,11 +777,11 @@ export default function AdminDashboard() {
     try {
       const res = await toggleAdminUserStatus(userId, { status: targetStatus });
       if (res.data.success) {
-        alert(res.data.message);
+        toast.success(res.data.message || 'Status updated successfully');
         fetchData();
       }
     } catch (err) {
-      alert(`Error updating status: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Error updating status');
     }
   };
 
@@ -772,12 +803,12 @@ export default function AdminDashboard() {
     try {
       const res = await transferAdminUser(transferTargetUser.id, transferUserForm);
       if (res.data.success) {
-        alert(`Success: ${res.data.message}`);
+        toast.success(res.data.message || 'User transferred successfully');
         setShowTransferUserModal(false);
         fetchData();
       }
     } catch (err) {
-      alert(`Transfer failed: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Transfer failed');
     }
   };
 
@@ -787,11 +818,11 @@ export default function AdminDashboard() {
     try {
       const res = await approveAdminUser(userId);
       if (res.data.success) {
-        alert(`Success: ${res.data.message}`);
+        toast.success(res.data.message || 'User registration approved');
         fetchData();
       }
     } catch (err) {
-      alert(`Approval error: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Approval error');
     }
   };
 
@@ -801,11 +832,11 @@ export default function AdminDashboard() {
     try {
       const res = await rejectAdminUser(userId, { reason: 'Rejected by Super Admin after review' });
       if (res.data.success) {
-        alert(`Success: ${res.data.message}`);
+        toast.success(res.data.message || 'User registration rejected');
         fetchData();
       }
     } catch (err) {
-      alert(`Rejection error: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Rejection error');
     }
   };
 
@@ -827,7 +858,7 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('Error checking downline summary:', err);
-      alert(err.response?.data?.message || 'Failed to check downline records.');
+      toast.error(err.response?.data?.message || 'Failed to check downline records.');
     } finally {
       setLoadingDeleteSummary(false);
     }
@@ -838,7 +869,7 @@ export default function AdminDashboard() {
     if (!deleteTargetUser) return;
     const hasDownlines = (deleteDownlineSummary?.total_downline_count || 0) > 0;
     if (hasDownlines && !selectedReassignParentId) {
-      alert('Please select a replacement Super Distributor / Parent to safely transfer downline members before deletion.');
+      toast.error('Please select a replacement Super Distributor / Parent to safely transfer downline members before deletion.');
       return;
     }
 
@@ -855,13 +886,13 @@ export default function AdminDashboard() {
       });
 
       if (res.data.success) {
-        alert(res.data.message || 'User deleted successfully.');
+        toast.success(res.data.message || 'User deleted successfully.');
         setShowDeleteUserModal(false);
         setDeleteTargetUser(null);
         fetchData();
       }
     } catch (err) {
-      alert(`Delete failed: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Delete failed');
     } finally {
       setDeletingUser(false);
     }
@@ -893,13 +924,13 @@ export default function AdminDashboard() {
         sub_retailer_id: selectedSubRetailerId,
       });
       if (res.data?.success) {
-        alert(res.data.message || 'Customer successfully assigned to Sub-Retailer!');
+        toast.success(res.data.message || 'Customer successfully assigned to Sub-Retailer!');
         setShowAssignCustomerModal(false);
         setAssignTargetCustomer(null);
         fetchData();
       }
     } catch (err) {
-      alert(`Assignment failed: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Assignment failed');
     } finally {
       setAssigningLoading(false);
     }
@@ -955,11 +986,11 @@ export default function AdminDashboard() {
           setUserForm(prev => ({ ...prev, gst_doc: res.data.url }));
         }
       } else {
-        alert('Failed to upload document. Please check file format (JPG, PNG, PDF).');
+        toast.error('Failed to upload document. Please check file format (JPG, PNG, PDF).');
       }
     } catch (err) {
       console.error('KYC Upload error:', err);
-      alert(err.response?.data?.message || 'Error uploading document.');
+      toast.error(err.response?.data?.message || 'Error uploading document.');
     } finally {
       setUploadingDoc(prev => ({ ...prev, [docType]: false }));
     }
@@ -972,13 +1003,13 @@ export default function AdminDashboard() {
     setProcessingKycAction(true);
     try {
       const res = await approveAdminUser(targetUser.id);
-      alert(res.data?.message || `Account for ${targetUser.name} has been verified and approved!`);
+      toast.success(res.data?.message || `Account for ${targetUser.name} has been verified and approved!`);
       setShowKycReviewModal(false);
       setSelectedKycUser(null);
       fetchData();
     } catch (err) {
       console.error('Approve user error:', err);
-      alert(err.response?.data?.message || 'Failed to approve account.');
+      toast.error(err.response?.data?.message || 'Failed to approve account.');
     } finally {
       setProcessingKycAction(false);
     }
@@ -992,13 +1023,13 @@ export default function AdminDashboard() {
     setProcessingKycAction(true);
     try {
       const res = await rejectAdminUser(targetUser.id, { reason });
-      alert(res.data?.message || `Registration for ${targetUser.name} has been rejected.`);
+      toast.success(res.data?.message || `Registration for ${targetUser.name} has been rejected.`);
       setShowKycReviewModal(false);
       setSelectedKycUser(null);
       fetchData();
     } catch (err) {
       console.error('Reject user error:', err);
-      alert(err.response?.data?.message || 'Failed to reject account.');
+      toast.error(err.response?.data?.message || 'Failed to reject account.');
     } finally {
       setProcessingKycAction(false);
     }
@@ -1056,18 +1087,18 @@ export default function AdminDashboard() {
     try {
       const res = await saveAdminProductStatePrices(statePriceProduct.id, { prices: statePriceRows });
       if (res.data.success) {
-        alert(`State wholesale rates saved successfully for ${statePriceProduct.name}!`);
+        toast.success(`State wholesale rates saved successfully for ${statePriceProduct.name}!`);
         setShowStatePriceModal(false);
       }
     } catch (err) {
-      alert(`Error saving state prices: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Error saving state prices');
     }
   };
 
   // Super Admin: Assign Products & Set Product Price Handlers (Screenshots Feature)
   const handleOpenAssignProductsModal = async (targetUser) => {
     if (!isSuperAdmin) {
-      alert('Access Denied: Product assigning feature is strictly reserved for Super Admin only.');
+      toast.error('Access Denied: Product assigning feature is strictly reserved for Super Admin only.');
       return;
     }
     setAssignTargetUser(targetUser);
@@ -1084,7 +1115,7 @@ export default function AdminDashboard() {
         }
       }
     } catch (err) {
-      alert(`Error fetching assigned products: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Error fetching assigned products');
     } finally {
       setAssignProductsLoading(false);
     }
@@ -1101,7 +1132,7 @@ export default function AdminDashboard() {
         is_assigned: newStatus,
       });
     } catch (err) {
-      alert(`Failed to update assignment: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to update assignment');
       setAssignedProductsList((prev) =>
         prev.map((p) => (p.id === productId ? { ...p, is_assigned: !newStatus } : p))
       );
@@ -1120,9 +1151,9 @@ export default function AdminDashboard() {
         is_assigned: newStatus,
       });
       setSelectedAssignProductIds([]);
-      alert(newStatus ? `${targetIds.length} products assigned successfully!` : `${targetIds.length} products removed from distributor!`);
+      toast.success(newStatus ? `${targetIds.length} products assigned successfully!` : `${targetIds.length} products removed from distributor!`);
     } catch (err) {
-      alert(`Bulk update failed: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Bulk update failed');
     }
   };
 
@@ -1186,10 +1217,10 @@ export default function AdminDashboard() {
           prev.map((p) => (p.id === priceTargetProduct.id ? { ...p, ...payload, is_assigned: true } : p))
         );
         setShowSetPriceModal(false);
-        alert(res.data.message || 'Product prices, rates, and commissions saved successfully!');
+        toast.success(res.data.message || 'Product prices, rates, and commissions saved successfully!');
       }
     } catch (err) {
-      alert(`Failed to save price: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to save price');
     } finally {
       setSavingPrice(false);
     }
@@ -1252,7 +1283,7 @@ export default function AdminDashboard() {
       if (targetList.length === 0) targetList = rawList;
 
       if (targetList.length === 0) {
-        alert('No medicines available to edit for this distributor. Please assign products first.');
+        toast.error('No medicines available to edit for this distributor. Please assign products first.');
         return;
       }
 
@@ -1305,7 +1336,7 @@ export default function AdminDashboard() {
       }
 
       if (targetItems.length === 0) {
-        alert('No medicines available to edit. Please add or load medicines first.');
+        toast.error('No medicines available to edit. Please add or load medicines first.');
         return;
       }
 
@@ -1460,7 +1491,7 @@ export default function AdminDashboard() {
 
         const res = await bulkSaveAdminUserProductPrices(bulkPricingTargetDistributor.id, { products: payload });
         if (res.data.success) {
-          alert(res.data.message || `Assigned rates & commissions saved for ${bulkPricingTargetDistributor.name}!`);
+          toast.success(res.data.message || `Assigned rates & commissions saved for ${bulkPricingTargetDistributor.name}!`);
           setShowBulkPricingModal(false);
           // Refresh assigned products list in modal
           const updatedAssigned = await getAdminUserAssignedProducts(bulkPricingTargetDistributor.id);
@@ -1471,14 +1502,14 @@ export default function AdminDashboard() {
       } else {
         const res = await bulkUpdateAdminProductPricing({ products: bulkProductsList });
         if (res.data.success) {
-          alert(res.data.message || `Successfully updated ${bulkProductsList.length} medicines!`);
+          toast.success(res.data.message || `Successfully updated ${bulkProductsList.length} medicines!`);
           setShowBulkPricingModal(false);
           setSelectedProductIds([]);
           fetchProductsFromDb(productPage);
         }
       }
     } catch (err) {
-      alert(`Failed to save bulk prices: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Failed to save bulk prices');
     } finally {
       setSavingBulkPricing(false);
     }
@@ -1509,12 +1540,12 @@ export default function AdminDashboard() {
         admin_notes: poAdminNotes
       });
       if (res.data.success) {
-        alert(`Purchase Order #${selectedPO.po_number} APPROVED!\nGST Tax Invoice Generated.`);
+        toast.success(`Purchase Order #${selectedPO.po_number} APPROVED! GST Tax Invoice Generated.`);
         setShowPOModal(false);
         fetchData();
       }
     } catch (err) {
-      alert(`Error approving PO: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Error approving PO');
     }
   };
 
@@ -1524,12 +1555,12 @@ export default function AdminDashboard() {
     try {
       const res = await rejectPurchaseOrder(selectedPO.id, { admin_notes: poAdminNotes });
       if (res.data.success) {
-        alert(`Purchase Order #${selectedPO.po_number} marked as Rejected.`);
+        toast.success(`Purchase Order #${selectedPO.po_number} marked as Rejected.`);
         setShowPOModal(false);
         fetchData();
       }
     } catch (err) {
-      alert(`Error rejecting PO: ${err.response?.data?.message || err.message}`);
+      toast.error(err.response?.data?.message || err.message || 'Error rejecting PO');
     }
   };
 
@@ -1565,7 +1596,7 @@ export default function AdminDashboard() {
 
       // Password confirmation check
       if (payload.password && payload.confirm_password && payload.password !== payload.confirm_password) {
-        alert('Password and Confirm Password do not match. Please re-enter.');
+        toast.error('Password and Confirm Password do not match. Please re-enter.');
         return;
       }
 
@@ -1588,10 +1619,10 @@ export default function AdminDashboard() {
 
       if (editingUser) {
         await updateAdminHierarchyUser(editingUser.id, payload);
-        alert('User details updated successfully!');
+        toast.success('User details updated successfully!');
       } else {
         const res = await storeAdminHierarchyUser(payload);
-        alert(res.data?.message || 'New account created successfully!');
+        toast.success(res.data?.message || 'New account created successfully!');
       }
       setShowAddUserModal(false);
       setEditingUser(null);
@@ -1605,7 +1636,7 @@ export default function AdminDashboard() {
       } else {
         msg = err.response?.data?.message || err.message || 'Failed to save user. Please verify details.';
       }
-      alert(msg);
+      toast.error(msg);
     }
   };
 
@@ -1647,11 +1678,11 @@ export default function AdminDashboard() {
           }
         } else {
           if (newTab && !newTab.closed) newTab.close();
-          alert('Failed to log in to user account.');
+          toast.error('Failed to log in to user account.');
         }
       } catch (err) {
         if (newTab && !newTab.closed) newTab.close();
-        alert('Impersonation failed: ' + (err.response?.data?.message || err.message));
+        toast.error('Impersonation failed: ' + (err.response?.data?.message || err.message));
       }
     }
   };
@@ -1687,7 +1718,7 @@ export default function AdminDashboard() {
         });
       }
     } catch (err) {
-      alert(`Image upload failed: ${err.response?.data?.message || err.message}`);
+      toast.error(`Image upload failed: ${err.response?.data?.message || err.message}`);
     } finally {
       setUploadingProductImage(false);
       e.target.value = '';
@@ -1743,7 +1774,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       if (!categoryForm.name?.trim()) {
-        alert('Please enter category or subcategory name.');
+        toast.error('Please enter category or subcategory name.');
         return;
       }
 
@@ -1759,10 +1790,10 @@ export default function AdminDashboard() {
 
       if (editingCategory) {
         await updateAdminCategory(editingCategory.id, payload);
-        alert('Category / Subcategory updated successfully!');
+        toast.success('Category / Subcategory updated successfully!');
       } else {
         const res = await storeAdminCategory(payload);
-        alert(res.data?.message || 'Category / Subcategory created successfully!');
+        toast.success(res.data?.message || 'Category / Subcategory created successfully!');
       }
 
       setShowCategoryModal(false);
@@ -1777,7 +1808,7 @@ export default function AdminDashboard() {
       } else {
         msg = err.response?.data?.message || err.message || 'Failed to save category.';
       }
-      alert(msg);
+      toast.error(msg);
     }
   };
 
@@ -1785,11 +1816,11 @@ export default function AdminDashboard() {
     if (window.confirm(`Are you sure you want to delete "${catName}"? Any subcategories under it will also be deleted.`)) {
       try {
         await deleteAdminCategory(catId);
-        alert('Category deleted successfully.');
+        toast.success('Category deleted successfully.');
         fetchData();
       } catch (err) {
         console.error('Failed to delete category:', err);
-        alert(err.response?.data?.message || 'Failed to delete category.');
+        toast.error(err.response?.data?.message || 'Failed to delete category.');
       }
     }
   };
@@ -1818,9 +1849,9 @@ export default function AdminDashboard() {
       setShowProductModal(false);
       setEditingProduct(null);
       fetchData();
-      alert('Product saved successfully!');
+      toast.success('Product saved successfully!');
     } catch (err) {
-      alert('Failed to save product. Check required fields.');
+      toast.error('Failed to save product. Check required fields.');
     }
   };
 
@@ -1843,7 +1874,7 @@ export default function AdminDashboard() {
       });
     } catch (err) {
       console.error('Failed to toggle product section:', err);
-      alert('Failed to update product section.');
+      toast.error('Failed to update product section.');
     }
   };
 
@@ -1890,14 +1921,14 @@ export default function AdminDashboard() {
       try {
         const res = await deleteAdminProduct(productId);
         if (res?.data?.success) {
-          alert(`"${productName || 'Medicine'}" successfully delete ho gaya!`);
+          toast.success(`"${productName || 'Medicine'}" deleted successfully!`);
           fetchData();
         } else {
-          alert(res?.data?.message || 'Product delete nahi ho paya.');
+          toast.error(res?.data?.message || 'Product deletion failed.');
         }
       } catch (err) {
         console.error('Delete product error:', err);
-        alert('Failed to delete product. Please check console for details.');
+        toast.error('Failed to delete product.');
       }
     }
   };
@@ -1919,9 +1950,9 @@ export default function AdminDashboard() {
         notes: '',
       });
       fetchData();
-      alert('Transfer processed successfully.');
+      toast.success('Transfer processed successfully.');
     } catch (err) {
-      alert('Transfer failed. Check inputs.');
+      toast.error('Transfer failed. Check inputs.');
     }
   };
 
@@ -3730,7 +3761,7 @@ export default function AdminDashboard() {
                     setSavingMargins(true);
                     await updateAdminMargins({ margins });
                     setSavingMargins(false);
-                    alert('Margins updated successfully.');
+                    toast.success('Margins updated successfully.');
                   }}
                   disabled={savingMargins}
                   className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1.5"
@@ -4147,7 +4178,7 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-500">Live order fulfillment with Pincode Sub-Retailer Auto-Routing and GST Invoicing.</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <span className="text-xs font-bold text-slate-400">Total: {ordersList?.data?.length || 0} Orders</span>
+                  <span className="text-xs font-bold text-slate-400">Total: {ordersList?.total ?? ordersList?.data?.length ?? 0} Orders</span>
                   <button
                     type="button"
                     onClick={() => exportSalesReport(ordersList?.data || [], { userName: user?.name })}
@@ -4156,6 +4187,63 @@ export default function AdminDashboard() {
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Export Sales (Excel)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Order Status Tabs & Search Filter */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { key: 'all', label: 'All Orders' },
+                    { key: 'pending', label: 'Pending' },
+                    { key: 'processing', label: 'Processing' },
+                    { key: 'dispatched', label: 'Dispatched' },
+                    { key: 'delivered', label: 'Delivered' },
+                    { key: 'cancelled', label: 'Cancelled' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        setOrderFilterStatus(tab.key);
+                        setOrderPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        orderFilterStatus === tab.key
+                          ? 'bg-[#004e89] text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search order #, customer, phone..."
+                      value={orderSearchQuery}
+                      onChange={(e) => setOrderSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setOrderPage(1);
+                          fetchOrdersData(1);
+                        }
+                      }}
+                      className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#004e89] w-64"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fetchOrdersData(orderPage)}
+                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
+                    title="Refresh Orders"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isOrderLoading ? 'animate-spin text-brand-blue-700' : ''}`} />
                   </button>
                 </div>
               </div>
@@ -4173,126 +4261,170 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {ordersList?.data?.map((ord) => (
-                      <tr key={ord.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 font-bold text-brand-blue-800">
-                          {ord.order_number}
-                          {ord.invoice_number && (
-                            <span className="text-[10px] text-slate-400 font-mono block">{ord.invoice_number}</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <span className="font-bold text-slate-900 block">{ord.customer_name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{ord.phone} • {ord.city} ({ord.pincode})</span>
-                        </td>
-                        <td className="p-3">
-                          {ord.assigned_sub_retailer ? (
-                            <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px] inline-block">
-                              📍 {ord.assigned_sub_retailer.name} ({ord.assigned_sub_retailer.pincode})
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-[10px] italic">Central Warehouse</span>
-                          )}
-                        </td>
-                        <td className="p-3 font-black text-slate-900">
-                          ₹{Number(ord.total_amount).toFixed(2)}
-                          <span className="text-[10px] text-slate-400 block uppercase font-normal">{ord.payment_method} ({ord.payment_status})</span>
-                        </td>
-                        <td className="p-3">
-                          {canDispatchOrder ? (
-                            <div className="space-y-1">
-                              <select
-                                value={ord.order_status}
-                                onChange={async (e) => {
-                                  const newStatus = e.target.value;
-                                  if (newStatus === 'dispatched') {
-                                    setDispatchTargetOrder(ord);
-                                    setShowDispatchModal(true);
-                                  } else {
-                                    await updateAdminOrderStatus(ord.id, { order_status: newStatus });
-                                    fetchData();
-                                  }
-                                }}
-                                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 outline-none cursor-pointer"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="processing">Processing</option>
-                                <option value="dispatched">Dispatched</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                              {ord.order_status === 'dispatched' && ord.tracking_number && (
-                                <span className="text-[10px] text-emerald-700 font-mono font-bold block">
-                                  {ord.courier_name ? `${ord.courier_name}: ` : ''}{ord.tracking_number}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-0.5">
-                              <span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase inline-block ${
-                                ord.order_status === 'delivered' ? 'bg-emerald-50 text-emerald-700' :
-                                ord.order_status === 'dispatched' ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-700'
-                              }`}>
-                                {ord.order_status}
-                              </span>
-                              {ord.order_status === 'dispatched' && ord.tracking_number && (
-                                <span className="text-[10px] text-slate-500 font-mono block">
-                                  {ord.courier_name ? `${ord.courier_name}: ` : ''}{ord.tracking_number}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
-                            {/* GST Bill */}
-                            <button
-                              onClick={() => setSelectedInvoiceOrderId(ord.id)}
-                              className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-brand-orange-200"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                              <span>GST Bill</span>
-                            </button>
-
-                            {/* Track Order Button (Visible to everyone when dispatched or tracking number exists) */}
-                            {(ord.order_status === 'dispatched' || ord.tracking_number) && (
-                              <button
-                                onClick={() => {
-                                  setTrackingTargetOrder(ord);
-                                  setShowTrackingModal(true);
-                                }}
-                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-blue-200"
-                                title="Track Shipment Details"
-                              >
-                                <Truck className="w-3.5 h-3.5" />
-                                <span>Track</span>
-                              </button>
-                            )}
-
-                            {/* Dispatch / Edit Tracking Button (For Retailer and above roles) */}
-                            {canDispatchOrder && (
-                              <button
-                                onClick={() => {
-                                  setDispatchTargetOrder(ord);
-                                  setShowDispatchModal(true);
-                                }}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border ${
-                                  ord.order_status === 'dispatched'
-                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
-                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                                }`}
-                              >
-                                <Truck className="w-3.5 h-3.5" />
-                                <span>{ord.order_status === 'dispatched' ? 'Edit Tracking' : 'Dispatch'}</span>
-                              </button>
-                            )}
-                          </div>
+                    {ordersList?.data?.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="p-8 text-center text-slate-400">
+                          No orders found matching the filter criteria.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      ordersList?.data?.map((ord) => (
+                        <tr key={ord.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-bold text-brand-blue-800">
+                            {ord.order_number}
+                            {ord.invoice_number && (
+                              <span className="text-[10px] text-slate-400 font-mono block">{ord.invoice_number}</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <span className="font-bold text-slate-900 block">{ord.customer_name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">{ord.phone} • {ord.city} ({ord.pincode})</span>
+                          </td>
+                          <td className="p-3">
+                            {ord.assigned_sub_retailer ? (
+                              <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px] inline-block">
+                                📍 {ord.assigned_sub_retailer.name} ({ord.assigned_sub_retailer.pincode})
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[10px] italic">Central Warehouse</span>
+                            )}
+                          </td>
+                          <td className="p-3 font-black text-slate-900">
+                            ₹{Number(ord.total_amount).toFixed(2)}
+                            <span className="text-[10px] text-slate-400 block uppercase font-normal">{ord.payment_method} ({ord.payment_status})</span>
+                          </td>
+                          <td className="p-3">
+                            {canDispatchOrder ? (
+                              <div className="space-y-1">
+                                <select
+                                  value={ord.order_status}
+                                  onChange={async (e) => {
+                                    const newStatus = e.target.value;
+                                    if (newStatus === 'dispatched') {
+                                      setDispatchTargetOrder(ord);
+                                      setShowDispatchModal(true);
+                                    } else {
+                                      await updateAdminOrderStatus(ord.id, { order_status: newStatus });
+                                      toast.success(`Order #${ord.order_number} status updated to ${newStatus}`);
+                                      fetchOrdersData(orderPage);
+                                    }
+                                  }}
+                                  className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:bg-white focus:border-emerald-600 outline-none cursor-pointer"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="processing">Processing</option>
+                                  <option value="dispatched">Dispatched</option>
+                                  <option value="delivered">Delivered</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                                {ord.order_status === 'dispatched' && ord.tracking_number && (
+                                  <span className="text-[10px] text-emerald-700 font-mono font-bold block">
+                                    {ord.courier_name ? `${ord.courier_name}: ` : ''}{ord.tracking_number}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5">
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase inline-block ${
+                                  ord.order_status === 'delivered' ? 'bg-emerald-50 text-emerald-700' :
+                                  ord.order_status === 'dispatched' ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {ord.order_status}
+                                </span>
+                                {ord.order_status === 'dispatched' && ord.tracking_number && (
+                                  <span className="text-[10px] text-slate-500 font-mono block">
+                                    {ord.courier_name ? `${ord.courier_name}: ` : ''}{ord.tracking_number}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
+                              {/* GST Bill */}
+                              <button
+                                onClick={() => setSelectedInvoiceOrderId(ord.id)}
+                                className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-brand-orange-200"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>GST Bill</span>
+                              </button>
+
+                              {/* Track Order Button */}
+                              {(ord.order_status === 'dispatched' || ord.tracking_number) && (
+                                <button
+                                  onClick={() => {
+                                    setTrackingTargetOrder(ord);
+                                    setShowTrackingModal(true);
+                                  }}
+                                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-blue-200"
+                                  title="Track Shipment Details"
+                                >
+                                  <Truck className="w-3.5 h-3.5" />
+                                  <span>Track</span>
+                                </button>
+                              )}
+
+                              {/* Dispatch / Edit Tracking Button */}
+                              {canDispatchOrder && (
+                                <button
+                                  onClick={() => {
+                                    setDispatchTargetOrder(ord);
+                                    setShowDispatchModal(true);
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border ${
+                                    ord.order_status === 'dispatched'
+                                      ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}
+                                >
+                                  <Truck className="w-3.5 h-3.5" />
+                                  <span>{ord.order_status === 'dispatched' ? 'Edit Tracking' : 'Dispatch'}</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Orders Pagination */}
+              {ordersList?.last_page > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                  <span className="text-slate-500 font-medium">
+                    Showing Page <strong>{ordersList.current_page}</strong> of <strong>{ordersList.last_page}</strong> ({ordersList.total} total orders)
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      disabled={ordersList.current_page <= 1}
+                      onClick={() => {
+                        const prev = Math.max(1, orderPage - 1);
+                        setOrderPage(prev);
+                        fetchOrdersData(prev);
+                      }}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 font-bold rounded-xl transition-all cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      disabled={ordersList.current_page >= ordersList.last_page}
+                      onClick={() => {
+                        const next = orderPage + 1;
+                        setOrderPage(next);
+                        fetchOrdersData(next);
+                      }}
+                      className="px-3 py-1.5 bg-brand-blue-800 hover:bg-brand-blue-900 disabled:opacity-40 text-white font-bold rounded-xl transition-all cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -5131,7 +5263,7 @@ export default function AdminDashboard() {
                                         if (ref !== null) {
                                           await processAdminPayout(pay.id, { action: 'approve', transaction_ref: ref });
                                           fetchData();
-                                          alert('Payout marked as Approved & Settled.');
+                                          toast.success('Payout marked as Approved & Settled.');
                                         }
                                       }}
                                       className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg font-bold text-[11px] shadow-xs"
@@ -5144,7 +5276,7 @@ export default function AdminDashboard() {
                                         if (note !== null) {
                                           await processAdminPayout(pay.id, { action: 'reject', admin_note: note });
                                           fetchData();
-                                          alert('Payout rejected and ₹' + pay.amount + ' refunded to partner wallet.');
+                                          toast.success('Payout rejected and ₹' + pay.amount + ' refunded to partner wallet.');
                                         }
                                       }}
                                       className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1 rounded-lg font-bold text-[11px]"
@@ -5191,25 +5323,154 @@ export default function AdminDashboard() {
 
           {currentSection === 'reports' && (
             <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <h3 className="font-black text-slate-900 text-lg">Business &amp; GST Reports</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-50 p-5 rounded-2xl border">
-                  <h4 className="font-bold text-xs text-slate-800 uppercase mb-3">Daily Paid Sales</h4>
-                  {reportsData?.daily_sales?.map((d, i) => (
-                    <div key={i} className="flex justify-between text-xs py-1 border-b">
-                      <span>{d.date}</span>
-                      <strong>₹{parseFloat(d.total).toFixed(2)} ({d.order_count} orders)</strong>
-                    </div>
-                  ))}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b">
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg">Business Analytics &amp; Reports</h3>
+                  <p className="text-xs text-slate-500">Live operational ledger metrics, category revenue, top medicines, and state-wise sales distribution.</p>
                 </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border">
-                  <h4 className="font-bold text-xs text-slate-800 uppercase mb-3">Category Revenue</h4>
-                  {reportsData?.category_sales?.map((c, i) => (
-                    <div key={i} className="flex justify-between text-xs py-1 border-b">
-                      <span>{c.category_name}</span>
-                      <strong className="text-emerald-700">₹{parseFloat(c.total_revenue).toFixed(2)}</strong>
-                    </div>
-                  ))}
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Reports</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {/* 1. Daily Paid Sales */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 uppercase flex items-center justify-between">
+                    <span>Daily Paid Sales (Recent)</span>
+                    <Calendar className="w-3.5 h-3.5 text-brand-blue-700" />
+                  </h4>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {reportsData?.daily_sales?.length === 0 ? (
+                      <p className="text-slate-400 text-xs text-center py-4">No sales records available.</p>
+                    ) : (
+                      reportsData?.daily_sales?.map((d, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-200/60">
+                          <span className="font-medium text-slate-600">{d.date}</span>
+                          <span className="font-bold text-slate-900">
+                            ₹{parseFloat(d.total).toFixed(2)} <span className="text-[10px] text-slate-400 font-normal">({d.order_count} orders)</span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Category Revenue */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 uppercase flex items-center justify-between">
+                    <span>Category Revenue</span>
+                    <FolderTree className="w-3.5 h-3.5 text-emerald-600" />
+                  </h4>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {reportsData?.category_sales?.length === 0 ? (
+                      <p className="text-slate-400 text-xs text-center py-4">No category data available.</p>
+                    ) : (
+                      reportsData?.category_sales?.map((c, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-200/60">
+                          <span className="font-medium text-slate-600 truncate mr-2">{c.category_name}</span>
+                          <span className="font-bold text-emerald-700 shrink-0">
+                            ₹{parseFloat(c.total_revenue).toFixed(2)} <span className="text-[10px] text-slate-400 font-normal">({c.total_units} units)</span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Monthly Revenue */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 uppercase flex items-center justify-between">
+                    <span>Monthly Revenue (Last 12 Mo)</span>
+                    <DollarSign className="w-3.5 h-3.5 text-blue-600" />
+                  </h4>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {reportsData?.monthly_revenue?.length === 0 ? (
+                      <p className="text-slate-400 text-xs text-center py-4">No monthly sales data.</p>
+                    ) : (
+                      reportsData?.monthly_revenue?.map((m, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-200/60">
+                          <span className="font-mono font-medium text-slate-600">{m.month}</span>
+                          <span className="font-bold text-blue-800">
+                            ₹{parseFloat(m.total).toFixed(2)} <span className="text-[10px] text-slate-400 font-normal">({m.order_count} orders)</span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Top Selling Medicines */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 uppercase flex items-center justify-between">
+                    <span>Top 10 Selling Medicines</span>
+                    <Package className="w-3.5 h-3.5 text-orange-500" />
+                  </h4>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {reportsData?.top_products?.length === 0 ? (
+                      <p className="text-slate-400 text-xs text-center py-4">No product sales yet.</p>
+                    ) : (
+                      reportsData?.top_products?.map((p, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-200/60">
+                          <span className="font-medium text-slate-700 truncate mr-2" title={p.name}>
+                            {i + 1}. {p.name}
+                          </span>
+                          <span className="font-bold text-orange-600 shrink-0">
+                            ₹{parseFloat(p.revenue).toFixed(2)} <span className="text-[10px] text-slate-400 font-normal">({p.units_sold} qty)</span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. State-Wise Sales */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 uppercase flex items-center justify-between">
+                    <span>State-Wise Sales Distribution</span>
+                    <MapPin className="w-3.5 h-3.5 text-purple-600" />
+                  </h4>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {reportsData?.state_wise_sales?.length === 0 ? (
+                      <p className="text-slate-400 text-xs text-center py-4">No state sales recorded.</p>
+                    ) : (
+                      reportsData?.state_wise_sales?.map((s, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-200/60">
+                          <span className="font-bold text-slate-700 uppercase">{s.state}</span>
+                          <span className="font-bold text-purple-800">
+                            ₹{parseFloat(s.revenue).toFixed(2)} <span className="text-[10px] text-slate-400 font-normal">({s.order_count} orders)</span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 6. Member Growth Analytics */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+                  <h4 className="font-bold text-xs text-slate-800 uppercase flex items-center justify-between">
+                    <span>Partner &amp; Member Signups</span>
+                    <Users className="w-3.5 h-3.5 text-teal-600" />
+                  </h4>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {reportsData?.member_growth?.length === 0 ? (
+                      <p className="text-slate-400 text-xs text-center py-4">No member growth data.</p>
+                    ) : (
+                      reportsData?.member_growth?.map((g, i) => (
+                        <div key={i} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-200/60">
+                          <span className="font-mono font-medium text-slate-600">{g.month}</span>
+                          <span className="font-black text-teal-700">
+                            +{g.new_members} <span className="text-[10px] text-slate-400 font-normal">new accounts</span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -5259,7 +5520,7 @@ export default function AdminDashboard() {
           {currentSection === 'settings' && (
             <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
               <h3 className="font-black text-slate-900 text-lg">System &amp; Platform Configuration</h3>
-              <form onSubmit={async (e) => { e.preventDefault(); await updateAdminSettings({ settings: settingsData }); alert('Settings updated.'); }} className="space-y-4 max-w-2xl text-xs">
+              <form onSubmit={async (e) => { e.preventDefault(); await updateAdminSettings({ settings: settingsData }); toast.success('Settings updated successfully.'); }} className="space-y-4 max-w-2xl text-xs">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Company Legal Entity</label>
                   <input type="text" value={settingsData.company_name} onChange={(e) => setSettingsData({ ...settingsData, company_name: e.target.value })} className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-medium" />
@@ -7717,15 +7978,44 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Banner Image URL *</label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://images.unsplash.com/..."
-                  value={bannerForm.image}
-                  onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono text-[11px]"
-                />
+                <label className="font-bold text-slate-700 block mb-1">Banner Image *</label>
+                <div className="space-y-2">
+                  <label className="flex items-center justify-center space-x-2 px-3 py-2 bg-slate-50 border-2 border-dashed border-slate-300 hover:border-[#ff5722] rounded-xl cursor-pointer text-xs text-slate-600 transition-colors">
+                    <Upload className="w-4 h-4 text-slate-400" />
+                    <span>Upload Banner Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('image', file);
+                        try {
+                          const res = await uploadAdminProductImage(fd);
+                          if (res.data?.url) {
+                            setBannerForm(prev => ({ ...prev, image: res.data.url }));
+                            toast.success('Banner image uploaded!');
+                          }
+                        } catch (err) {
+                          toast.error('Image upload failed');
+                        }
+                      }}
+                    />
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="Or paste image URL directly"
+                    value={bannerForm.image}
+                    onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono text-[11px]"
+                  />
+                  {bannerForm.image && (
+                    <img src={bannerForm.image} alt="Banner Preview" className="w-full h-28 object-cover rounded-xl border border-slate-200" />
+                  )}
+                </div>
               </div>
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Target Link URL</label>

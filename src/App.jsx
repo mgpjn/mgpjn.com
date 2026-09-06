@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import PrescriptionModal from './components/PrescriptionModal';
+import { Toaster } from 'react-hot-toast';
 
 // Auto Scroll To Top & Global Referral Code Capture on every route & parameter change
 function ScrollAndReferralTracker() {
@@ -362,6 +363,7 @@ export default function App() {
         isOpen={isPrescriptionModalOpen}
         onClose={() => setIsPrescriptionModalOpen(false)}
       />
+      <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
 
       {/* Hide footer on full admin & invoice print pages */}
       {!isAdminRoute && !isInvoiceRoute && <Footer />}

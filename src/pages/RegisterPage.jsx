@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw, Smartphone, X, UserCheck, AlertCircle, Building2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 import { sendRegisterOtp, verifyOtp, verifySponsor, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
 import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
@@ -218,6 +219,7 @@ export default function RegisterPage() {
     try {
       const data = await register(formData);
       console.log('Registration success data:', data);
+      toast.success('Account created successfully! Welcome to MediGlaxo.');
       if (data.user.role === 'customer') {
         navigate('/shop');
       } else {
@@ -225,7 +227,9 @@ export default function RegisterPage() {
       }
     } catch (err) {
       console.error('Registration failed error:', err);
-      setError(err.response?.data?.message || err.message || 'Registration failed. Please check details.');
+      const msg = err.response?.data?.message || err.message || 'Registration failed. Please check details.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

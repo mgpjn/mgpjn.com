@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
 import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
@@ -164,7 +165,7 @@ export default function LoginPage() {
       if (res.data?.success) {
         setSuperAdminResendTimer(60);
         setSuperAdminOtp('');
-        alert(res.data.message || `A new 6-digit 2FA code has been sent to ${superAdminEmail}`);
+        toast.success(res.data.message || `A new 6-digit 2FA code has been sent to ${superAdminEmail}`);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to resend 2FA code.');
@@ -330,7 +331,7 @@ export default function LoginPage() {
       });
 
       if (res.data.success) {
-        alert('Password reset successfully! Please sign in with your new password.');
+        toast.success('Password reset successfully! Please sign in with your new password.');
         setShowForgotModal(false);
         setForgotStep(1);
         setLoginInput(forgotEmail);
