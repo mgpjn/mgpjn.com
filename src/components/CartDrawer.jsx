@@ -91,16 +91,35 @@ export default function CartDrawer() {
                     </p>
                     <div className="mt-2 flex items-center justify-between">
                       <div>
-                        <div className="text-sm font-black text-brand-blue-900">
-                          ₹{item.itemTotal.toFixed(2)}
+                        <div className="flex items-baseline space-x-1.5">
+                          <span className="text-sm font-black text-brand-blue-900">
+                            ₹{item.itemTotal.toFixed(2)}
+                          </span>
+                          {item.effectiveMrp > item.effectiveUnitPrice && (
+                            <span className="text-[10px] text-slate-400 line-through">
+                              ₹{(item.effectiveMrp * item.quantity).toFixed(2)}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-normal">
-                          ₹{item.effectiveUnitPrice.toFixed(2)} / {item.isWholesale ? (item.box_unit || 'Unit') : (item.strip_unit || item.unit || 'Unit')}
+                        <div className="text-[10px] text-slate-500 font-medium">
+                          ₹{item.effectiveUnitPrice.toFixed(2)} / {item.isWholesale ? (item.box_unit || 'Box') : (item.strip_unit || item.unit || 'Strip')}
+                          {item.effectiveMrp > item.effectiveUnitPrice && (
+                            <span className="text-slate-400 font-normal ml-1">
+                              (MRP ₹{item.effectiveMrp.toFixed(2)})
+                            </span>
+                          )}
                         </div>
                         {item.isWholesale && (
-                          <span className="inline-block text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded mt-0.5">
-                            Wholesale Rate Applied!
-                          </span>
+                          <div className="flex items-center space-x-1 mt-0.5">
+                            <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                              Wholesale Rate
+                            </span>
+                            {item.itemDiscount > 0 && (
+                              <span className="text-[9px] font-black text-white bg-emerald-600 px-1.5 py-0.5 rounded shadow-xs">
+                                {item.itemDiscount}% OFF
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
 

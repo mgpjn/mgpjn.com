@@ -59,13 +59,23 @@ export default function CartPage() {
                       ? `📦 Box Packaging: ${item.box_packing || '1 Box (10 Strips)'}`
                       : `💊 ${item.dosage_form} • ${item.strip_packing || item.pack_size || '1 Strip'}`}
                   </p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-xs font-black text-brand-blue-900">
-                      ₹{item.effectiveUnitPrice || item.price} {item.isWholesale ? '/ Box' : '/ Strip'}
-                    </p>
+                  <div className="flex items-center space-x-2 mt-1 flex-wrap">
+                    <span className="text-xs font-black text-brand-blue-900">
+                      ₹{item.effectiveUnitPrice || item.price} {item.isWholesale ? (`/ ${item.box_unit || 'Box'}`) : (`/ ${item.strip_unit || 'Strip'}`)}
+                    </span>
+                    {item.effectiveMrp > item.effectiveUnitPrice && (
+                      <span className="text-[11px] text-slate-400 line-through">
+                        MRP ₹{item.effectiveMrp}
+                      </span>
+                    )}
                     {item.isWholesale && (
                       <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
-                        Wholesale (Box)
+                        Wholesale Rate
+                      </span>
+                    )}
+                    {item.itemDiscount > 0 && (
+                      <span className="text-[10px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded shadow-xs">
+                        {item.itemDiscount}% OFF
                       </span>
                     )}
                   </div>

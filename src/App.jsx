@@ -5,8 +5,8 @@ import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import PrescriptionModal from './components/PrescriptionModal';
 
-// Auto Scroll To Top on every route & parameter change
-function ScrollToTop() {
+// Auto Scroll To Top & Global Referral Code Capture on every route & parameter change
+function ScrollAndReferralTracker() {
   const { pathname, search } = useLocation();
 
   useEffect(() => {
@@ -14,6 +14,28 @@ function ScrollToTop() {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
   }, [pathname, search]);
+
+  useEffect(() => {
+    if (search) {
+      const params = new URLSearchParams(search);
+      const sponsorCode =
+        params.get('ref') ||
+        params.get('sponsor') ||
+        params.get('sponsor_code') ||
+        params.get('referral') ||
+        params.get('code');
+
+      if (sponsorCode && sponsorCode.trim()) {
+        const clean = sponsorCode.trim();
+        try {
+          localStorage.setItem('mediglaxo_sponsor_code', clean);
+          sessionStorage.setItem('mediglaxo_sponsor_code', clean);
+          // Also set a 30-day cookie for multi-tab referral persistence
+          document.cookie = `mediglaxo_ref=${encodeURIComponent(clean)}; max-age=${30 * 24 * 60 * 60}; path=/`;
+        } catch {}
+      }
+    }
+  }, [search]);
 
   return null;
 }
@@ -150,7 +172,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased selection:bg-brand-blue-900 selection:text-white">
-      <ScrollToTop />
+      <ScrollAndReferralTracker />
       {/* Super Admin Impersonated Session Notification Banner */}
       {isImpersonated && (
         <div className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-bold flex flex-wrap items-center justify-between gap-2 shadow-md sticky top-0 z-50">

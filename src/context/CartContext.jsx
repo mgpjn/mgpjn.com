@@ -92,23 +92,35 @@ export const CartProvider = ({ children }) => {
     const isWholesale = isB2BWholesaleEligible;
     const effectiveUnitPrice = isWholesale ? wholesaleRate : retailRate;
     const itemTotal = effectiveUnitPrice * item.quantity;
-    const itemMrp = Number(item.mrp || (retailRate * 1.35));
+    const retailMrp = Number(item.mrp || (retailRate * 1.35));
+    const wholesaleMrp = Number(
+      item.wholesale_mrp || (item.mrp ? item.mrp * 10 : (wholesaleRate * 1.5))
+    );
+    const effectiveMrp = isWholesale ? wholesaleMrp : retailMrp;
+    const itemDiscount = effectiveMrp > effectiveUnitPrice 
+      ? Math.round(((effectiveMrp - effectiveUnitPrice) / effectiveMrp) * 100) 
+      : 0;
+    const itemSavings = Math.max(0, (effectiveMrp - effectiveUnitPrice) * item.quantity);
 
     return {
       ...item,
       retailRate,
       wholesaleRate,
+      wholesaleMrp,
       minWholesaleQty,
       isWholesale,
       effectiveUnitPrice,
+      effectiveMrp,
+      itemDiscount,
+      itemSavings,
       itemTotal,
-      itemMrp,
+      itemMrp: effectiveMrp,
     };
   });
 
   const totalItemsCount = processedItems.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = processedItems.reduce((acc, item) => acc + item.itemTotal, 0);
-  const totalMrp = processedItems.reduce((acc, item) => acc + item.itemMrp * item.quantity, 0);
+  const totalMrp = processedItems.reduce((acc, item) => acc + item.effectiveMrp * item.quantity, 0);
   const totalSavings = Math.max(0, totalMrp - subtotal);
   const deliveryCharge = subtotal >= 500 || subtotal === 0 ? 0 : 50;
   const finalTotal = subtotal + deliveryCharge;

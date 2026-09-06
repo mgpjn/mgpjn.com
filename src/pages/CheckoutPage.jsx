@@ -6,7 +6,21 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { createOrder, getWalletTransactions } from '../services/api';
+import { createOrder, getWalletTransactions, createRazorpayOrder, verifyRazorpayPayment } from '../services/api';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export default function CheckoutPage() {
   const { cartItems, subtotal, deliveryCharge, finalTotal, clearCart } = useCart();
@@ -104,6 +118,88 @@ export default function CheckoutPage() {
         })),
       };
 
+      const isOnlinePayment = !isFullWallet && (formData.payment_method === 'online' || formData.payment_method === 'upi_qr');
+
+      if (isOnlinePayment && remainingPayable > 0) {
+        // 1. Create order in DB (marked pending)
+        const orderRes = await createOrder(orderPayload);
+        if (!orderRes.data?.success) {
+          throw new Error(orderRes.data?.message || 'Could not create order.');
+        }
+        const placedOrder = orderRes.data.order;
+
+        // 2. Load Razorpay Checkout SDK
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          clearCart();
+          navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
+          return;
+        }
+
+        // 3. Create Razorpay Order
+        const rzpOrderRes = await createRazorpayOrder({
+          amount: remainingPayable,
+          order_number: placedOrder.order_number,
+          customer_name: formData.customer_name,
+          customer_email: formData.email,
+          customer_phone: formData.phone,
+        });
+
+        if (!rzpOrderRes.data?.success) {
+          throw new Error(rzpOrderRes.data?.message || 'Failed to initialize payment gateway.');
+        }
+
+        const rzpData = rzpOrderRes.data;
+
+        // 4. Open Razorpay Checkout modal
+        const options = {
+          key: rzpData.key_id,
+          amount: rzpData.amount,
+          currency: rzpData.currency || 'INR',
+          name: 'MEDIGLAXO PHARMA JUNCTION',
+          description: `Order #${placedOrder.order_number} Payment`,
+          image: '/logo.png',
+          order_id: rzpData.razorpay_order_id,
+          prefill: {
+            name: formData.customer_name,
+            email: formData.email || '',
+            contact: formData.phone,
+          },
+          theme: {
+            color: '#1e3a8a',
+          },
+          handler: async function (response) {
+            try {
+              setLoading(true);
+              await verifyRazorpayPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                order_number: placedOrder.order_number,
+                order_id: placedOrder.id,
+              });
+              clearCart();
+              navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
+            } catch (vErr) {
+              clearCart();
+              navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
+            } finally {
+              setLoading(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setLoading(false);
+            },
+          },
+        };
+
+        const razorpayInstance = new window.Razorpay(options);
+        razorpayInstance.open();
+        return;
+      }
+
+      // Standard COD, Takeaway, or 100% Wallet Order
       const res = await createOrder(orderPayload);
       if (res.data.success) {
         const placedOrder = res.data.order;
@@ -111,7 +207,7 @@ export default function CheckoutPage() {
         navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to process order. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Failed to process order. Please try again.');
     } finally {
       setLoading(false);
     }

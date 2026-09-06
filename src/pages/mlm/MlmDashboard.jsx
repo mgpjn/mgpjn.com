@@ -52,7 +52,7 @@ export default function MlmDashboard() {
   }, []);
 
   const referralCode = user?.referral_code || 'MG1001';
-  const referralLink = `${window.location.origin}/register?sponsor=${referralCode}`;
+  const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);

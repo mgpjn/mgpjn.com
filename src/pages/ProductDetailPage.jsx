@@ -8,6 +8,7 @@ import {
 import { getProduct } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { FALLBACK_PRODUCTS } from '../data/fallbackProducts';
 import ProductCard from '../components/ProductCard';
 import ShareProductModal from '../components/ShareProductModal';
 
@@ -59,7 +60,20 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           }
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.warn('API fetch error, falling back to local products dataset:', err);
+        const fallback = FALLBACK_PRODUCTS.find(
+          (p) => String(p.id) === String(idOrSlug) || p.slug === idOrSlug || (p.name && p.name.toLowerCase().includes(String(idOrSlug).toLowerCase()))
+        ) || FALLBACK_PRODUCTS[0];
+        if (fallback) {
+          setProduct(fallback);
+          setRelated(FALLBACK_PRODUCTS.filter((p) => p.id !== fallback.id).slice(0, 4));
+          if (isWholesaleAllowed) {
+            setPricingMode('wholesale');
+            setQuantity(fallback.wholesale_min_qty || 5);
+          }
+        }
+      })
       .finally(() => setLoading(false));
   }, [idOrSlug, isWholesaleAllowed]);
 
@@ -104,6 +118,15 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
 
   const wholesaleMinQty = product.wholesale_min_qty || 5;
   const mrp = Number(product.mrp || (retailPrice * 1.35));
+
+  // Wholesale MRP & Trade Profit Margin Calculation
+  const wholesaleMrp = Number(
+    product.wholesale_mrp || (product.mrp ? product.mrp * 10 : (wholesalePrice * 1.5))
+  );
+  const wholesaleDiscount = wholesaleMrp > wholesalePrice 
+    ? Math.round(((wholesaleMrp - wholesalePrice) / wholesaleMrp) * 100) 
+    : 0;
+  const wholesaleSavings = Math.max(0, wholesaleMrp - wholesalePrice);
 
   const isWholesaleSelected = isWholesaleAllowed && (pricingMode === 'wholesale' || quantity >= wholesaleMinQty);
   const currentUnitPrice = isWholesaleSelected ? wholesalePrice : retailPrice;
@@ -323,7 +346,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                   onClick={() => handleSelectMode('wholesale')}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
                     isWholesaleSelected
-                      ? 'border-emerald-600 bg-emerald-50/50 shadow-sm'
+                      ? 'border-emerald-600 bg-emerald-50/60 shadow-sm'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
@@ -332,25 +355,61 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                       <Package className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Wholesale Rate (per {product.box_unit || 'Wholesale Unit'})</span>
                     </span>
-                    <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-2.5 py-0.5 rounded-full shadow-sm">
-                      {product.box_unit || 'Wholesale'} Packing
-                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      {wholesaleDiscount > 0 && (
+                        <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-xs">
+                          {wholesaleDiscount}% OFF
+                        </span>
+                      )}
+                      <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                        {product.box_unit || 'Wholesale'} Packing
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-2 flex items-baseline space-x-2">
+                  <div className="mt-2 flex items-baseline space-x-2 flex-wrap">
                     <span className="text-2xl font-black text-emerald-800">₹{wholesalePrice.toFixed(2)}</span>
                     <span className="text-xs text-emerald-700 font-extrabold">/ {product.box_unit || 'Wholesale'}</span>
-                    <span className="text-xs text-emerald-600 font-bold">
-                      (Wholesale Trade)
-                    </span>
+                    {wholesaleMrp > wholesalePrice && (
+                      <span className="text-xs text-slate-400 line-through">
+                        MRP ₹{wholesaleMrp.toFixed(2)}
+                      </span>
+                    )}
+                    {wholesaleSavings > 0 && (
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-lg">
+                        Save ₹{wholesaleSavings.toFixed(2)}/pack
+                      </span>
+                    )}
                   </div>
                   <p className="text-[10px] text-emerald-800 font-bold mt-1">
                     📦 Packing: {product.box_packing || (`1 ${product.box_unit || 'Wholesale Pack'}`)}
                   </p>
-                  <p className="text-[10px] text-emerald-600 mt-0.5">
-                    B2B Trade Rate for stockists, chemists &amp; bulk buyers
+                  <p className="text-[10px] text-emerald-600 mt-0.5 font-medium">
+                    Trade Rate for verified Stockists, Chemists &amp; Bulk Wholesalers
                   </p>
                 </div>
               </div>
+
+              {/* Wholesale Profit & Savings Breakdown Banner */}
+              {isWholesaleSelected && wholesaleSavings > 0 && (
+                <div className="p-3.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-400/90 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-xs flex-shrink-0">
+                      ₹
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-black text-emerald-950">
+                        Wholesale Profit &amp; Trade Discount Benefit
+                      </h5>
+                      <p className="text-[11px] text-emerald-900 font-medium">
+                        By purchasing at Wholesale Price <strong className="font-extrabold text-emerald-950">₹{wholesalePrice.toFixed(2)}</strong> (Wholesale MRP: ₹{wholesaleMrp.toFixed(2)}), you save <strong className="font-extrabold text-emerald-950">₹{(wholesaleSavings * quantity).toFixed(2)}</strong> ({wholesaleDiscount}% Trade Margin) on this {quantity} {product.box_unit || 'Box'} order!
+                      </p>
+                    </div>
+                  </div>
+                  <span className="hidden sm:inline-block bg-emerald-600 text-white text-[11px] font-black px-2.5 py-1 rounded-xl shadow-xs whitespace-nowrap">
+                    {wholesaleDiscount}% PROFIT
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70">

@@ -39,6 +39,15 @@ export default function ProductCard({ product }) {
   const mrp = Number(product.mrp || (retailPrice * 1.35));
   const discount = Math.round(((mrp - retailPrice) / mrp) * 100);
 
+  // Wholesale MRP & Profit Margin Calculation for Wholesaler / Retailer / Distributor
+  const wholesaleMrp = Number(
+    product.wholesale_mrp || (product.mrp ? product.mrp * 10 : (wholesalePrice * 1.5))
+  );
+  const wholesaleDiscount = wholesaleMrp > wholesalePrice 
+    ? Math.round(((wholesaleMrp - wholesalePrice) / wholesaleMrp) * 100) 
+    : 0;
+  const wholesaleSavings = Math.max(0, wholesaleMrp - wholesalePrice);
+
   // Deterministic ratings and reviews for clean 1mg style presentation
   const idNum = typeof product.id === 'number' ? product.id : (product.id ? String(product.id).charCodeAt(0) : 7);
   const rating = ((4.2 + (idNum % 7) * 0.1)).toFixed(1);
@@ -168,25 +177,50 @@ export default function ProductCard({ product }) {
           </span>
         </div>
 
-        {/* Wholesale Rate (Role-specific B2B packaging rate) */}
+        {/* Wholesale Rate (Role-specific B2B packaging rate with Wholesale MRP & Discount) */}
         {isWholesaleAllowed && (
-          <div className="flex items-center justify-between bg-emerald-50/95 border border-emerald-300/80 px-2 py-1 rounded-xl text-[10px] shadow-2xs">
-            <div className="flex flex-col">
-              <span className="font-extrabold text-emerald-950 flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                <span>Wholesale:</span>
-              </span>
-              <span className="text-[9px] text-emerald-700 font-medium truncate max-w-[100px]" title={product.box_packing || product.pack_size || product.box_unit || 'Wholesale Unit'}>
-                {product.box_packing || (product.box_unit ? `1 ${product.box_unit}` : 'Wholesale Pack')}
-              </span>
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50/70 border border-emerald-300/90 p-2 rounded-xl text-[10px] shadow-2xs space-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span className="font-extrabold text-emerald-950 uppercase tracking-wider text-[9px]">
+                  Wholesale Trade Rate
+                </span>
+              </div>
+              {wholesaleDiscount > 0 && (
+                <span className="bg-emerald-600 text-white font-black text-[9px] px-1.5 py-0.5 rounded-md shadow-xs">
+                  {wholesaleDiscount}% OFF
+                </span>
+              )}
             </div>
-            <div className="text-right">
-              <span className="font-black text-emerald-800 text-xs">
-                ₹{wholesalePrice.toFixed(0)}
-              </span>
-              <span className="text-[9px] text-emerald-600 font-bold block">
-                / {product.box_unit || 'Wholesale'}
-              </span>
+
+            <div className="flex items-baseline justify-between pt-0.5">
+              <div className="flex flex-col">
+                <span className="text-[9px] text-emerald-800 font-bold truncate max-w-[120px]" title={product.box_packing || product.box_unit || 'Wholesale Unit'}>
+                  📦 {product.box_packing || (product.box_unit ? `1 ${product.box_unit}` : 'Bulk Box')}
+                </span>
+                {wholesaleSavings > 0 && (
+                  <span className="text-[9px] font-extrabold text-emerald-700">
+                    Save ₹{wholesaleSavings.toFixed(0)} / {product.box_unit || 'Box'}
+                  </span>
+                )}
+              </div>
+
+              <div className="text-right">
+                <div className="flex items-baseline justify-end space-x-1">
+                  <span className="font-black text-emerald-900 text-xs sm:text-sm">
+                    ₹{wholesalePrice.toFixed(0)}
+                  </span>
+                  {wholesaleMrp > wholesalePrice && (
+                    <span className="text-[9px] text-slate-400 line-through">
+                      ₹{wholesaleMrp.toFixed(0)}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[8px] text-slate-500 font-semibold block">
+                  MRP: ₹{wholesaleMrp.toFixed(0)} / {product.box_unit || 'Box'}
+                </span>
+              </div>
             </div>
           </div>
         )}

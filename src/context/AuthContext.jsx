@@ -115,8 +115,10 @@ export const AuthProvider = ({ children }) => {
             }
           }
         })
-        .catch(() => {
-          clearSession();
+        .catch((err) => {
+          if (err?.response?.status === 401 || err?.response?.status === 403) {
+            clearSession();
+          }
         })
         .finally(() => setLoading(false));
     } else {

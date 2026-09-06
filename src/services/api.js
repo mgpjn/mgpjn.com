@@ -35,6 +35,10 @@ export const trackOrder = (orderNumber) => api.get(`/orders/track/${orderNumber}
 export const getUserOrders = () => api.get('/user/orders');
 export const updateDeliveryStatus = (id, data) => api.post(`/orders/${id}/delivery-status`, data);
 
+// Razorpay Online Payments
+export const createRazorpayOrder = (data) => api.post('/payment/create-razorpay-order', data);
+export const verifyRazorpayPayment = (data) => api.post('/payment/verify-razorpay-payment', data);
+
 // Prescriptions
 export const uploadPrescription = (data) => api.post('/prescriptions/upload', data);
 export const getUserPrescriptions = () => api.get('/user/prescriptions');
@@ -47,7 +51,10 @@ export const updateProfile = (data) => api.post('/auth/profile', data);
 export const sendForgotPasswordOtp = (data) => api.post('/auth/forgot-password-otp', data);
 export const resetPasswordWithOtp = (data) => api.post('/auth/reset-password-otp', data);
 export const sendRegisterOtp = (data) => api.post('/auth/send-register-otp', data);
+export const sendPhoneOtp = (data) => api.post('/auth/send-phone-otp', data);
 export const verifyOtp = (data) => api.post('/auth/verify-otp', data);
+export const verifyPhoneOtp = (data) => api.post('/auth/verify-phone-otp', data);
+export const verifySponsor = (code) => api.get(`/auth/verify-sponsor/${encodeURIComponent(code)}`);
 export const verifySuperAdmin2Fa = (data) => api.post('/auth/verify-superadmin-2fa', data);
 export const resendSuperAdmin2Fa = (data) => api.post('/auth/resend-superadmin-2fa', data);
 export const loginWithPhone = (data) => api.post('/auth/login-phone', data);

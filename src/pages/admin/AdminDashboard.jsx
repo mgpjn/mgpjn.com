@@ -209,6 +209,7 @@ export default function AdminDashboard() {
     manufacturer: 'MEDIGLAXO PHARMA',
     description: '',
     mrp: '',
+    wholesale_mrp: '',
     base_price: '',
     retail_price: '',
     sd_price: '',
@@ -1682,6 +1683,7 @@ export default function AdminDashboard() {
       manufacturer: p.manufacturer || 'MEDIGLAXO PHARMA',
       description: p.description || '',
       mrp: p.mrp || p.price || '',
+      wholesale_mrp: p.wholesale_mrp !== undefined && p.wholesale_mrp !== null ? p.wholesale_mrp : (p.mrp ? Number(p.mrp) * 10 : ''),
       base_price: p.base_price || (p.price * 0.45) || '',
       retail_price: p.retail_price || p.price || '',
       sd_price: p.sd_price || '',
@@ -2142,6 +2144,7 @@ export default function AdminDashboard() {
                         manufacturer: 'MEDIGLAXO PHARMA',
                         description: '',
                         mrp: '',
+                        wholesale_mrp: '',
                         base_price: '',
                         retail_price: '',
                         sd_price: '',
@@ -3032,6 +3035,7 @@ export default function AdminDashboard() {
                         manufacturer: 'MEDIGLAXO PHARMA',
                         description: '',
                         mrp: '',
+                        wholesale_mrp: '',
                         base_price: '',
                         retail_price: '',
                         sd_price: '',
@@ -3365,8 +3369,25 @@ export default function AdminDashboard() {
                             ₹{Number(p.retail_price || p.price || 0).toFixed(0)}
                             <span className="text-[9px] text-slate-400 block font-normal">/ {p.strip_unit || p.unit || 'Unit'}</span>
                           </td>
-                          <td className="p-2.5 font-bold text-emerald-700 whitespace-nowrap">
-                            ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
+                          <td className="p-2.5 whitespace-nowrap">
+                            <div className="font-bold text-emerald-700">
+                              ₹{Number(p.wholesale_price || p.retailer_price || 0).toFixed(0)}
+                            </div>
+                            {(() => {
+                              const wPrice = Number(p.wholesale_price || p.retailer_price || 0);
+                              const wMrp = Number(p.wholesale_mrp || (p.mrp ? p.mrp * 10 : wPrice * 1.5));
+                              const wDisc = wMrp > wPrice ? Math.round(((wMrp - wPrice) / wMrp) * 100) : 0;
+                              return (
+                                <div className="flex items-center space-x-1 text-[9px]">
+                                  <span className="line-through text-slate-400">₹{wMrp.toFixed(0)}</span>
+                                  {wDisc > 0 && (
+                                    <span className="text-emerald-700 font-extrabold bg-emerald-100/70 px-1 py-0.2 rounded">
+                                      {wDisc}% OFF
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <span className="text-[9px] text-emerald-600/80 block font-normal">/ {p.box_unit || 'Wholesale'}</span>
                           </td>
                           <td className="p-2.5 text-center font-bold text-slate-800">
@@ -3646,11 +3667,12 @@ export default function AdminDashboard() {
                     <tr>
                       <th className="p-3">Medicine</th>
                       <th className="p-3">Category</th>
+                      <th className="p-3">Retail MRP</th>
                       <th className="p-3">Retail Price</th>
-                      <th className="p-3">Base Price</th>
+                      <th className="p-3">Wholesale MRP</th>
                       <th className="p-3">Wholesale Price</th>
-                      <th className="p-3">MRP</th>
-                      <th className="p-3 font-bold text-purple-700">Margin Spread</th>
+                      <th className="p-3 font-bold text-emerald-700">Wholesale Margin / Profit</th>
+                      <th className="p-3 font-bold text-purple-700">Retail Margin</th>
                       <th className="p-3 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -3660,14 +3682,26 @@ export default function AdminDashboard() {
                       const base = Number(p.base_price || retail * 0.45);
                       const wholesale = Number(p.wholesale_price || retail * 0.60);
                       const mrp = Number(p.mrp || retail * 1.25);
+                      const wholesaleMrp = Number(p.wholesale_mrp || (p.mrp ? p.mrp * 10 : wholesale * 1.5));
+                      const wholesaleDiscount = wholesaleMrp > wholesale ? Math.round(((wholesaleMrp - wholesale) / wholesaleMrp) * 100) : 0;
+                      const wholesaleSavings = wholesaleMrp > wholesale ? wholesaleMrp - wholesale : 0;
+
                       return (
                         <tr key={p.id} className="hover:bg-slate-50/60">
                           <td className="p-3 font-bold text-slate-900">{p.name}</td>
                           <td className="p-3">{p.category?.name || 'Tablets'}</td>
+                          <td className="p-3 text-slate-500 font-semibold">₹{mrp.toFixed(0)}</td>
                           <td className="p-3 font-bold text-slate-800">₹{retail.toFixed(0)} <span className="text-[10px] text-slate-400 font-normal">/ {p.strip_unit || p.unit || 'Unit'}</span></td>
-                          <td className="p-3 font-bold text-blue-600">₹{base.toFixed(0)}</td>
+                          <td className="p-3 text-amber-700 font-bold">₹{wholesaleMrp.toFixed(0)}</td>
                           <td className="p-3 font-bold text-emerald-600">₹{wholesale.toFixed(0)} <span className="text-[10px] text-emerald-600/70 font-semibold">/ {p.box_unit || 'Wholesale'}</span></td>
-                          <td className="p-3 text-slate-400">₹{mrp.toFixed(0)}</td>
+                          <td className="p-3 whitespace-nowrap">
+                            <span className="font-black text-emerald-700">₹{wholesaleSavings.toFixed(0)}</span>
+                            {wholesaleDiscount > 0 && (
+                              <span className="ml-1.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.5 rounded">
+                                {wholesaleDiscount}% OFF
+                              </span>
+                            )}
+                          </td>
                           <td className="p-3 font-black text-purple-700">₹{(retail - base).toFixed(0)}</td>
                           <td className="p-3 text-right whitespace-nowrap">
                             <button
@@ -4770,23 +4804,43 @@ export default function AdminDashboard() {
 
               {/* Pricing & Stock */}
               <div className="space-y-3 pt-3 border-t">
-                <h4 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Base Pricing &amp; Stock</h4>
-                <div className="grid grid-cols-3 gap-3">
+                <h4 className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px]">Base Pricing, Wholesale MRP &amp; Stock</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">MRP (Maximum Retail Price) *</label>
+                    <label className="font-bold text-slate-700 block mb-1">Retail MRP (₹ / Strip) *</label>
                     <input
                       type="number"
                       required
                       placeholder="100.00"
                       value={productForm.mrp}
-                      onChange={(e) => setProductForm({ ...productForm, mrp: e.target.value })}
+                      onChange={(e) => {
+                        const newMrp = e.target.value;
+                        const newWholesaleMrp = productForm.wholesale_mrp ? productForm.wholesale_mrp : (newMrp ? String(Number(newMrp) * 10) : '');
+                        setProductForm({ ...productForm, mrp: newMrp, wholesale_mrp: newWholesaleMrp });
+                      }}
                       className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-black text-sm"
                     />
-                    <span className="text-[10px] text-slate-400 block mt-0.5">Base MRP for calculations</span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Per {productForm.strip_unit || 'Strip'} MRP for Patients</span>
+                  </div>
+
+                  <div className="p-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl">
+                    <label className="font-extrabold text-emerald-950 block mb-1">
+                      Wholesale MRP (₹ / {productForm.box_unit || 'Box'}) *
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="1000.00"
+                      value={productForm.wholesale_mrp}
+                      onChange={(e) => setProductForm({ ...productForm, wholesale_mrp: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl font-black text-sm text-emerald-900 outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <span className="text-[10px] text-emerald-700 font-medium block mt-0.5">
+                      B2B Trade MRP per {productForm.box_unit || 'Box'}
+                    </span>
                   </div>
 
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Base Price (₹) *</label>
+                    <label className="font-bold text-slate-700 block mb-1">Base Price / Cost (₹) *</label>
                     <input
                       type="number"
                       required
@@ -4819,11 +4873,11 @@ export default function AdminDashboard() {
                   <div className="flex items-center space-x-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
                     <h4 className="font-black text-slate-900 uppercase tracking-wider text-xs">
-                      Post-Wise Product Rates (Role-Based Pricing)
+                      Post-Wise Product Rates &amp; Wholesale Trade Discounts
                     </h4>
                   </div>
-                  <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-200 w-fit">
-                    Wholesale (Box) vs Retail (Strip)
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full border border-emerald-300 w-fit">
+                    Live Wholesale Margin Preview
                   </span>
                 </div>
 
@@ -4832,7 +4886,7 @@ export default function AdminDashboard() {
                     <strong className="text-slate-900 font-bold">1. Sub-Retailer &amp; Customer:</strong> Inko sirf <span className="text-blue-700 font-bold">Retail Rate (per Strip)</span> show hoga (Wholesale rate hide rahega).
                   </p>
                   <p className="font-medium">
-                    <strong className="text-slate-900 font-bold">2. Retailer, Sub-Distributor, Distributor, Super Distributor:</strong> In sabhi uper ke posts ko <span className="text-emerald-700 font-bold">Retail Rate aur unka respective Wholesale Rate (per Box) dono</span> show hoga.
+                    <strong className="text-slate-900 font-bold">2. Retailer, Sub-Distributor, Distributor, Super Distributor:</strong> In sabhi uper ke posts ko <span className="text-emerald-700 font-bold">Wholesale MRP ke comparison me unka Discount % &amp; Margin</span> saaf dikhega.
                   </p>
                 </div>
 
@@ -4878,9 +4932,14 @@ export default function AdminDashboard() {
                       onChange={(e) => setProductForm({ ...productForm, sd_price: e.target.value })}
                       className="w-full px-3 py-2 bg-emerald-50/40 border border-emerald-300 rounded-xl font-black text-xs text-emerald-900 outline-none focus:bg-white"
                     />
-                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Super Distributor purchase rate per {productForm.box_unit || 'unit'}
-                    </span>
+                    <div className="mt-1 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-500 font-medium">SD Buy Rate</span>
+                      {Number(productForm.wholesale_mrp || 0) > Number(productForm.sd_price || 0) && Number(productForm.sd_price || 0) > 0 && (
+                        <span className="font-extrabold text-emerald-700 bg-emerald-50 px-1 rounded">
+                          {Math.round(((Number(productForm.wholesale_mrp) - Number(productForm.sd_price)) / Number(productForm.wholesale_mrp)) * 100)}% Discount
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* 3. Distributor Sale Rate */}
@@ -4901,9 +4960,14 @@ export default function AdminDashboard() {
                       onChange={(e) => setProductForm({ ...productForm, dist_price: e.target.value })}
                       className="w-full px-3 py-2 bg-teal-50/40 border border-teal-300 rounded-xl font-black text-xs text-teal-900 outline-none focus:bg-white"
                     />
-                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Sale rate for Distributor per {productForm.box_unit || 'unit'}
-                    </span>
+                    <div className="mt-1 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-500 font-medium">Distributor Rate</span>
+                      {Number(productForm.wholesale_mrp || 0) > Number(productForm.dist_price || 0) && Number(productForm.dist_price || 0) > 0 && (
+                        <span className="font-extrabold text-teal-700 bg-teal-50 px-1 rounded">
+                          {Math.round(((Number(productForm.wholesale_mrp) - Number(productForm.dist_price)) / Number(productForm.wholesale_mrp)) * 100)}% Discount
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* 4. Sub-Distributor Sale Rate */}
@@ -4924,9 +4988,14 @@ export default function AdminDashboard() {
                       onChange={(e) => setProductForm({ ...productForm, subd_price: e.target.value })}
                       className="w-full px-3 py-2 bg-sky-50/40 border border-sky-300 rounded-xl font-black text-xs text-sky-900 outline-none focus:bg-white"
                     />
-                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Sale rate for Sub-Distributor per {productForm.box_unit || 'unit'}
-                    </span>
+                    <div className="mt-1 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-500 font-medium">Sub-Dist Rate</span>
+                      {Number(productForm.wholesale_mrp || 0) > Number(productForm.subd_price || 0) && Number(productForm.subd_price || 0) > 0 && (
+                        <span className="font-extrabold text-sky-700 bg-sky-50 px-1 rounded">
+                          {Math.round(((Number(productForm.wholesale_mrp) - Number(productForm.subd_price)) / Number(productForm.wholesale_mrp)) * 100)}% Discount
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* 5. Retailer Sale Rate */}
@@ -4947,9 +5016,14 @@ export default function AdminDashboard() {
                       onChange={(e) => setProductForm({ ...productForm, retailer_price: e.target.value, wholesale_price: e.target.value })}
                       className="w-full px-3 py-2 bg-indigo-50/40 border border-indigo-300 rounded-xl font-black text-xs text-indigo-900 outline-none focus:bg-white"
                     />
-                    <span className="text-[10px] text-slate-500 font-medium block mt-1">
-                      Wholesale rate for Retailer (Chemist) per {productForm.box_unit || 'unit'}
-                    </span>
+                    <div className="mt-1 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-500 font-medium">Retailer / Chemist Rate</span>
+                      {Number(productForm.wholesale_mrp || 0) > Number(productForm.retailer_price || 0) && Number(productForm.retailer_price || 0) > 0 && (
+                        <span className="font-extrabold text-indigo-700 bg-indigo-50 px-1 rounded">
+                          {Math.round(((Number(productForm.wholesale_mrp) - Number(productForm.retailer_price)) / Number(productForm.wholesale_mrp)) * 100)}% Discount
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* 6. Quick Auto-Calculate Helper */}
@@ -4959,13 +5033,14 @@ export default function AdminDashboard() {
                         <span>⚡ Quick Rate Suggestion</span>
                       </span>
                       <p className="text-[10px] text-amber-800 leading-tight">
-                        Base Price aur MRP ke hisaab se sabhi posts (SD, Dist, SubD, Retailer) ke standard margins auto-fill karein.
+                        Base Price aur MRP ke hisaab se Wholesale MRP &amp; sabhi posts (SD, Dist, SubD, Retailer) ke standard margins auto-fill karein.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
                         const mrpVal = parseFloat(productForm.mrp) || 100;
+                        const wholesaleMrpVal = parseFloat(productForm.wholesale_mrp) || (mrpVal * 10);
                         const baseVal = parseFloat(productForm.base_price) || (mrpVal * 0.45);
                         const round2 = (num) => Math.round(num * 100) / 100;
                         const sd = round2(baseVal * 1.12);
@@ -4975,6 +5050,7 @@ export default function AdminDashboard() {
                         const retail = round2(mrpVal * 0.80);
                         setProductForm({
                           ...productForm,
+                          wholesale_mrp: wholesaleMrpVal,
                           retail_price: retail,
                           sd_price: sd,
                           dist_price: dist,
@@ -4985,7 +5061,7 @@ export default function AdminDashboard() {
                       }}
                       className="mt-2.5 w-full py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl font-black text-xs transition-all shadow-xs cursor-pointer text-center"
                     >
-                      Auto-Fill All Post Rates
+                      Auto-Fill All Post Rates &amp; Wholesale MRP
                     </button>
                   </div>
                 </div>

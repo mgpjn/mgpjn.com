@@ -41,6 +41,20 @@ export const getInvisibleRecaptcha = (containerId = 'recaptcha-container') => {
   return window.recaptchaVerifier;
 };
 
+export const clearRecaptchaVerifier = () => {
+  if (window.recaptchaVerifier) {
+    try {
+      window.recaptchaVerifier.clear();
+    } catch (e) {}
+    window.recaptchaVerifier = null;
+  }
+  // Remove any leftover floating recaptcha challenge badges/overlays
+  try {
+    const badges = document.querySelectorAll('.grecaptcha-badge, div[style*="z-index: 2000000000"]');
+    badges.forEach((b) => b.remove());
+  } catch (e) {}
+};
+
 // Send Phone OTP using Firebase Phone Auth
 export const sendFirebasePhoneOtp = async (phoneNumber, containerId = 'recaptcha-container') => {
   let formatted = phoneNumber.trim().replace(/\s+/g, '');

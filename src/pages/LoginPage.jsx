@@ -2,12 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone } from '../services/api';
-import { sendFirebasePhoneOtp } from '../config/firebase';
+import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
+import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
 export default function LoginPage() {
   const { user, login, setDirectSession } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    return () => {
+      clearRecaptchaVerifier();
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -42,11 +48,12 @@ export default function LoginPage() {
   const [superAdminResendTimer, setSuperAdminResendTimer] = useState(0);
   const [resending2Fa, setResending2Fa] = useState(false);
 
-  // Phone OTP Login State (Firebase Phone Auth)
+  // Phone OTP Login State (Hybrid Firebase + Backend SMS)
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
+  const [isBackendOtp, setIsBackendOtp] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneTimer, setPhoneTimer] = useState(0);
@@ -166,7 +173,7 @@ export default function LoginPage() {
     }
   };
 
-  // Send Firebase Phone OTP
+  // Send Mobile Phone OTP (Hybrid: Firebase -> Backend fallback)
   const handleSendPhoneOtp = async (e) => {
     if (e) e.preventDefault();
     const cleanNumber = phoneNumber.replace(/\D/g, '');
@@ -176,50 +183,62 @@ export default function LoginPage() {
     }
     setPhoneLoading(true);
     setPhoneError('');
+    setIsBackendOtp(false);
 
     try {
-      const result = await sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
+      // 1. Try Firebase Phone Auth with 3-second timeout
+      const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase service timed out')), 3000)
+      );
+
+      const result = await Promise.race([firebasePromise, timeoutPromise]);
       setConfirmationResult(result);
       setPhoneOtpSent(true);
       setPhoneTimer(60);
     } catch (err) {
-      console.error('Firebase Phone Auth Error:', err);
-      setPhoneError(err.message || 'Failed to send SMS OTP. Please check phone number.');
+      console.warn('Firebase SMS unavailable, switching to backend SMS OTP service:', err.message);
+      // 2. Seamlessly fall back to Backend SMS OTP
+      try {
+        const res = await sendPhoneOtp({ phone: cleanNumber });
+        if (res.data.success) {
+          setIsBackendOtp(true);
+          setPhoneOtpSent(true);
+          setPhoneTimer(60);
+        } else {
+          setPhoneError(res.data.message || 'Failed to send SMS OTP.');
+        }
+      } catch (backendErr) {
+        setPhoneError(backendErr.response?.data?.message || 'Failed to send SMS OTP. Please check mobile number.');
+      }
     } finally {
       setPhoneLoading(false);
     }
   };
 
-  // Verify Firebase Phone OTP & Login
+  // Verify Phone OTP & Login
   const handleVerifyPhoneOtp = async (e) => {
     e.preventDefault();
     if (phoneOtp.length !== 6) {
       setPhoneError('Please enter the 6-digit OTP received on your mobile.');
       return;
     }
-    if (!confirmationResult) {
-      setPhoneError('Session expired. Please request a new OTP.');
-      return;
-    }
     setPhoneLoading(true);
     setPhoneError('');
 
     try {
-      // 1. Confirm OTP with Firebase
-      await confirmationResult.confirm(phoneOtp);
+      if (confirmationResult && !isBackendOtp) {
+        // 1. Confirm OTP with Firebase
+        await confirmationResult.confirm(phoneOtp);
+      } else {
+        // 2. Verify with Backend OTP
+        await verifyPhoneOtp({ phone: phoneNumber, otp: phoneOtp });
+      }
 
-      // 2. Authorize with Backend
+      // 3. Authorize with Backend
       const res = await loginWithPhone({ phone: phoneNumber });
       if (res.data.success) {
-        // If Super Admin Phone Login requires 2FA
-        if (res.data.requires_2fa) {
-          setSuperAdmin2FaRequired(true);
-          setSuperAdminEmail(res.data.full_email);
-          setSuperAdminMaskedEmail(res.data.email);
-          setPhoneLoading(false);
-          return;
-        }
-
+        clearRecaptchaVerifier();
         setDirectSession(res.data.token, res.data.user);
         const role = res.data.user.role;
         if (role === 'admin' || role === 'super_admin') {
