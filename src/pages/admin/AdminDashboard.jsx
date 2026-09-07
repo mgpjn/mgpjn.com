@@ -315,6 +315,15 @@ export default function AdminDashboard() {
   });
   const [isAdjustingWallet, setIsAdjustingWallet] = useState(false);
 
+  // Prescriptions Management Desk
+  const [prescriptionsList, setPrescriptionsList] = useState([]);
+  const [prescriptionStats, setPrescriptionStats] = useState({ total: 0, pending: 0, verified: 0, converted: 0, rejected: 0 });
+  const [prescriptionFilter, setPrescriptionFilter] = useState('all');
+  const [prescriptionSearch, setPrescriptionSearch] = useState('');
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
+  const [prescriptionAdminNote, setPrescriptionAdminNote] = useState('');
+  const [isUpdatingPrescription, setIsUpdatingPrescription] = useState(false);
+
   // Banners & Reports
   const [bannersList, setBannersList] = useState([]);
   const [showBannerModal, setShowBannerModal] = useState(false);
@@ -546,6 +555,7 @@ export default function AdminDashboard() {
     { key: 'products', label: 'Products', path: '/admin/products', icon: Package },
     { key: 'categories', label: 'Categories', path: '/admin/categories', icon: FolderTree },
     { key: 'orders', label: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+    { key: 'prescriptions', label: 'Prescriptions (Rx Desk)', path: '/admin/prescriptions', icon: FileText, badge: prescriptionStats?.pending > 0 ? `${prescriptionStats.pending} New` : null },
     { key: 'payments', label: 'Payments & Repair Portal', path: '/admin/payments', icon: CreditCard, badge: paymentStats?.failed_count > 0 ? `${paymentStats.failed_count} Issues` : null },
     { key: 'wallet', label: 'Commission Wallet', path: '/admin/wallet', icon: Wallet },
     { key: 'banners', label: 'Banner Management', path: '/admin/banners', icon: Image },
@@ -641,6 +651,8 @@ export default function AdminDashboard() {
         if (res.data.success) setCategoriesList(res.data.categories);
       } else if (currentSection === 'orders') {
         await fetchOrdersData(orderPage);
+      } else if (currentSection === 'prescriptions') {
+        await fetchPrescriptionsData();
       } else if (currentSection === 'payments') {
         await fetchPaymentsData(paymentPage);
       } else if (currentSection === 'wallet') {
@@ -664,6 +676,47 @@ export default function AdminDashboard() {
       console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch Prescriptions for Admin Rx Desk
+  const fetchPrescriptionsData = async (filterOverride, searchOverride) => {
+    try {
+      setLoading(true);
+      const st = filterOverride !== undefined ? filterOverride : prescriptionFilter;
+      const q = searchOverride !== undefined ? searchOverride : prescriptionSearch;
+      const res = await getAdminPrescriptions({ status: st, search: q });
+      if (res.data?.success) {
+        setPrescriptionsList(res.data.prescriptions?.data || res.data.prescriptions || []);
+        if (res.data.stats) {
+          setPrescriptionStats(res.data.stats);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePrescriptionStatus = async (prescriptionId, newStatus, note = '') => {
+    try {
+      setIsUpdatingPrescription(true);
+      const res = await updateAdminPrescriptionStatus(prescriptionId, {
+        status: newStatus,
+        admin_notes: note || prescriptionAdminNote,
+      });
+      if (res.data?.success) {
+        toast.success(`Prescription marked as ${newStatus}`);
+        fetchPrescriptionsData();
+        if (selectedPrescription?.id === prescriptionId) {
+          setSelectedPrescription(res.data.prescription);
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update prescription');
+    } finally {
+      setIsUpdatingPrescription(false);
     }
   };
 
@@ -5158,6 +5211,17 @@ export default function AdminDashboard() {
                             {ord.invoice_number && (
                               <span className="text-[10px] text-slate-400 font-mono block">{ord.invoice_number}</span>
                             )}
+                            {(ord.prescription || ord.prescription_id) && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPrescription(ord.prescription || { id: ord.prescription_id, patient_name: ord.customer_name, phone: ord.phone, order_id: ord.id })}
+                                className="inline-flex items-center space-x-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded-md mt-1 cursor-pointer transition-colors"
+                                title="Click to view attached Doctor Prescription"
+                              >
+                                <FileText className="w-2.5 h-2.5 text-amber-600" />
+                                <span>Rx Attached</span>
+                              </button>
+                            )}
                           </td>
                           <td className="p-3">
                             <span className="font-bold text-slate-900 block">{ord.customer_name}</span>
@@ -5224,6 +5288,18 @@ export default function AdminDashboard() {
                           </td>
                           <td className="p-3 text-right">
                             <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
+                              {/* View Attached Prescription */}
+                              {(ord.prescription || ord.prescription_id) && (
+                                <button
+                                  onClick={() => setSelectedPrescription(ord.prescription || { id: ord.prescription_id, patient_name: ord.customer_name, phone: ord.phone, order_id: ord.id })}
+                                  className="bg-amber-50 hover:bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-amber-300"
+                                  title="View Attached Doctor Prescription"
+                                >
+                                  <FileText className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>Rx</span>
+                                </button>
+                              )}
+
                               {/* GST Bill */}
                               <button
                                 onClick={() => setSelectedInvoiceOrderId(ord.id)}
@@ -6622,6 +6698,262 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {currentSection === 'prescriptions' && (
+            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b">
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg flex items-center space-x-2">
+                    <FileText className="w-5 h-5 text-brand-blue-700" />
+                    <span>Doctor Prescriptions Desk (Rx Approvals)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Review patient prescription uploads, verify medicine salt dosages, direct call/WhatsApp patients, and convert to active orders.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchPrescriptionsData()}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-brand-blue-700' : ''}`} />
+                  <span>Refresh Rx Desk</span>
+                </button>
+              </div>
+
+              {/* Stats Counters */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Total Uploads</span>
+                  <div className="text-xl font-black text-slate-900">{prescriptionStats.total || 0}</div>
+                </div>
+                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 space-y-1">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>Pending Review</span>
+                  </span>
+                  <div className="text-xl font-black text-amber-900">{prescriptionStats.pending || 0}</div>
+                </div>
+                <div className="bg-emerald-50/80 p-3.5 rounded-2xl border border-emerald-200 space-y-1">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase">Pharmacist Verified</span>
+                  <div className="text-xl font-black text-emerald-900">{prescriptionStats.verified || 0}</div>
+                </div>
+                <div className="bg-blue-50/80 p-3.5 rounded-2xl border border-blue-200 space-y-1">
+                  <span className="text-[10px] font-bold text-blue-800 uppercase">Converted to Order</span>
+                  <div className="text-xl font-black text-blue-900">{prescriptionStats.converted || 0}</div>
+                </div>
+                <div className="bg-rose-50/80 p-3.5 rounded-2xl border border-rose-200 space-y-1">
+                  <span className="text-[10px] font-bold text-rose-800 uppercase">Rejected / Invalid</span>
+                  <div className="text-xl font-black text-rose-900">{prescriptionStats.rejected || 0}</div>
+                </div>
+              </div>
+
+              {/* Filter Tabs & Search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { key: 'all', label: 'All Prescriptions' },
+                    { key: 'pending', label: '🟡 Pending Review' },
+                    { key: 'verified', label: '🟢 Verified' },
+                    { key: 'converted', label: '🔵 Converted' },
+                    { key: 'rejected', label: '🔴 Rejected' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        setPrescriptionFilter(tab.key);
+                        fetchPrescriptionsData(tab.key, prescriptionSearch);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        prescriptionFilter === tab.key
+                          ? 'bg-[#004e89] text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search patient, phone, notes..."
+                    value={prescriptionSearch}
+                    onChange={(e) => setPrescriptionSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        fetchPrescriptionsData(prescriptionFilter, prescriptionSearch);
+                      }
+                    }}
+                    className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#004e89] w-full sm:w-64"
+                  />
+                </div>
+              </div>
+
+              {/* Prescriptions Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500">
+                    <tr>
+                      <th className="p-3">Rx ID &amp; Date</th>
+                      <th className="p-3">Patient &amp; Contact</th>
+                      <th className="p-3">Prescription File</th>
+                      <th className="p-3">Instructions / Notes</th>
+                      <th className="p-3">Linked Order</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {prescriptionsList?.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="p-8 text-center text-slate-400">
+                          No prescriptions found in this view.
+                        </td>
+                      </tr>
+                    ) : (
+                      prescriptionsList?.map((rx) => {
+                        const cleanPhone = (rx.phone || '').replace(/\D/g, '');
+                        const waPhone = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+                        const isPdf = (rx.file_path || '').toLowerCase().endsWith('.pdf');
+
+                        return (
+                          <tr key={rx.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="p-3">
+                              <span className="font-bold text-brand-blue-800 font-mono block">#RX-{rx.id}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {rx.created_at ? new Date(rx.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                              </span>
+                            </td>
+
+                            <td className="p-3">
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-slate-900 block">{rx.patient_name}</span>
+                                <div className="flex items-center space-x-2 text-[10px]">
+                                  <a
+                                    href={`tel:${cleanPhone}`}
+                                    className="text-brand-blue-700 font-bold hover:underline inline-flex items-center space-x-0.5"
+                                    title="Direct Phone Call"
+                                  >
+                                    <PhoneCall className="w-2.5 h-2.5" />
+                                    <span>{rx.phone}</span>
+                                  </a>
+                                  {waPhone && (
+                                    <a
+                                      href={`https://wa.me/91${waPhone}?text=${encodeURIComponent(`Hello ${rx.patient_name}, this is MediGlaxo Pharmacy regarding your uploaded Prescription #RX-${rx.id}.`)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-emerald-700 font-bold hover:underline bg-emerald-50 px-1 py-0.5 rounded"
+                                      title="Open WhatsApp Chat"
+                                    >
+                                      💬 WhatsApp
+                                    </a>
+                                  )}
+                                </div>
+                                {rx.email && <span className="text-[10px] text-slate-400 block truncate max-w-[140px]">{rx.email}</span>}
+                              </div>
+                            </td>
+
+                            <td className="p-3">
+                              {rx.file_path ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPrescription(rx)}
+                                  className="group relative block w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer shadow-2xs hover:border-brand-blue-500 transition-all"
+                                  title="Click to view full prescription"
+                                >
+                                  {isPdf ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-rose-50 text-rose-700 p-1">
+                                      <FileText className="w-5 h-5" />
+                                      <span className="text-[8px] font-black uppercase mt-0.5">PDF</span>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={rx.file_path}
+                                      alt="Prescription"
+                                      className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                      onError={(e) => {
+                                        e.target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400';
+                                      }}
+                                    />
+                                  )}
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                    <Eye className="w-4 h-4" />
+                                  </div>
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic">No document</span>
+                              )}
+                            </td>
+
+                            <td className="p-3 max-w-xs">
+                              <p className="text-slate-700 text-xs line-clamp-2" title={rx.notes || 'No specific notes'}>
+                                {rx.notes || <span className="text-slate-400 italic">No specific instructions</span>}
+                              </p>
+                              {rx.admin_notes && (
+                                <span className="text-[10px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded font-medium mt-1 block">
+                                  Pharmacist: {rx.admin_notes}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              {rx.order || rx.order_id ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedInvoiceOrderId(rx.order_id || rx.order?.id)}
+                                  className="bg-brand-blue-50 text-brand-blue-800 border border-brand-blue-200 px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-brand-blue-100 transition-colors"
+                                  title="View Linked Order Bill"
+                                >
+                                  📦 #{rx.order?.order_number || rx.order_id}
+                                </button>
+                              ) : (
+                                <span className="text-slate-400 text-[10px] italic">Not linked</span>
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase inline-block ${
+                                rx.status === 'verified' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                rx.status === 'converted' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                                rx.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
+                              }`}>
+                                {rx.status === 'verified' ? '✓ Verified' :
+                                 rx.status === 'converted' ? '✓ Converted' :
+                                 rx.status === 'rejected' ? '✕ Rejected' : '🟡 Pending'}
+                              </span>
+                            </td>
+
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end space-x-1.5 whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedPrescription(rx);
+                                    setPrescriptionAdminNote(rx.admin_notes || '');
+                                  }}
+                                  className="bg-brand-blue-700 hover:bg-brand-blue-800 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold inline-flex items-center space-x-1 transition-all shadow-2xs cursor-pointer"
+                                  title="Review & Verify Prescription"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Review</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -12054,6 +12386,182 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: PRESCRIPTION LIGHTBOX & PHARMACIST REVIEW         */}
+      {/* ======================================================== */}
+      {selectedPrescription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b flex-shrink-0">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-5 h-5 text-brand-blue-700" />
+                <h3 className="text-base font-black text-slate-900">
+                  Prescription Details • #{selectedPrescription.id}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPrescription(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 space-y-4 pr-1 text-xs">
+              {/* Patient Info Card */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Patient Name</span>
+                  <span className="font-extrabold text-slate-900 text-sm">{selectedPrescription.patient_name}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Contact Number</span>
+                  <div className="flex items-center space-x-2 mt-0.5">
+                    <a
+                      href={`tel:${selectedPrescription.phone}`}
+                      className="font-bold text-brand-blue-700 hover:underline inline-flex items-center space-x-1"
+                    >
+                      <PhoneCall className="w-3 h-3" />
+                      <span>{selectedPrescription.phone}</span>
+                    </a>
+                    <a
+                      href={`https://wa.me/91${(selectedPrescription.phone || '').replace(/\D/g, '').slice(-10)}?text=${encodeURIComponent(`Hello ${selectedPrescription.patient_name}, this is MediGlaxo Pharmacy regarding your uploaded Prescription #RX-${selectedPrescription.id}.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 font-bold hover:underline bg-emerald-100 px-2 py-0.5 rounded-lg text-[10px]"
+                    >
+                      💬 WhatsApp
+                    </a>
+                  </div>
+                </div>
+                {selectedPrescription.email && (
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Email Address</span>
+                    <span className="font-medium text-slate-700">{selectedPrescription.email}</span>
+                  </div>
+                )}
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Current Verification Status</span>
+                  <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase inline-block mt-0.5 ${
+                    selectedPrescription.status === 'verified' ? 'bg-emerald-100 text-emerald-800' :
+                    selectedPrescription.status === 'converted' ? 'bg-blue-100 text-blue-800' :
+                    selectedPrescription.status === 'rejected' ? 'bg-rose-100 text-rose-800' :
+                    'bg-amber-100 text-amber-800'
+                  }`}>
+                    {selectedPrescription.status || 'pending'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              {selectedPrescription.notes && (
+                <div className="bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200/80">
+                  <span className="font-bold text-amber-900 block mb-0.5">Patient / Doctor Instructions:</span>
+                  <p className="text-amber-800">{selectedPrescription.notes}</p>
+                </div>
+              )}
+
+              {/* Document / Image Viewer */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700">Prescription Document Preview:</span>
+                  {selectedPrescription.file_path && (
+                    <a
+                      href={selectedPrescription.file_path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-blue-700 hover:underline font-bold inline-flex items-center space-x-1 text-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open Full Size / PDF</span>
+                    </a>
+                  )}
+                </div>
+
+                <div className="bg-slate-900/5 rounded-2xl border border-slate-200 p-2 flex items-center justify-center min-h-[220px]">
+                  {selectedPrescription.file_path?.toLowerCase().endsWith('.pdf') ? (
+                    <div className="text-center p-6 space-y-2">
+                      <FileText className="w-12 h-12 text-rose-600 mx-auto" />
+                      <p className="font-bold text-slate-700">PDF Prescription Attached</p>
+                      <a
+                        href={selectedPrescription.file_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-brand-blue-800 text-white px-4 py-2 rounded-xl font-bold shadow hover:bg-brand-blue-900"
+                      >
+                        Download / View PDF File
+                      </a>
+                    </div>
+                  ) : (
+                    <img
+                      src={selectedPrescription.file_path || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800'}
+                      alt="Prescription Document"
+                      className="max-h-[380px] w-auto object-contain rounded-xl shadow-xs"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Pharmacist Action / Notes */}
+              <div className="space-y-2 pt-2 border-t">
+                <label className="font-bold text-slate-700 block">Pharmacist Review Notes:</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Verified by Pharmacist Sharma. Salt dosage confirmed."
+                  value={prescriptionAdminNote}
+                  onChange={(e) => setPrescriptionAdminNote(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:bg-white focus:outline-none focus:border-brand-blue-600"
+                />
+              </div>
+
+              {/* Status Action Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    disabled={isUpdatingPrescription}
+                    onClick={() => handleUpdatePrescriptionStatus(selectedPrescription.id, 'verified')}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold shadow-xs transition-all flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Approve &amp; Verify</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isUpdatingPrescription}
+                    onClick={() => handleUpdatePrescriptionStatus(selectedPrescription.id, 'converted')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold shadow-xs transition-all flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    <span>Mark Converted to Order</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isUpdatingPrescription}
+                    onClick={() => handleUpdatePrescriptionStatus(selectedPrescription.id, 'rejected')}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Reject</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPrescription(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
