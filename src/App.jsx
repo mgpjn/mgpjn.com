@@ -172,7 +172,7 @@ export default function App() {
   const isInvoiceRoute = location.pathname.startsWith('/invoice');
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased selection:bg-brand-blue-900 selection:text-white">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-slate-50 text-slate-900 font-sans antialiased selection:bg-brand-blue-900 selection:text-white">
       <ScrollAndReferralTracker />
       {/* Super Admin Impersonated Session Notification Banner */}
       {isImpersonated && (
@@ -201,7 +201,7 @@ export default function App() {
         <Navbar onOpenPrescriptionModal={() => setIsPrescriptionModalOpen(true)} />
       )}
 
-      <main className="flex-grow">
+      <main className="flex-grow w-full max-w-full overflow-x-hidden">
         <Routes>
           {/* Isolated Impersonation Session Initializer */}
           <Route path="/impersonate" element={<ImpersonateSessionPage />} />

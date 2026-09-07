@@ -33,3 +33,4 @@ scratch_results.json
 deep_crawler.js
 test_login.js
 test_db_connection.js
+*.tar.gz

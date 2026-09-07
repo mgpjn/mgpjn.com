@@ -243,6 +243,9 @@ export default function AdminDashboard() {
     retailer_price: '',
     wholesale_price: '',
     stock_quantity: 100,
+    gst_percentage: '12.00',
+    hsn_code: '30049099',
+    unit: 'Box (10*10)',
     box_packing: '1 Box (10 Strips)',
     box_unit: 'Box',
     strip_packing: '1 Strip (10 Tablets)',
@@ -2342,6 +2345,9 @@ export default function AdminDashboard() {
       retailer_price: p.retailer_price || p.wholesale_price || '',
       wholesale_price: p.wholesale_price || '',
       stock_quantity: p.stock ?? p.stock_quantity ?? 100,
+      gst_percentage: p.gst_percentage !== undefined && p.gst_percentage !== null ? String(p.gst_percentage) : '12.00',
+      hsn_code: p.hsn_code || '30049099',
+      unit: p.unit || 'Box (10*10)',
       box_packing: p.box_packing || '1 Box (10 Strips)',
       box_unit: p.box_unit || 'Box',
       strip_packing: p.strip_packing || '1 Strip (10 Tablets)',
@@ -3264,6 +3270,9 @@ export default function AdminDashboard() {
                         retailer_price: '',
                         wholesale_price: '',
                         stock_quantity: 100,
+                        gst_percentage: '12.00',
+                        hsn_code: '30049099',
+                        unit: 'Box (10*10)',
                         box_packing: '1 Box (10 Strips)',
                         box_unit: 'Box',
                         strip_packing: '1 Strip (10 Tablets)',
@@ -4198,6 +4207,9 @@ export default function AdminDashboard() {
                         retailer_price: '',
                         wholesale_price: '',
                         stock_quantity: 100,
+                        gst_percentage: '12.00',
+                        hsn_code: '30049099',
+                        unit: 'Box (10*10)',
                         box_packing: '1 Box (10 Strips)',
                         box_unit: 'Box',
                         strip_packing: '1 Strip (10 Tablets)',
@@ -4511,10 +4523,16 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           <td className="p-2.5 font-semibold text-slate-700 whitespace-nowrap">
-                            {p.category?.name || 'Tablets'}
+                            <div>{p.category?.name || 'Tablets'}</div>
+                            <div className="flex items-center space-x-1 text-[9px] mt-0.5">
+                              <span className="bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded border border-blue-200">
+                                {p.gst_percentage !== undefined && p.gst_percentage !== null ? p.gst_percentage : 12}% GST
+                              </span>
+                            </div>
                           </td>
-                          <td className="p-2.5 font-mono text-slate-600 font-bold whitespace-nowrap text-[11px]">
-                            {p.batch_no || 'BT2026001'}
+                          <td className="p-2.5 font-mono text-slate-600 whitespace-nowrap text-[11px]">
+                            <div className="font-bold text-slate-700">{p.batch_no || 'BT2026001'}</div>
+                            <div className="text-[9px] text-slate-400 font-mono">HSN: {p.hsn_code || '30049099'}</div>
                           </td>
                           <td className="p-2.5 font-bold text-slate-900 whitespace-nowrap">
                             ₹{Number(p.mrp || (p.price * 1.25)).toFixed(0)}
@@ -7633,6 +7651,124 @@ export default function AdminDashboard() {
                       onChange={(e) => setProductForm({ ...productForm, manufacturer: e.target.value })}
                       className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium"
                     />
+                  </div>
+                </div>
+
+                {/* GST Tax Rate & HSN Classification Section */}
+                <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                      <label className="font-black text-slate-900 text-xs uppercase tracking-wider">
+                        GST Tax Rate &amp; HSN/SAC Classification
+                      </label>
+                    </div>
+                    <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200">
+                      Active: {productForm.gst_percentage || '12'}% GST
+                    </span>
+                  </div>
+
+                  {/* GST Percentage Presets + Custom Input */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                      GST Rate (%) *
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 mb-2">
+                      {[
+                        { label: '0%', sub: 'Exempt', val: '0' },
+                        { label: '5%', sub: 'Essential', val: '5' },
+                        { label: '12%', sub: 'Pharma (Std)', val: '12' },
+                        { label: '18%', sub: 'Supplements', val: '18' },
+                        { label: '28%', sub: 'Special', val: '28' },
+                      ].map((item) => (
+                        <button
+                          key={item.val}
+                          type="button"
+                          onClick={() => setProductForm({ ...productForm, gst_percentage: item.val })}
+                          className={`py-1.5 px-2 rounded-xl text-center border font-bold transition-all cursor-pointer ${
+                            String(productForm.gst_percentage) === item.val
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
+                          }`}
+                        >
+                          <div className="text-xs font-black">{item.label}</div>
+                          <div className={`text-[9px] ${String(productForm.gst_percentage) === item.val ? 'text-blue-100' : 'text-slate-400'}`}>
+                            {item.sub}
+                          </div>
+                        </button>
+                      ))}
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="Custom %"
+                          value={productForm.gst_percentage}
+                          onChange={(e) => setProductForm({ ...productForm, gst_percentage: e.target.value })}
+                          className="w-full h-full py-1.5 px-2 bg-white border border-slate-200 rounded-xl font-black text-xs text-center text-blue-900 outline-none focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* HSN Code & Packaging Unit */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                        HSN / SAC Code *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="30049099"
+                        value={productForm.hsn_code}
+                        onChange={(e) => setProductForm({ ...productForm, hsn_code: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-bold text-slate-900"
+                      />
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {[
+                          { code: '30049099', label: 'Allopathic' },
+                          { code: '30041010', label: 'Antibiotic' },
+                          { code: '30045010', label: 'Vitamins' },
+                          { code: '21069099', label: 'Nutra' },
+                        ].map((hsn) => (
+                          <button
+                            key={hsn.code}
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, hsn_code: hsn.code })}
+                            className="text-[9px] bg-white hover:bg-blue-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 cursor-pointer"
+                          >
+                            {hsn.code} ({hsn.label})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                        Invoice Unit / Packing Label
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Box (10*10)"
+                        value={productForm.unit || ''}
+                        onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-900"
+                      />
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {['Box (10*10)', 'Strip', 'Bottle (100ml)', 'Tube (30g)', 'Vial'].map((u) => (
+                          <button
+                            key={u}
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, unit: u })}
+                            className="text-[9px] bg-white hover:bg-blue-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 cursor-pointer"
+                          >
+                            {u}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

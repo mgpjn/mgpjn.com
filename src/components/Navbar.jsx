@@ -191,7 +191,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-slate-100">
       {/* 1. Top Pharmaceutical Trust Header */}
-      <div className="bg-brand-blue-950 text-white text-xs py-1.5 px-4 hidden md:block border-b border-brand-blue-900">
+      <div className="bg-brand-blue-950 text-white text-xs py-1.5 px-4 hidden xl:block border-b border-brand-blue-900">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-6">
             <span className="flex items-center space-x-1.5 font-semibold text-amber-300">
@@ -232,12 +232,12 @@ export default function Navbar({ onOpenPrescriptionModal }) {
       </div>
 
       {/* 2. Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 py-2.5">
-        <div className="flex items-center justify-between gap-3 md:gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5">
+        <div className="flex items-center justify-between gap-2.5 sm:gap-4">
           {/* Mobile Menu Hamburger Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden text-slate-700 hover:text-brand-blue-800 p-1.5 -ml-1 rounded-lg"
+            className="lg:hidden text-slate-700 hover:text-brand-blue-800 p-1.5 -ml-1 rounded-lg cursor-pointer"
             aria-label="Toggle Navigation Menu"
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -248,12 +248,12 @@ export default function Navbar({ onOpenPrescriptionModal }) {
             <img
               src="/logo.png"
               alt="MediGlaxo Pharma Junction"
-              className="h-9 sm:h-11 md:h-12 w-auto max-w-[170px] sm:max-w-[200px] md:max-w-[230px] object-contain group-hover:scale-105 transition-transform duration-200"
+              className="h-8 xs:h-9 sm:h-11 md:h-12 w-auto max-w-[140px] xs:max-w-[170px] sm:max-w-[200px] md:max-w-[230px] object-contain group-hover:scale-105 transition-transform duration-200"
             />
           </Link>
 
           {/* Desktop Search Bar with Debounce & Styled Search List */}
-          <div ref={searchRef} className="relative flex-1 max-w-2xl hidden md:block">
+          <div ref={searchRef} className="relative flex-1 max-w-2xl hidden lg:block">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
@@ -437,8 +437,8 @@ export default function Navbar({ onOpenPrescriptionModal }) {
           </div>
         </div>
 
-        {/* 3. Mobile Search Bar (< 768px) with Debounce & Styled Search List */}
-        <div ref={mobileSearchRef} className="mt-2.5 md:hidden relative">
+        {/* 3. Mobile Search Bar (< 1024px) with Debounce & Styled Search List */}
+        <div ref={mobileSearchRef} className="mt-2.5 lg:hidden relative">
           <form onSubmit={handleSearchSubmit} className="relative">
             <input
               type="text"
@@ -462,13 +462,13 @@ export default function Navbar({ onOpenPrescriptionModal }) {
         </div>
       </div>
 
-      {/* 4. Category Full-Width Mega Navigation Bar (Desktop) */}
+      {/* 4. Category Full-Width Mega Navigation Bar (Desktop 1024px+) */}
       <nav 
-        className="border-t border-slate-100 bg-white hidden md:block relative z-30"
+        className="border-t border-slate-100 bg-white hidden lg:block relative z-30 w-full max-w-full"
         onMouseLeave={handleMouseLeaveNav}
       >
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center space-x-1 lg:space-x-1.5 py-1">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 flex items-center justify-between overflow-x-auto scrollbar-none">
+          <div className="flex items-center space-x-1 lg:space-x-1.5 py-1 flex-shrink-0">
             {/* All Medicines Mega Button */}
             <div
               className="relative"

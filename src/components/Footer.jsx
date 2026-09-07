@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="bg-slate-900 text-slate-300 pt-16 pb-8 border-t border-slate-800 mt-20">
       <div className="max-w-7xl mx-auto px-4">
         {/* Top Trust Features */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pb-12 border-b border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pb-10 sm:pb-12 border-b border-slate-800">
           <div className="flex items-start space-x-4 bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
             <div className="w-12 h-12 rounded-xl bg-brand-blue-900/80 text-brand-blue-400 flex items-center justify-center flex-shrink-0">
               <Truck className="w-6 h-6" />
@@ -50,7 +50,7 @@ export default function Footer() {
         </div>
 
         {/* Middle Footer Navigation */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 py-10 sm:py-12">
           {/* Brand Info */}
           <div className="space-y-4">
             <div className="bg-white p-2.5 rounded-2xl inline-block shadow-md">

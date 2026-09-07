@@ -26,8 +26,8 @@ export default function CartDrawer() {
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
       ></div>
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+        <div className="w-full sm:w-96 md:w-[420px] max-w-full bg-white shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
           {/* Drawer Header */}
           <div className="p-5 bg-slate-50 border-b flex items-center justify-between">
             <div className="flex items-center space-x-2">
