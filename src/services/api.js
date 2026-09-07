@@ -10,11 +10,14 @@ const api = axios.create({
   },
 });
 
-// Attach bearer token if present
+// Attach bearer token if present and handle FormData headers properly
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('mediglaxo_session_token') || localStorage.getItem('mediglaxo_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
   }
   return config;
 });
