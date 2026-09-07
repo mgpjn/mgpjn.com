@@ -237,52 +237,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
         )}
       </section>
 
-      {/* 2. TOP CATEGORIES BROWSER */}
-      <section className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight flex items-center space-x-2">
-              <Layers className="w-5 h-5 text-[#ff5722]" />
-              <span>Browse by Dosage Form &amp; Category</span>
-            </h2>
-            <p className="text-xs text-slate-500">Explore verified formulations categorized for fast dispensing.</p>
-          </div>
-          <Link to="/shop" className="text-xs font-bold text-[#ff5722] hover:text-[#f4511e] flex items-center space-x-1">
-            <span>All Categories</span>
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-          {categories.filter(c => !c.parent_id).slice(0, 8).map((cat) => (
-            <Link
-              key={cat.id}
-              to={`/shop?category=${cat.slug || cat.id}`}
-              className="bg-white hover:bg-orange-50/50 p-3.5 rounded-2xl border border-slate-100 hover:border-orange-200/80 shadow-xs hover:shadow-md transition-all text-center group flex flex-col items-center justify-center space-y-2"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-slate-50 group-hover:bg-white flex items-center justify-center border border-slate-100 shadow-xs group-hover:scale-110 transition-transform">
-                {cat.image ? (
-                  <img src={cat.image} alt={cat.name} className="w-8 h-8 object-contain" />
-                ) : (
-                  getCategoryIcon(cat.name)
-                )}
-              </div>
-              <div>
-                <span className="font-bold text-xs text-slate-900 block group-hover:text-[#ff5722] transition-colors truncate max-w-[100px]">
-                  {cat.name}
-                </span>
-                {cat.products_count !== undefined && (
-                  <span className="text-[10px] text-slate-400 font-semibold">
-                    {cat.products_count} Products
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. 🔥 HOT SELLING & HIGH DEMAND MEDICINES (CONTROLLED BY is_trending IN ADMIN) */}
+      {/* 2. 🔥 HOT SELLING & HIGH DEMAND MEDICINES (CONTROLLED BY is_trending IN ADMIN) */}
       {hotSellingList.length > 0 && (
         <section className="max-w-7xl mx-auto px-4">
           <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-orange-500/10 p-4 sm:p-6 md:p-8 rounded-3xl border border-orange-200/60 shadow-sm space-y-4 sm:space-y-6">
