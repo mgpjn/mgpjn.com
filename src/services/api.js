@@ -22,6 +22,8 @@ api.interceptors.request.use((config) => {
 // Catalog & Public Endpoints
 export const getCategories = () => api.get('/categories');
 export const getCategory = (idOrSlug) => api.get(`/categories/${idOrSlug}`);
+export const getBanners = () => api.get('/banners');
+export const getHomepageData = () => api.get('/homepage');
 export const getProducts = (params) => api.get('/products', { params });
 export const getProduct = (idOrSlug) => api.get(`/products/${idOrSlug}`);
 export const getFeaturedProducts = () => api.get('/products/featured');
