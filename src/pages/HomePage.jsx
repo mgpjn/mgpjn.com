@@ -123,9 +123,9 @@ export default function HomePage({ onOpenPrescriptionModal }) {
   return (
     <div className="space-y-8 sm:space-y-12 pb-16 pt-2">
       {/* 1. HERO PROMOTIONAL BANNER SECTION (DYNAMIC FROM ADMIN) */}
-      <section className="max-w-7xl mx-auto px-4">
-        {banners.length > 0 ? (
-          <div className="relative rounded-3xl overflow-hidden shadow-xl border border-slate-100 bg-slate-900 group aspect-[21/9] sm:aspect-[24/9] md:aspect-[3/1] max-h-[380px]">
+      {(featuredData.hero_slider_enabled !== false && featuredData.hero_slider_enabled !== '0' && banners.length > 0) && (
+        <section className="w-full px-2 sm:px-4 md:px-6 max-w-[1600px] mx-auto">
+          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border border-slate-200/50 bg-slate-900 group min-h-[200px] xs:min-h-[220px] sm:min-h-[280px] md:min-h-[350px] lg:min-h-[420px] aspect-[16/9] xs:aspect-[18/9] sm:aspect-[21/9] md:aspect-[24/8] lg:aspect-[28/8] max-h-[480px]">
             {banners.map((banner, index) => (
               <div
                 key={banner.id || index}
@@ -138,24 +138,24 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                   alt={banner.title}
                   className="w-full h-full object-cover object-center"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/50 to-transparent flex items-center p-6 sm:p-10 md:p-14">
-                  <div className="max-w-xl space-y-2 sm:space-y-3 text-white">
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-transparent flex items-center py-4 px-10 xs:px-12 sm:px-14 md:px-16 sm:py-8 md:py-12 lg:py-16">
+                  <div className="max-w-xl space-y-1.5 sm:space-y-3 text-white">
                     {banner.subtitle && (
-                      <span className="inline-block px-3 py-1 bg-[#ff5722] text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-full shadow-xs">
+                      <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-[#ff5722] text-white text-[9px] sm:text-xs font-black uppercase tracking-wider rounded-full shadow-xs">
                         {banner.subtitle}
                       </span>
                     )}
-                    <h2 className="text-xl sm:text-3xl md:text-4xl font-black tracking-tight leading-tight">
+                    <h2 className="text-base xs:text-lg sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight leading-tight sm:leading-snug">
                       {banner.title}
                     </h2>
                     {banner.link && (
-                      <div className="pt-2">
+                      <div className="pt-1 sm:pt-2">
                         <Link
                           to={banner.link.startsWith('/') ? banner.link : `/shop`}
-                          className="inline-flex items-center space-x-2 bg-white text-slate-900 hover:bg-orange-50 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-105"
+                          className="inline-flex items-center space-x-1.5 sm:space-x-2 bg-white text-slate-900 hover:bg-orange-50 px-3.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-105"
                         >
                           <span>Explore Products</span>
-                          <ChevronRight className="w-4 h-4 text-[#ff5722]" />
+                          <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#ff5722]" />
                         </Link>
                       </div>
                     )}
@@ -170,25 +170,25 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                 <button
                   type="button"
                   onClick={() => setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs transition-colors"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-1.5 sm:p-2.5 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs transition-colors"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setCurrentBannerIndex((prev) => (prev + 1) % banners.length)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs transition-colors"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-1.5 sm:p-2.5 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs transition-colors"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-1.5 bg-black/30 backdrop-blur-xs px-2.5 py-1 rounded-full">
+                <div className="absolute bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-1.5 bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-full">
                   {banners.map((_, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => setCurrentBannerIndex(idx)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        idx === currentBannerIndex ? 'bg-[#ff5722] w-6' : 'bg-white/60'
+                      className={`h-1.5 sm:h-2 rounded-full transition-all ${
+                        idx === currentBannerIndex ? 'bg-[#ff5722] w-5 sm:w-6' : 'bg-white/60 w-1.5 sm:w-2'
                       }`}
                     />
                   ))}
@@ -196,46 +196,8 @@ export default function HomePage({ onOpenPrescriptionModal }) {
               </>
             )}
           </div>
-        ) : (
-          /* Default Premium Hero Banner */
-          <div className="relative overflow-hidden bg-gradient-to-r from-brand-blue-950 via-slate-900 to-brand-blue-900 text-white p-6 sm:p-10 md:p-14 rounded-3xl shadow-xl">
-            <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
-            <div className="max-w-2xl space-y-4 relative z-10">
-              <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-semibold border border-white/10 text-emerald-300">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>WHO-GMP Certified Healthcare &amp; Express Logistics</span>
-              </div>
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
-                Authentic Medicines <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff5722] via-amber-300 to-yellow-200">
-                  Direct from Manufacturer.
-                </span>
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                Order genuine WHO-GMP certified pharmaceuticals, tablets, syrups, and chronic care medicines with verified batch certificates &amp; instant flat discounts.
-              </p>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Link
-                  to="/shop"
-                  className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold shadow-lg shadow-orange-600/30 transition-all hover:scale-105"
-                >
-                  Explore Medicines Catalog →
-                </Link>
-                {onOpenPrescriptionModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenPrescriptionModal}
-                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold backdrop-blur-md transition-all flex items-center space-x-2"
-                  >
-                    <Upload className="w-4 h-4 text-emerald-400" />
-                    <span>Upload Prescription</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* 2. 🔥 HOT SELLING & HIGH DEMAND MEDICINES (CONTROLLED BY is_trending IN ADMIN) */}
       {hotSellingList.length > 0 && (
@@ -351,7 +313,9 @@ export default function HomePage({ onOpenPrescriptionModal }) {
 
       {/* 7. DYNAMIC CATEGORY SHELVES (Tablets, Capsules, Syrups, Injections, etc.) */}
       {featuredData.categoryShelves && featuredData.categoryShelves.length > 0 && (
-        featuredData.categoryShelves.slice(0, 3).map((catShelf) => (
+        featuredData.categoryShelves
+          .filter((catShelf) => !(featuredData.disabled_shelves || []).includes(catShelf.id) && !(featuredData.disabled_shelves || []).includes(Number(catShelf.id)))
+          .map((catShelf) => (
           <section key={catShelf.id} className="max-w-7xl mx-auto px-4">
             <div className="bg-slate-50/80 p-5 sm:p-7 rounded-3xl border border-slate-200/80 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">

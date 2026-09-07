@@ -12,7 +12,8 @@ import {
   User, UserCheck2, UserPlus2, FileCheck, KeyRound, ShieldAlert,
   CheckCheck, SlidersHorizontal, ArrowDownCircle, Map, Upload, Star, Truck, Menu, Download,
   FileText, CreditCard, Building2, PhoneCall, Loader2, Banknote, QrCode, Activity,
-  Minus, History, ArrowDownRight, TrendingUp, TrendingDown
+  Minus, History, ArrowDownRight, TrendingUp, TrendingDown,
+  Pill, Droplets, Syringe, Sparkles, Heart, HeartHandshake
 } from 'lucide-react';
 import { EarningsSalesChart, StockInventoryChart } from '../../components/common/DashboardCharts';
 import {
@@ -48,6 +49,7 @@ import {
   getAdminPayouts, processAdminPayout,
   getAdminWalletStats, getAdminWalletUsers, getAdminWalletTransactions, adjustAdminUserWallet,
   getAdminBanners, storeAdminBanner, deleteAdminBanner,
+  toggleAdminSlider, toggleAdminBanner, toggleAdminCategoryShelf,
   getAdminReports,
   getAdminEmployees, storeAdminEmployee, updateAdminEmployee,
   getAdminSettings, updateAdminSettings,
@@ -324,8 +326,14 @@ export default function AdminDashboard() {
   const [prescriptionAdminNote, setPrescriptionAdminNote] = useState('');
   const [isUpdatingPrescription, setIsUpdatingPrescription] = useState(false);
 
-  // Banners & Reports
+  // Banners, Slider & Homepage Shelves
   const [bannersList, setBannersList] = useState([]);
+  const [heroSliderEnabled, setHeroSliderEnabled] = useState(true);
+  const [disabledShelves, setDisabledShelves] = useState([]);
+  const [shelfCategories, setShelfCategories] = useState([]);
+  const [isTogglingSlider, setIsTogglingSlider] = useState(false);
+  const [togglingShelfId, setTogglingShelfId] = useState(null);
+  const [togglingBannerId, setTogglingBannerId] = useState(null);
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [bannerForm, setBannerForm] = useState({
     title: '',
@@ -659,7 +667,12 @@ export default function AdminDashboard() {
         await fetchWalletData(walletUserPage);
       } else if (currentSection === 'banners') {
         const res = await getAdminBanners();
-        if (res.data.success) setBannersList(res.data.banners);
+        if (res.data.success) {
+          setBannersList(res.data.banners || []);
+          setHeroSliderEnabled(res.data.hero_slider_enabled ?? true);
+          setDisabledShelves(res.data.disabled_shelves || []);
+          if (res.data.categories) setShelfCategories(res.data.categories);
+        }
       } else if (currentSection === 'reports') {
         const res = await getAdminReports();
         if (res.data.success) setReportsData(res.data.reports);
@@ -6958,21 +6971,337 @@ export default function AdminDashboard() {
           )}
 
           {currentSection === 'banners' && (
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b">
-                <h3 className="font-black text-slate-900 text-lg">Promotional Banners</h3>
-                <button onClick={() => setShowBannerModal(true)} className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2 rounded-xl text-xs font-bold">
-                  + Add Banner
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg flex items-center space-x-2">
+                    <span>🎠 Hero Slider &amp; Homepage Shelves Management</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Control hero promotional slider visibility, manage banner slides, and turn ON / OFF product range shelves (Tablets Range, Capsules Range, etc.) on the Homepage.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh</span>
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {bannersList.map((b) => (
-                  <div key={b.id} className="bg-slate-50 rounded-2xl overflow-hidden border p-3 space-y-2">
-                    <img src={b.image} alt={b.title} className="w-full h-32 object-cover rounded-xl" />
-                    <h4 className="font-bold text-xs text-slate-800">{b.title}</h4>
-                    <button onClick={async () => { await deleteAdminBanner(b.id); fetchData(); }} className="text-rose-600 text-[11px] font-bold">Delete</button>
+
+              {/* 1. HERO SLIDER MASTER SWITCH */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 border border-blue-100/80">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2.5">
+                      <span className="text-xl">🎠</span>
+                      <h4 className="font-black text-slate-900 text-base">Hero Promotional Banner Slider</h4>
+                      <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                        heroSliderEnabled ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-700 border border-slate-300'
+                      }`}>
+                        {heroSliderEnabled ? '🟢 Live on Homepage' : '⚪ Hidden (Disabled)'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 max-w-xl">
+                      {heroSliderEnabled
+                        ? 'The hero promotional carousel is actively displayed at full-width on the Homepage with auto-sliding slides.'
+                        : 'The hero carousel is currently turned OFF. Homepage visitors will see direct hot-selling medicines immediately.'}
+                    </p>
                   </div>
-                ))}
+
+                  <button
+                    type="button"
+                    disabled={isTogglingSlider}
+                    onClick={async () => {
+                      setIsTogglingSlider(true);
+                      try {
+                        const res = await toggleAdminSlider({ enabled: !heroSliderEnabled });
+                        if (res.data?.success) {
+                          setHeroSliderEnabled(res.data.hero_slider_enabled);
+                          toast.success(res.data.message || 'Slider updated!');
+                        }
+                      } catch (err) {
+                        toast.error('Failed to toggle slider');
+                      } finally {
+                        setIsTogglingSlider(false);
+                      }
+                    }}
+                    className={`px-5 py-2.5 rounded-xl font-extrabold text-xs flex items-center space-x-2 transition-all shadow-md cursor-pointer ${
+                      heroSliderEnabled
+                        ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                    } ${isTogglingSlider ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    {isTogglingSlider ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Updating...</span>
+                      </>
+                    ) : heroSliderEnabled ? (
+                      <>
+                        <span>Turn Slider OFF</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Turn Slider ON</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. CATEGORY RANGES & SHELVES (Tablets, Capsules, Syrups, etc.) ON / OFF CONTROLS */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="font-black text-slate-900 text-base flex items-center space-x-2">
+                      <Layers className="w-5 h-5 text-[#ff5722]" />
+                      <span>💊 Homepage Category Shelves &amp; Ranges (ON / OFF Controls)</span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Select which category range showcases appear on the customer Homepage (e.g. <b>Tablets Range</b>, <b>Capsules Range</b>, <b>Syrups Range</b>, <b>Injections Range</b>).
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full self-start sm:self-auto">
+                    {shelfCategories.length} Categories Configured
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                  {shelfCategories.map((cat) => {
+                    const isShelfDisabled = disabledShelves.includes(cat.id) || disabledShelves.includes(Number(cat.id));
+                    const isShelfActive = !isShelfDisabled && cat.is_active;
+                    const isUpdatingThis = togglingShelfId === cat.id;
+
+                    return (
+                      <div
+                        key={cat.id}
+                        className={`p-4 rounded-2xl border transition-all space-y-3 flex flex-col justify-between ${
+                          isShelfActive
+                            ? 'bg-emerald-50/40 border-emerald-200/80 shadow-xs'
+                            : 'bg-slate-50/70 border-slate-200 opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-base shadow-2xs">
+                              {(() => {
+                                const s = `${cat.name || ''} ${cat.icon || ''}`.toLowerCase();
+                                if (s.includes('tablet') || s.includes('pill')) return <Pill className="w-4 h-4 text-blue-600" />;
+                                if (s.includes('capsule')) return <Pill className="w-4 h-4 text-purple-600" />;
+                                if (s.includes('syrup') || s.includes('flask')) return <Droplets className="w-4 h-4 text-rose-600" />;
+                                if (s.includes('injection') || s.includes('syringe')) return <Syringe className="w-4 h-4 text-emerald-600" />;
+                                if (s.includes('cream') || s.includes('ointment')) return <Sparkles className="w-4 h-4 text-amber-600" />;
+                                if (s.includes('fitness') || s.includes('health')) return <Activity className="w-4 h-4 text-cyan-600" />;
+                                if (s.includes('ayurved') || s.includes('leaf')) return <Heart className="w-4 h-4 text-emerald-700" />;
+                                return <HeartHandshake className="w-4 h-4 text-orange-600" />;
+                              })()}
+                            </div>
+                            <div>
+                              <h5 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">
+                                {cat.name} Range
+                              </h5>
+                              <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                                {cat.products_count ?? 0} Active Products
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                            isShelfActive
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-slate-200 text-slate-600 border border-slate-300'
+                          }`}>
+                            {isShelfActive ? 'ON' : 'OFF'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/50">
+                          <span className="text-[11px] text-slate-500">
+                            Homepage Shelf:
+                          </span>
+                          <button
+                            type="button"
+                            disabled={isUpdatingThis}
+                            onClick={async () => {
+                              setTogglingShelfId(cat.id);
+                              try {
+                                const res = await toggleAdminCategoryShelf(cat.id);
+                                if (res.data?.success) {
+                                  setDisabledShelves(res.data.disabled_shelves || []);
+                                  toast.success(res.data.message || 'Shelf status updated');
+                                }
+                              } catch (err) {
+                                toast.error('Failed to toggle shelf');
+                              } finally {
+                                setTogglingShelfId(null);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1.5 transition-all shadow-2xs cursor-pointer ${
+                              isShelfActive
+                                ? 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 hover:border-rose-300'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                            } ${isUpdatingThis ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          >
+                            {isUpdatingThis ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : isShelfActive ? (
+                              <span>Turn Shelf OFF</span>
+                            ) : (
+                              <span>Turn Shelf ON</span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. PROMOTIONAL SLIDES MANAGEMENT */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div>
+                    <h4 className="font-black text-slate-900 text-base flex items-center space-x-2">
+                      <span>🖼️ Banner Slides ({bannersList.length} Slides)</span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Upload high-resolution slides with title, marketing badges, and custom shop links.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBannerForm({
+                        title: '',
+                        subtitle: 'WHO-GMP Certified Pharmaceuticals',
+                        image: '',
+                        link: '/shop',
+                        position: 'hero',
+                        sort_order: bannersList.length + 1,
+                        is_active: true,
+                      });
+                      setShowBannerModal(true);
+                    }}
+                    className="bg-[#ff5722] hover:bg-[#f4511e] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-[#ff5722]/20 transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add New Slide</span>
+                  </button>
+                </div>
+
+                {bannersList.length === 0 ? (
+                  <div className="py-12 text-center space-y-3 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <p className="text-sm font-bold text-slate-600">No banner slides created yet.</p>
+                    <button
+                      onClick={() => setShowBannerModal(true)}
+                      className="text-xs font-bold text-[#ff5722] hover:underline"
+                    >
+                      Click here to add your first hero banner slide
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {bannersList.map((b) => {
+                      const isUpdatingThis = togglingBannerId === b.id;
+                      const isActive = !!b.is_active;
+
+                      return (
+                        <div
+                          key={b.id}
+                          className="bg-slate-50 rounded-2xl overflow-hidden border border-slate-200/80 shadow-xs space-y-3 p-3.5 flex flex-col justify-between"
+                        >
+                          <div className="space-y-2.5">
+                            <div className="relative w-full h-36 rounded-xl overflow-hidden bg-slate-900 border border-slate-200">
+                              <img
+                                src={b.image}
+                                alt={b.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute top-2 left-2 flex items-center space-x-1.5">
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full backdrop-blur-xs ${
+                                  isActive
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-slate-800/90 text-slate-300'
+                                }`}>
+                                  {isActive ? 'Active' : 'Inactive'}
+                                </span>
+                                <span className="text-[9px] font-bold bg-black/60 text-white px-2 py-0.5 rounded-full">
+                                  Order: {b.sort_order ?? 1}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              {b.subtitle && (
+                                <span className="text-[10px] font-bold text-[#ff5722] block uppercase tracking-wider">
+                                  {b.subtitle}
+                                </span>
+                              )}
+                              <h5 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">
+                                {b.title}
+                              </h5>
+                              <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                                Link: <span className="font-mono text-slate-700">{b.link || '/shop'}</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                            <button
+                              type="button"
+                              disabled={isUpdatingThis}
+                              onClick={async () => {
+                                setTogglingBannerId(b.id);
+                                try {
+                                  const res = await toggleAdminBanner(b.id);
+                                  if (res.data?.success) {
+                                    toast.success(res.data.message || 'Banner status updated');
+                                    fetchData();
+                                  }
+                                } catch (err) {
+                                  toast.error('Failed to toggle banner status');
+                                } finally {
+                                  setTogglingBannerId(null);
+                                }
+                              }}
+                              className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center space-x-1 transition-all cursor-pointer ${
+                                isActive
+                                  ? 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              {isUpdatingThis ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : isActive ? (
+                                <span>Turn OFF</span>
+                              ) : (
+                                <span>Turn ON</span>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm(`Delete banner "${b.title}"?`)) {
+                                  await deleteAdminBanner(b.id);
+                                  toast.success('Banner deleted');
+                                  fetchData();
+                                }
+                              }}
+                              className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-rose-200"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

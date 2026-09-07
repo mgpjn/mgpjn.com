@@ -115,6 +115,9 @@ export const getAdminProductMargins = (params) => api.get('/admin/product-margin
 
 export const getAdminBanners = () => api.get('/admin/banners');
 export const storeAdminBanner = (data) => api.post('/admin/banners', data);
+export const toggleAdminBanner = (id, data) => api.post(`/admin/banners/${id}/toggle`, data);
+export const toggleAdminSlider = (data) => api.post('/admin/slider/toggle', data);
+export const toggleAdminCategoryShelf = (id) => api.post(`/admin/category-shelves/${id}/toggle`);
 export const deleteAdminBanner = (id) => api.delete(`/admin/banners/${id}`);
 
 export const getAdminReports = () => api.get('/admin/reports');
