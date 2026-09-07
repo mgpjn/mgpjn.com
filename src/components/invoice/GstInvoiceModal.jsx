@@ -36,7 +36,13 @@ export default function GstInvoiceModal({ orderId, onClose }) {
         margin: [4, 4, 4, 4],
         filename: `GST-Invoice-${orderNo}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false, 
+          scrollY: 0,
+          windowWidth: 794
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
@@ -99,8 +105,8 @@ export default function GstInvoiceModal({ orderId, onClose }) {
           </div>
         </div>
 
-        {/* Printable Invoice Body */}
-        <div className="p-3 sm:p-5 overflow-y-auto print:p-0 print:overflow-visible text-slate-900 bg-white" ref={printRef}>
+        {/* Printable Invoice Body Container (with horizontal scroll on tiny mobile screens, but 760px fixed on PDF/print) */}
+        <div className="p-2 sm:p-4 overflow-x-auto overflow-y-auto print:p-0 print:overflow-visible text-slate-900 bg-white">
           {loading ? (
             <div className="py-20 text-center space-y-3">
               <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -111,37 +117,40 @@ export default function GstInvoiceModal({ orderId, onClose }) {
               Unable to load invoice data. Please try again.
             </div>
           ) : (
-            <div className="border border-slate-300 p-3.5 sm:p-4 rounded-lg print:border-none print:p-0 text-[10px] leading-tight space-y-2 font-sans">
+            <div 
+              ref={printRef} 
+              className="w-[740px] min-w-[740px] mx-auto bg-white border border-slate-300 p-3 rounded-lg print:border-none print:p-0 print:w-full print:min-w-0 text-[9.5px] leading-tight space-y-1.5 font-sans"
+            >
               
               {/* 1. Header: Company Info (Left) + Logo (Right) */}
-              <div className="flex flex-row justify-between items-start gap-3 pb-1 border-b border-slate-200">
-                <div className="space-y-0.5 max-w-[72%]">
-                  <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight uppercase">
+              <div className="flex flex-row justify-between items-start gap-2 pb-1 border-b border-slate-200">
+                <div className="space-y-0.5 max-w-[74%]">
+                  <h1 className="text-base font-black text-slate-900 tracking-tight uppercase">
                     {invoice.company?.legal_name || 'MEDIGLAXO PHARMA'}
                   </h1>
-                  <p className="text-[9.5px] text-slate-700 leading-tight">
+                  <p className="text-[9px] text-slate-700 leading-tight">
                     {invoice.company?.address || '280 SOMNATH NAGAR, GABHENI, SACHIN, SURAT, GUJARAT, Pin-394230'}
                   </p>
-                  <p className="text-[9.5px] text-slate-700 font-bold">
+                  <p className="text-[9px] text-slate-700 font-bold">
                     D.L. NO. {invoice.company?.dl_no || 'GJ-SUR-215010 / GJ-SUR-215011'}
                   </p>
-                  <p className="text-[9.5px] text-slate-700">
+                  <p className="text-[9px] text-slate-700">
                     <span className="font-semibold">{invoice.company?.website || 'www.mgpjn.com'}</span>
                     {' | '}Phone: <span className="font-semibold">{invoice.company?.phone || '+91-9650582703'}</span>
                     {' | '}Email: <span className="font-semibold">{invoice.company?.email || 'support@mgpjn.com'}</span>
                   </p>
-                  <p className="text-[10px] text-slate-900 font-bold pt-0.5">
+                  <p className="text-[9.5px] text-slate-900 font-bold pt-0.5">
                     GSTIN: <span className="font-mono">{invoice.company?.gstin || '24ABVFM0075D1ZA'}</span>
                     {' | '}State: <span>{invoice.company?.state || '24-Gujarat'}</span>
                   </p>
                 </div>
 
                 <div className="flex flex-col items-end shrink-0">
-                  <div className="w-24 sm:w-32 h-auto flex items-center justify-end">
+                  <div className="w-24 h-auto flex items-center justify-end">
                     <img
                       src="/logo.png"
                       alt="MediGlaxo Pharma"
-                      className="max-h-12 w-auto object-contain"
+                      className="max-h-11 w-auto object-contain"
                       onError={(e) => {
                         e.target.style.display = 'none';
                       }}
@@ -152,17 +161,17 @@ export default function GstInvoiceModal({ orderId, onClose }) {
 
               {/* 2. Blue Ribbon Banner: Tax Invoice */}
               <div className="bg-[#2563eb] text-white py-0.5 px-3 text-center rounded-xs">
-                <h2 className="text-xs font-black tracking-wider uppercase">Tax Invoice</h2>
+                <h2 className="text-[11px] font-black tracking-wider uppercase">Tax Invoice</h2>
               </div>
 
-              {/* 3. 3-Column Details Block */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+              {/* 3. Fixed 3-Column Details Block (Never collapses vertically) */}
+              <div className="grid grid-cols-3 gap-1.5">
                 {/* Column 1: Bill To */}
-                <div className="border border-slate-300 rounded p-2 space-y-0.5 text-[9px] leading-tight">
-                  <h3 className="text-[9.5px] font-black text-[#2563eb] pb-0.5 border-b border-slate-200 uppercase tracking-tight">
+                <div className="border border-slate-300 rounded p-1.5 space-y-0.5 text-[8.5px] leading-tight">
+                  <h3 className="text-[9px] font-black text-[#2563eb] pb-0.5 border-b border-slate-200 uppercase tracking-tight">
                     Bill To
                   </h3>
-                  <p className="font-bold text-slate-900 text-[9.5px]">
+                  <p className="font-bold text-slate-900 text-[9px]">
                     {invoice.customer?.business_name || invoice.customer?.name}
                   </p>
                   <p className="text-slate-600">
@@ -183,13 +192,13 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
 
                 {/* Column 2: Transportation Details */}
-                <div className="border border-slate-300 rounded p-2 space-y-0.5 text-[9px] leading-tight">
-                  <h3 className="text-[9.5px] font-black text-[#2563eb] pb-0.5 border-b border-slate-200 uppercase tracking-tight">
+                <div className="border border-slate-300 rounded p-1.5 space-y-0.5 text-[8.5px] leading-tight">
+                  <h3 className="text-[9px] font-black text-[#2563eb] pb-0.5 border-b border-slate-200 uppercase tracking-tight">
                     Transportation Details
                   </h3>
                   <div className="space-y-0.5 pt-0.5">
                     <p className="text-slate-800">
-                      <strong>Vehicle No.:</strong> <span className="font-mono">{invoice.transport?.vehicle_no || 'GJ05RT5221:'}</span>
+                      <strong>Vehicle No.:</strong> <span className="font-mono">{invoice.transport?.vehicle_no || 'GJ05RT5221'}</span>
                     </p>
                     <p className="text-slate-800">
                       <strong>E-Way Bill No.:</strong> <span className="font-mono">{invoice.transport?.eway_no || 'EWAY-2026-0891'}</span>
@@ -206,8 +215,8 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
 
                 {/* Column 3: Invoice Details */}
-                <div className="border border-slate-300 rounded p-2 space-y-0.5 text-[9px] leading-tight">
-                  <h3 className="text-[9.5px] font-black text-[#2563eb] pb-0.5 border-b border-slate-200 uppercase tracking-tight">
+                <div className="border border-slate-300 rounded p-1.5 space-y-0.5 text-[8.5px] leading-tight">
+                  <h3 className="text-[9px] font-black text-[#2563eb] pb-0.5 border-b border-slate-200 uppercase tracking-tight">
                     Invoice Details
                   </h3>
                   <div className="space-y-0.5 pt-0.5">
@@ -237,10 +246,10 @@ export default function GstInvoiceModal({ orderId, onClose }) {
 
               {/* 4. Medicine Items & GST Table */}
               <div className="border border-slate-300 rounded overflow-hidden">
-                <table className="w-full text-left text-[9px] border-collapse leading-tight">
+                <table className="w-full text-left text-[8.5px] border-collapse leading-tight">
                   <thead className="bg-[#2563eb] text-white font-bold uppercase text-[8px]">
                     <tr>
-                      <th className="py-1 px-1 text-center border-r border-blue-400 w-7">SL.</th>
+                      <th className="py-1 px-1 text-center border-r border-blue-400 w-6">SL.</th>
                       <th className="py-1 px-1.5 border-r border-blue-400">Item name</th>
                       <th className="py-1 px-1 text-center border-r border-blue-400">HSN</th>
                       <th className="py-1 px-1 text-right border-r border-blue-400">MRP</th>
@@ -296,7 +305,7 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                   {/* Table Total Row */}
                   <tfoot>
                     <tr className="bg-slate-100 font-black text-slate-900 border-t border-slate-300">
-                      <td colSpan={4} className="py-1 px-1 text-right uppercase text-[8.5px] border-r border-slate-200">
+                      <td colSpan={4} className="py-1 px-1 text-right uppercase text-[8px] border-r border-slate-200">
                         Total
                       </td>
                       <td className="py-1 px-1 text-center border-r border-slate-200">
@@ -316,21 +325,21 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </table>
               </div>
 
-              {/* 5. Summary & Breakdown Block */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-1.5 pt-0.5">
+              {/* 5. Fixed Side-by-Side Summary & Breakdown Block (Never collapses) */}
+              <div className="grid grid-cols-12 gap-1.5 pt-0.5">
                 {/* Left (Words & Terms): 7 Cols */}
-                <div className="md:col-span-7 space-y-1.5">
+                <div className="col-span-7 space-y-1">
                   <div className="border border-slate-300 rounded p-1.5">
-                    <span className="font-bold block text-[8px] uppercase tracking-wider text-slate-600">
+                    <span className="font-bold block text-[7.5px] uppercase tracking-wider text-slate-500">
                       Invoice Amount In Words
                     </span>
-                    <p className="font-bold text-slate-900 text-[9.5px] mt-0.5 capitalize">
+                    <p className="font-bold text-slate-900 text-[9px] mt-0.5 capitalize">
                       {invoice.financials?.amount_in_words || 'Three Hundred Rupees only'}
                     </p>
                   </div>
 
                   <div className="border border-slate-300 rounded p-1.5 space-y-0.5">
-                    <span className="font-bold block text-[8px] uppercase tracking-wider text-slate-600">
+                    <span className="font-bold block text-[7.5px] uppercase tracking-wider text-slate-500">
                       Terms And Conditions
                     </span>
                     <ol className="list-decimal list-inside text-[8px] text-slate-600 space-y-0.5">
@@ -342,8 +351,8 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
 
                 {/* Right (Tax Breakdown & Totals): 5 Cols */}
-                <div className="md:col-span-5">
-                  <div className="border border-slate-300 rounded overflow-hidden text-[9px]">
+                <div className="col-span-5">
+                  <div className="border border-slate-300 rounded overflow-hidden text-[8.5px]">
                     <div className="divide-y divide-slate-200">
                       <div className="flex justify-between py-0.5 px-1.5 bg-slate-50">
                         <span className="text-slate-700 font-medium">Sub Total</span>
@@ -404,9 +413,9 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                         </div>
                       )}
 
-                      <div className="flex justify-between py-1 px-1.5 bg-[#2563eb]/10 font-black text-[10px] text-slate-900 border-t border-slate-300">
+                      <div className="flex justify-between py-0.5 px-1.5 bg-[#2563eb]/10 font-black text-[9.5px] text-slate-900 border-t border-slate-300">
                         <span>Total</span>
-                        <span className="font-mono text-[#2563eb] text-xs">
+                        <span className="font-mono text-[#2563eb] text-[11px]">
                           ₹ {(invoice.financials?.grand_total || 0).toFixed(2)}
                         </span>
                       </div>
@@ -438,11 +447,11 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
               </div>
 
-              {/* 6. Footer: Pay To (Left) + For MEDIGLAXO PHARMA (Right) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pt-1 border-t border-slate-300 print-page-break-avoid">
+              {/* 6. Fixed 2-Column Footer: Pay To (Left) + For MEDIGLAXO PHARMA (Right) */}
+              <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-300 print-page-break-avoid">
                 {/* Pay To Bank Info */}
-                <div className="border border-slate-300 rounded p-1.5 space-y-0.5 text-[8.5px] leading-tight">
-                  <h4 className="font-black text-slate-900 uppercase tracking-wider text-[8.5px] text-[#2563eb]">
+                <div className="border border-slate-300 rounded p-1.5 space-y-0.5 text-[8px] leading-tight">
+                  <h4 className="font-black text-slate-900 uppercase tracking-wider text-[8px] text-[#2563eb]">
                     Pay To:
                   </h4>
                   <div className="space-y-0.5 text-slate-800">
@@ -454,21 +463,21 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
 
                 {/* Authorized Signatory & Digital Stamp */}
-                <div className="border border-slate-300 rounded p-1.5 flex flex-col justify-between items-center md:items-end text-[8.5px] text-right">
+                <div className="border border-slate-300 rounded p-1.5 flex flex-col justify-between items-end text-[8px] text-right">
                   <span className="font-bold text-slate-900">
                     For: {invoice.company?.legal_name || 'MEDIGLAXO PHARMA'}
                   </span>
                   
                   {/* Digital Stamp / Signature Mark */}
-                  <div className="my-0.5 py-0.5 px-2 border border-emerald-500 bg-emerald-50/70 rounded flex items-center space-x-1 text-emerald-800">
+                  <div className="my-0.5 py-0.5 px-1.5 border border-emerald-500 bg-emerald-50/70 rounded flex items-center space-x-1 text-emerald-800">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     <div className="text-left leading-tight">
-                      <div className="font-black text-[8px] uppercase tracking-wider">MEDIGLAXO PHARMA</div>
-                      <div className="text-[7.5px] text-emerald-700 font-semibold">DIGITALLY VERIFIED INVOICE</div>
+                      <div className="font-black text-[7.5px] uppercase tracking-wider">MEDIGLAXO PHARMA</div>
+                      <div className="text-[7px] text-emerald-700 font-semibold">DIGITALLY VERIFIED INVOICE</div>
                     </div>
                   </div>
 
-                  <span className="font-bold text-slate-700 text-[8.5px]">
+                  <span className="font-bold text-slate-700 text-[8px]">
                     Authorized Signatory (Digitally Verified)
                   </span>
                 </div>
