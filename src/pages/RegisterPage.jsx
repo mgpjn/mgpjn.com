@@ -6,6 +6,45 @@ import toast from 'react-hot-toast';
 import { sendRegisterOtp, verifyOtp, verifySponsor, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
 import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
+export const INDIAN_STATES_WITH_CODES = [
+  { name: 'Andhra Pradesh', code: '37' },
+  { name: 'Arunachal Pradesh', code: '12' },
+  { name: 'Assam', code: '18' },
+  { name: 'Bihar', code: '10' },
+  { name: 'Chhattisgarh', code: '22' },
+  { name: 'Goa', code: '30' },
+  { name: 'Gujarat', code: '24' },
+  { name: 'Haryana', code: '06' },
+  { name: 'Himachal Pradesh', code: '02' },
+  { name: 'Jharkhand', code: '20' },
+  { name: 'Karnataka', code: '29' },
+  { name: 'Kerala', code: '32' },
+  { name: 'Madhya Pradesh', code: '23' },
+  { name: 'Maharashtra', code: '27' },
+  { name: 'Manipur', code: '14' },
+  { name: 'Meghalaya', code: '17' },
+  { name: 'Mizoram', code: '15' },
+  { name: 'Nagaland', code: '13' },
+  { name: 'Odisha', code: '21' },
+  { name: 'Punjab', code: '03' },
+  { name: 'Rajasthan', code: '08' },
+  { name: 'Sikkim', code: '11' },
+  { name: 'Tamil Nadu', code: '33' },
+  { name: 'Telangana', code: '36' },
+  { name: 'Tripura', code: '16' },
+  { name: 'Uttar Pradesh', code: '09' },
+  { name: 'Uttarakhand', code: '05' },
+  { name: 'West Bengal', code: '19' },
+  { name: 'Andaman and Nicobar Islands', code: '35' },
+  { name: 'Chandigarh', code: '04' },
+  { name: 'Dadra and Nagar Haveli and Daman and Diu', code: '26' },
+  { name: 'Delhi', code: '07' },
+  { name: 'Jammu and Kashmir', code: '01' },
+  { name: 'Ladakh', code: '38' },
+  { name: 'Lakshadweep', code: '31' },
+  { name: 'Puducherry', code: '34' },
+];
+
 export default function RegisterPage() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
@@ -52,9 +91,17 @@ export default function RegisterPage() {
   const [hasReferral, setHasReferral] = useState(Boolean(detectedSponsor));
   const [formData, setFormData] = useState({
     name: '',
+    business_name: '',
     email: '',
     phone: '',
     password: '',
+    state: 'Gujarat',
+    state_code: '24',
+    city: '',
+    pincode: '',
+    address: '',
+    gst_number: '',
+    drug_license_no: '',
     sponsor_code: detectedSponsor,
     role: 'customer',
   });
@@ -447,6 +494,102 @@ export default function RegisterPage() {
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
+            </div>
+          </div>
+
+          {/* State Selection & GST Type Preview */}
+          <div className="space-y-3 pt-1 border-t border-slate-100">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-700">State / Province *</label>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                  formData.state_code === '24' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  {formData.state_code === '24' ? 'Intra-State (CGST + SGST)' : 'Inter-State (IGST)'}
+                </span>
+              </div>
+              <select
+                name="state"
+                value={formData.state}
+                onChange={(e) => {
+                  const sName = e.target.value;
+                  const sObj = INDIAN_STATES_WITH_CODES.find((s) => s.name === sName);
+                  setFormData((prev) => ({
+                    ...prev,
+                    state: sName,
+                    state_code: sObj?.code || '24',
+                  }));
+                }}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-brand-blue-700"
+              >
+                {INDIAN_STATES_WITH_CODES.map((s) => (
+                  <option key={s.code} value={s.name}>
+                    {s.name} ({s.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">City / Town</label>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  placeholder="e.g. Surat"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Pincode</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '') })}
+                  placeholder="e.g. 394230"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                />
+              </div>
+            </div>
+
+            {/* Optional Business / Pharmacy Compliance Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">GSTIN (Optional)</label>
+                  {formData.gst_number && formData.gst_number.length === 15 && (
+                    <span className={`text-[9px] font-bold ${
+                      formData.gst_number.substring(0, 2) === formData.state_code ? 'text-emerald-600' : 'text-rose-600'
+                    }`}>
+                      {formData.gst_number.substring(0, 2) === formData.state_code ? '✓ State Code Matches' : `⚠️ Must start with ${formData.state_code}`}
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  maxLength={15}
+                  name="gst_number"
+                  value={formData.gst_number}
+                  onChange={(e) => setFormData({ ...formData, gst_number: e.target.value.toUpperCase() })}
+                  placeholder="24ABVFM0075D1ZA"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono uppercase focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Drug License (Optional)</label>
+                <input
+                  type="text"
+                  name="drug_license_no"
+                  value={formData.drug_license_no}
+                  onChange={handleChange}
+                  placeholder="GJ-SUR-215010"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
+                />
+              </div>
             </div>
           </div>
 

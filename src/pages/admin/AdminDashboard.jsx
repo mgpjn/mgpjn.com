@@ -5372,6 +5372,58 @@ export default function AdminDashboard() {
                                   <span>{ord.order_status === 'dispatched' ? 'Edit Tracking' : 'Dispatch'}</span>
                                 </button>
                               )}
+
+                              {/* E-Way Bill Action */}
+                              {canDispatchOrder && (
+                                <button
+                                  onClick={async () => {
+                                    const currentEway = ord.eway_bill_no || '';
+                                    const input = window.prompt(`Enter Official GST E-Way Bill Number for Order #${ord.order_number}:`, currentEway);
+                                    if (input !== null && input.trim() !== '') {
+                                      try {
+                                        const res = await api.post(`/admin/orders/${ord.id}/eway-bill`, { eway_bill_no: input.trim() });
+                                        if (res.data?.success) {
+                                          toast.success(`E-Way Bill #${input.trim()} saved!`);
+                                          fetchOrdersData(orderPage);
+                                        }
+                                      } catch (err) {
+                                        toast.error(err.response?.data?.message || 'Failed to update E-Way bill');
+                                      }
+                                    }
+                                  }}
+                                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-purple-200"
+                                  title="Enter Official GST E-Way Bill Number"
+                                >
+                                  <span>E-Way</span>
+                                </button>
+                              )}
+
+                              {/* Cancel Order + Issue Credit Note */}
+                              {canDispatchOrder && ord.order_status !== 'cancelled' && ord.order_status !== 'delivered' && (
+                                <button
+                                  onClick={async () => {
+                                    const reason = window.prompt(`Are you sure you want to CANCEL Order #${ord.order_number} and issue a GST Credit Note?\n\nPlease enter the cancellation reason:`);
+                                    if (reason && reason.trim().length >= 4) {
+                                      try {
+                                        const res = await api.post(`/orders/${ord.id}/cancel`, { reason: reason.trim() });
+                                        if (res.data?.success) {
+                                          toast.success(res.data.message || 'Order cancelled and Credit Note issued!');
+                                          fetchOrdersData(orderPage);
+                                        } else {
+                                          toast.error(res.data?.message || 'Cancellation failed');
+                                        }
+                                      } catch (err) {
+                                        toast.error(err.response?.data?.message || 'Failed to cancel order');
+                                      }
+                                    }
+                                  }}
+                                  className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-rose-200"
+                                  title="Cancel Order & Issue Official Credit Note"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span>Cancel</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

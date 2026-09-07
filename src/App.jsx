@@ -57,6 +57,7 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/user/ProfilePage';
 import MyOrdersPage from './pages/user/MyOrdersPage';
 import MyPrescriptionsPage from './pages/user/MyPrescriptionsPage';
+import MyB2bInvoices from './pages/user/MyB2bInvoices';
 
 // 7-Tier Hierarchy Team Management
 import HierarchyDashboard from './pages/hierarchy/HierarchyDashboard';
@@ -262,6 +263,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MyPrescriptionsPage onOpenPrescriptionModal={() => setIsPrescriptionModalOpen(true)} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-b2b-invoices"
+            element={
+              <ProtectedRoute minLevel={2}>
+                <MyB2bInvoices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/b2b-invoices"
+            element={
+              <ProtectedRoute minLevel={2}>
+                <MyB2bInvoices />
               </ProtectedRoute>
             }
           />

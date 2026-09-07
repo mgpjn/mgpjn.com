@@ -159,10 +159,19 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                 </div>
               </div>
 
-              {/* 2. Blue Ribbon Banner: Tax Invoice */}
-              <div className="bg-[#2563eb] text-white py-0.5 px-3 text-center rounded-xs">
-                <h2 className="text-[11px] font-black tracking-wider uppercase">Tax Invoice</h2>
-              </div>
+              {/* 2. Blue Ribbon Banner: Tax Invoice / Credit Note */}
+              {invoice.invoice?.credit_note_number ? (
+                <div className="bg-rose-700 text-white py-1 px-3 text-center rounded-xs space-y-0.5">
+                  <h2 className="text-[11px] font-black tracking-wider uppercase">GST CREDIT NOTE (CANCELLED INVOICE)</h2>
+                  <p className="text-[9px] font-mono font-bold">
+                    Credit Note No: {invoice.invoice.credit_note_number} • Original Inv: {invoice.invoice.invoice_no} • Cancelled on: {invoice.invoice.cancelled_at || 'Recently'}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-[#2563eb] text-white py-0.5 px-3 text-center rounded-xs">
+                  <h2 className="text-[11px] font-black tracking-wider uppercase">Tax Invoice</h2>
+                </div>
+              )}
 
               {/* 3. Fixed 3-Column Details Block (Never collapses vertically) */}
               <div className="grid grid-cols-3 gap-1.5">
@@ -400,6 +409,24 @@ export default function GstInvoiceModal({ orderId, onClose }) {
                           <span className="text-slate-700">Delivery Charge</span>
                           <span className="font-mono text-slate-900">
                             ₹ {invoice.financials.delivery_charge.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {invoice.financials?.platform_fee > 0 && (
+                        <div className="flex justify-between py-0.5 px-1.5">
+                          <span className="text-slate-700">Platform Service Fee</span>
+                          <span className="font-mono text-slate-900">
+                            ₹ {invoice.financials.platform_fee.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {invoice.financials?.cod_charge > 0 && (
+                        <div className="flex justify-between py-0.5 px-1.5">
+                          <span className="text-slate-700">COD Handling Fee</span>
+                          <span className="font-mono text-slate-900">
+                            ₹ {invoice.financials.cod_charge.toFixed(2)}
                           </span>
                         </div>
                       )}
