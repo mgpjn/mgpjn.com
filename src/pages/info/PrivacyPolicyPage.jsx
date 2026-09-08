@@ -88,13 +88,35 @@ export default function PrivacyPolicyPage() {
             We implement industry-grade technical and organizational safeguards including HTTPS/TLS 1.3 encryption, role-based access control (RBAC), and tokenized authentication sessions.
           </p>
           <p className="text-slate-600">
-            You retain the right to review, update, download, or request the deletion of your account and personal profile data by reaching out to our Grievance Officer.
+            You retain the full right to review, update, download, or request the deletion of your account and personal profile data at any time.
           </p>
         </section>
 
-        {/* Section 5 - Grievance Officer */}
+        {/* Section 5 - Account & Data Deletion */}
+        <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm space-y-3">
+          <div className="flex items-center space-x-3 text-brand-blue-900">
+            <FileText className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">5. Account &amp; Data Deletion Request</h2>
+          </div>
+          <p className="text-slate-600">
+            In compliance with Google Play Developer Policies and the Digital Personal Data Protection (DPDP) Act 2023, MediGlaxo provides all users with a straightforward mechanism to delete their account and associated data:
+          </p>
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs sm:text-sm">
+            <p className="font-semibold text-slate-800">How to request Account Deletion via Email:</p>
+            <ul className="list-disc pl-5 space-y-1 text-slate-600">
+              <li>Send an email to <a href="mailto:support@mgpjn.com" className="text-brand-blue-800 font-bold underline">support@mgpjn.com</a> with the subject line <strong>"Account Deletion Request"</strong>.</li>
+              <li>Include your <strong>registered Mobile Number</strong> and <strong>Full Name</strong> in the email body.</li>
+              <li>Our data privacy team will verify the request and complete the deletion of your personal account, saved delivery addresses, and login credentials within <strong>15 to 30 business days</strong>.</li>
+            </ul>
+          </div>
+          <p className="text-xs text-slate-500">
+            <em>Note: Transactional billing records and tax invoices may be retained for the minimum statutory period required under the Central Goods and Services Tax (CGST) Act, 2017 and Drugs &amp; Cosmetics Act regulations.</em>
+          </p>
+        </section>
+
+        {/* Section 6 - Grievance Officer */}
         <section className="bg-gradient-to-r from-brand-blue-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 space-y-4">
-          <h2 className="text-base sm:text-lg font-bold text-emerald-400">5. Grievance Redressal &amp; Contact Details</h2>
+          <h2 className="text-base sm:text-lg font-bold text-emerald-400">6. Grievance Redressal &amp; Contact Details</h2>
           <p className="text-xs text-slate-300">
             In accordance with the Information Technology Act 2000 and the Digital Personal Data Protection Act 2023, the details of our designated Grievance Officer are provided below:
           </p>
