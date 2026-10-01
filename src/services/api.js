@@ -131,6 +131,12 @@ export const updateAdminEmployee = (id, data) => api.put(`/admin/employees/${id}
 
 export const getAdminSettings = () => api.get('/admin/settings');
 export const updateAdminSettings = (data) => api.post('/admin/settings', data);
+export const getAdminCoupons = () => api.get('/admin/coupons');
+export const storeAdminCoupon = (data) => api.post('/admin/coupons', data);
+export const updateAdminCoupon = (id, data) => api.put(`/admin/coupons/${id}`, data);
+export const deleteAdminCoupon = (id) => api.delete(`/admin/coupons/${id}`);
+export const getActiveCoupons = (params) => api.get('/coupons/active', { params });
+export const validateCoupon = (data) => api.post('/coupons/validate', data);
 
 // 7-Tier Hierarchy APIs
 export const getHierarchyUsers = (params) => api.get('/hierarchy/users', { params });

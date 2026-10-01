@@ -10,7 +10,7 @@ function TreeNode({ node, level = 1 }) {
   const stageBadge = level === 1
     ? 'Root Partner'
     : level === 2
-    ? 'Stage 1 (15% Direct)'
+    ? 'Stage 1 (10% Direct)'
     : level === 3
     ? 'Stage 2 (3% Team)'
     : 'Stage 3 (2% Network)';

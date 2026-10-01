@@ -39,7 +39,7 @@ export default function ReferralsPage() {
           <div className="flex items-center space-x-2">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Direct Referrals (Stage 1)</h1>
             <span className="bg-orange-50 text-[#ff5722] text-xs font-black px-2.5 py-0.5 rounded-full">
-              15% Referral Income
+              10% Direct • 15% Total
             </span>
           </div>
           <p className="text-xs text-slate-500">

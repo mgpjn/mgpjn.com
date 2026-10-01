@@ -61,7 +61,7 @@ export default function MlmDashboard() {
   };
 
   const handleWhatsAppShare = () => {
-    const text = `Join MediGlaxo Pharma Junction referral program using my code ${referralCode} and earn Stage 1 (15%), Stage 2 (3%), and Stage 3 (2%) referral income! Register here: ${referralLink}`;
+    const text = `Join MediGlaxo Pharma Junction referral program using my code ${referralCode} and earn Stage 1 (10%), Stage 2 (3%), and Stage 3 (2%) referral income! Register here: ${referralLink}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -113,28 +113,28 @@ export default function MlmDashboard() {
     {
       title: 'Customer 1 Buys a Product',
       desc: 'Order placed by directly referred Customer 1',
-      payout: '15% to Sub Retailer',
+      payout: '10% to Sub Retailer',
       color: 'border-l-[#ff5722] bg-orange-50/50',
-      badge: '15% Stage 1',
+      badge: '10% Stage 1',
     },
     {
       title: 'Customer 2 Buys a Product',
       desc: 'Referred by Customer 1 under Sub Retailer',
-      payout: '15% to Customer 1 + 3% to Sub Retailer',
+      payout: '10% to Customer 1 + 3% to Sub Retailer',
       color: 'border-l-blue-600 bg-blue-50/50',
-      badge: '15% + 3% (Stage 1 & 2)',
+      badge: '10% + 3% (Stage 1 & 2)',
     },
     {
       title: 'Customer 3 Buys a Product',
       desc: 'Referred by Customer 2 under Customer 1',
-      payout: '15% to Customer 2 + 3% to Customer 1 + 2% to Sub Retailer',
+      payout: '10% to Customer 2 + 3% to Customer 1 + 2% to Sub Retailer',
       color: 'border-l-purple-600 bg-purple-50/50',
-      badge: '15% + 3% + 2% (3 Stages)',
+      badge: '10% + 3% + 2% (3 Stages)',
     },
     {
       title: 'Customer 4 Buys a Product',
       desc: 'Referred by Customer 3 under Customer 2',
-      payout: '15% to Customer 3 + 3% to Customer 2 + 2% to Customer 1',
+      payout: '10% to Customer 3 + 3% to Customer 2 + 2% to Customer 1',
       color: 'border-l-emerald-600 bg-emerald-50/50',
       badge: 'Rolling 3-Level Chain',
     },
@@ -195,12 +195,12 @@ export default function MlmDashboard() {
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm border-l-4 border-l-[#ff5722] space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black text-slate-500 uppercase">Stage 1 (Direct Referral)</span>
-            <span className="bg-orange-50 text-[#ff5722] text-xs font-black px-2.5 py-0.5 rounded-full">15% Income</span>
+            <span className="bg-orange-50 text-[#ff5722] text-xs font-black px-2.5 py-0.5 rounded-full">10% Income</span>
           </div>
           <div className="text-2xl font-black text-slate-900">
             ₹{stats.stage1_earnings?.toFixed(2) || '0.00'}
           </div>
-          <p className="text-[11px] text-slate-400">15% instant commission from all directly referred Customer 1 orders.</p>
+          <p className="text-[11px] text-slate-400">10% instant commission from all directly referred Customer 1 orders.</p>
         </div>
 
         {/* Stage 2 Card */}
@@ -272,7 +272,7 @@ export default function MlmDashboard() {
           <div className="text-2xl font-black text-slate-900">
             {stats.direct_referrals_count || 0} Members
           </div>
-          <span className="text-[10px] text-slate-400 block">Earning 15% direct bonus</span>
+          <span className="text-[10px] text-slate-400 block">Earning 10% direct bonus</span>
         </div>
 
         {/* Total Downline Customer Orders */}
@@ -299,11 +299,11 @@ export default function MlmDashboard() {
               <span>How 3-Stage Referral Income Is Shared (कमीशन शेयरिंग नियम)</span>
             </h3>
             <p className="text-xs text-slate-500">
-              हर आर्डर का कमीशन 3 स्तरों में 15%, 3% और 2% के रूप में ऑटोमैटिकली बंटता है:
+              हर आर्डर का कमीशन 3 स्तरों में 10%, 3% और 2% के रूप में ऑटोमैटिकली बंटता है:
             </p>
           </div>
           <span className="text-[10px] font-black uppercase text-[#ff5722] bg-orange-50 px-2.5 py-1 rounded-full">
-            Stage 1: 15% | Stage 2: 3% | Stage 3: 2%
+            Stage 1: 10% | Stage 2: 3% | Stage 3: 2%
           </span>
         </div>
 

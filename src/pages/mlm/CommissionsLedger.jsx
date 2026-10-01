@@ -34,7 +34,7 @@ export default function CommissionsLedger() {
           </Link>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Referral Income Audit Ledger</h1>
           <p className="text-xs text-slate-500">
-            Statement of 3-Stage referral income: Stage 1 (15%), Stage 2 (3%), Stage 3 (2%).
+            Statement of 3-Stage referral income: Stage 1 (10%), Stage 2 (3%), Stage 3 (2%).
           </p>
         </div>
 
@@ -46,7 +46,7 @@ export default function CommissionsLedger() {
             className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 font-bold text-slate-700 focus:outline-none"
           >
             <option value="all">All 3 Stages</option>
-            <option value="1">Stage 1 (15% Direct)</option>
+            <option value="1">Stage 1 (10% Direct)</option>
             <option value="2">Stage 2 (3% Team)</option>
             <option value="3">Stage 3 (2% Network)</option>
           </select>

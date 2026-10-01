@@ -53,6 +53,7 @@ import {
   getAdminReports,
   getAdminEmployees, storeAdminEmployee, updateAdminEmployee,
   getAdminSettings, updateAdminSettings,
+  getAdminCoupons, storeAdminCoupon, updateAdminCoupon, deleteAdminCoupon,
   getHierarchyParents
 } from '../../services/api';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
@@ -140,9 +141,9 @@ export default function AdminDashboard() {
     upi_id: '',
     parent_id: '',
     sub_retailer_commission: 10,
-    customer_commission: 5,
+    customer_commission: 3,
     level_1_commission: 10,
-    level_2_commission: 5,
+    level_2_commission: 3,
     level_3_commission: 2,
     status: 'active',
   });
@@ -392,6 +393,27 @@ export default function AdminDashboard() {
     delivery_charge: '50',
   });
 
+  const emptyCouponForm = {
+    code: '',
+    title: '',
+    description: '',
+    type: 'percent',
+    value: '10',
+    minimum_cart_value: '500',
+    maximum_discount: '',
+    free_delivery: false,
+    usage_limit: '',
+    per_user_limit: '1',
+    starts_at: '',
+    expires_at: '',
+    is_active: true,
+    sort_order: '0',
+  };
+  const [couponsList, setCouponsList] = useState([]);
+  const [couponForm, setCouponForm] = useState(emptyCouponForm);
+  const [editingCoupon, setEditingCoupon] = useState(null);
+  const [savingCoupon, setSavingCoupon] = useState(false);
+
   // State Filter & State Counts
   const [stateFilter, setStateFilter] = useState('all');
   const [stateCounts, setStateCounts] = useState({});
@@ -569,6 +591,7 @@ export default function AdminDashboard() {
     { key: 'prescriptions', label: 'Prescriptions (Rx Desk)', path: '/admin/prescriptions', icon: FileText, badge: prescriptionStats?.pending > 0 ? `${prescriptionStats.pending} New` : null },
     { key: 'payments', label: 'Payments & Repair Portal', path: '/admin/payments', icon: CreditCard, badge: paymentStats?.failed_count > 0 ? `${paymentStats.failed_count} Issues` : null },
     { key: 'wallet', label: 'Commission Wallet', path: '/admin/wallet', icon: Wallet },
+    { key: 'coupons', label: 'Coupon Settings', path: '/admin/coupons', icon: Tag },
     { key: 'banners', label: 'Banner Management', path: '/admin/banners', icon: Image },
     { key: 'reports', label: 'Reports', path: '/admin/reports', icon: BarChart3 },
     { key: 'employees', label: 'Employee Module', path: '/admin/employees', icon: ShieldCheck },
@@ -668,6 +691,9 @@ export default function AdminDashboard() {
         await fetchPaymentsData(paymentPage);
       } else if (currentSection === 'wallet') {
         await fetchWalletData(walletUserPage);
+      } else if (currentSection === 'coupons') {
+        const res = await getAdminCoupons();
+        if (res.data.success) setCouponsList(res.data.coupons || []);
       } else if (currentSection === 'banners') {
         const res = await getAdminBanners();
         if (res.data.success) {
@@ -1566,10 +1592,10 @@ export default function AdminDashboard() {
       mrp: mrpVal,
       product_price: productPrice,
       level_1_commission: product.level_1_commission !== undefined ? product.level_1_commission : (assignTargetUser?.level_1_commission || 10),
-      level_2_commission: product.level_2_commission !== undefined ? product.level_2_commission : (assignTargetUser?.level_2_commission || 5),
+      level_2_commission: product.level_2_commission !== undefined ? product.level_2_commission : (assignTargetUser?.level_2_commission || 3),
       level_3_commission: product.level_3_commission !== undefined ? product.level_3_commission : (assignTargetUser?.level_3_commission || 2),
       sub_retailer_commission: product.sub_retailer_commission !== undefined ? product.sub_retailer_commission : (assignTargetUser?.sub_retailer_commission || 10),
-      customer_commission: product.customer_commission !== undefined ? product.customer_commission : (assignTargetUser?.customer_commission || 5),
+      customer_commission: product.customer_commission !== undefined ? product.customer_commission : (assignTargetUser?.customer_commission || 3),
       sd_margin: product.sd_margin !== undefined ? product.sd_margin : 2,
       dist_margin: product.dist_margin !== undefined ? product.dist_margin : 5,
       subd_margin: product.subd_margin !== undefined ? product.subd_margin : 10,
@@ -1716,10 +1742,10 @@ export default function AdminDashboard() {
         retailer_price: p.retailer_price || (p.subd_price ? Number((p.subd_price * 1.15).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.65).toFixed(2)) : 0)),
         stock: p.stock ?? 100,
         level_1_commission: p.level_1_commission !== undefined && p.level_1_commission !== null ? p.level_1_commission : (targetDistributor.level_1_commission || 10.00),
-        level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : (targetDistributor.level_2_commission || 5.00),
+        level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : (targetDistributor.level_2_commission || 3.00),
         level_3_commission: p.level_3_commission !== undefined && p.level_3_commission !== null ? p.level_3_commission : (targetDistributor.level_3_commission || 2.00),
         sub_retailer_commission: p.sub_retailer_commission !== undefined && p.sub_retailer_commission !== null ? p.sub_retailer_commission : (targetDistributor.sub_retailer_commission || 10.00),
-        customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : (targetDistributor.customer_commission || 5.00),
+        customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : (targetDistributor.customer_commission || 3.00),
         sd_margin: p.sd_margin !== undefined && p.sd_margin !== null ? p.sd_margin : 2.00,
         dist_margin: p.dist_margin !== undefined && p.dist_margin !== null ? p.dist_margin : 5.00,
         subd_margin: p.subd_margin !== undefined && p.subd_margin !== null ? p.subd_margin : 10.00,
@@ -1770,10 +1796,10 @@ export default function AdminDashboard() {
         retailer_price: p.retailer_price || (p.subd_price ? Number((p.subd_price * 1.15).toFixed(2)) : (p.mrp ? Number((p.mrp * 0.65).toFixed(2)) : 0)),
         stock: p.stock ?? 100,
         level_1_commission: p.level_1_commission !== undefined && p.level_1_commission !== null ? p.level_1_commission : 10.00,
-        level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : 5.00,
+        level_2_commission: p.level_2_commission !== undefined && p.level_2_commission !== null ? p.level_2_commission : 3.00,
         level_3_commission: p.level_3_commission !== undefined && p.level_3_commission !== null ? p.level_3_commission : 2.00,
         sub_retailer_commission: p.sub_retailer_commission !== undefined && p.sub_retailer_commission !== null ? p.sub_retailer_commission : 10.00,
-        customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : 5.00,
+        customer_commission: p.customer_commission !== undefined && p.customer_commission !== null ? p.customer_commission : 3.00,
         sd_margin: p.sd_margin !== undefined && p.sd_margin !== null ? p.sd_margin : 2.00,
         dist_margin: p.dist_margin !== undefined && p.dist_margin !== null ? p.dist_margin : 5.00,
         subd_margin: p.subd_margin !== undefined && p.subd_margin !== null ? p.subd_margin : 10.00,
@@ -1819,10 +1845,10 @@ export default function AdminDashboard() {
           wholesale_price: rt,
           retail_price: retail,
           level_1_commission: 10.00,
-          level_2_commission: 5.00,
+          level_2_commission: 3.00,
           level_3_commission: 2.00,
           sub_retailer_commission: 10.00,
-          customer_commission: 5.00,
+          customer_commission: 3.00,
         };
       })
     );
@@ -2380,6 +2406,76 @@ export default function AdminDashboard() {
         console.error('Delete product error:', err);
         toast.error('Failed to delete product.');
       }
+    }
+  };
+
+  const handleEditCoupon = (coupon) => {
+    setEditingCoupon(coupon);
+    setCouponForm({
+      code: coupon.code || '',
+      title: coupon.title || '',
+      description: coupon.description || '',
+      type: coupon.type || 'percent',
+      value: coupon.value ?? '',
+      minimum_cart_value: coupon.minimum_cart_value ?? '0',
+      maximum_discount: coupon.maximum_discount ?? '',
+      free_delivery: Boolean(coupon.free_delivery),
+      usage_limit: coupon.usage_limit ?? '',
+      per_user_limit: coupon.per_user_limit ?? '1',
+      starts_at: coupon.starts_at ? String(coupon.starts_at).slice(0, 16) : '',
+      expires_at: coupon.expires_at ? String(coupon.expires_at).slice(0, 16) : '',
+      is_active: coupon.is_active !== false,
+      sort_order: coupon.sort_order ?? '0',
+    });
+  };
+
+  const handleResetCouponForm = () => {
+    setEditingCoupon(null);
+    setCouponForm(emptyCouponForm);
+  };
+
+  const handleSaveCoupon = async (e) => {
+    e.preventDefault();
+    setSavingCoupon(true);
+    try {
+      const payload = {
+        ...couponForm,
+        code: String(couponForm.code || '').trim().toUpperCase(),
+        value: Number(couponForm.value || 0),
+        minimum_cart_value: Number(couponForm.minimum_cart_value || 0),
+        maximum_discount: couponForm.maximum_discount === '' ? null : Number(couponForm.maximum_discount),
+        usage_limit: couponForm.usage_limit === '' ? null : Number(couponForm.usage_limit),
+        per_user_limit: Number(couponForm.per_user_limit || 1),
+        sort_order: Number(couponForm.sort_order || 0),
+        starts_at: couponForm.starts_at || null,
+        expires_at: couponForm.expires_at || null,
+      };
+      const res = editingCoupon
+        ? await updateAdminCoupon(editingCoupon.id, payload)
+        : await storeAdminCoupon(payload);
+      if (res.data.success) {
+        toast.success(res.data.message || 'Coupon saved successfully.');
+        handleResetCouponForm();
+        const listRes = await getAdminCoupons();
+        if (listRes.data.success) setCouponsList(listRes.data.coupons || []);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Coupon save failed.');
+    } finally {
+      setSavingCoupon(false);
+    }
+  };
+
+  const handleDeleteCoupon = async (coupon) => {
+    if (!window.confirm(`Delete coupon ${coupon.code}?`)) return;
+    try {
+      const res = await deleteAdminCoupon(coupon.id);
+      if (res.data.success) {
+        toast.success('Coupon deleted.');
+        setCouponsList(prev => prev.filter(item => item.id !== coupon.id));
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Coupon delete failed.');
     }
   };
 
@@ -3424,11 +3520,11 @@ export default function AdminDashboard() {
                   <h2 className="text-xl font-black text-slate-900">{sectionTitle}</h2>
                   <p className="text-xs text-slate-500">
                     {currentSection === 'customer-layer-1'
-                      ? 'Direct Customers referred by Sub-Retailers (Local Delivery Hubs). Generates 15% instant commission.'
+                      ? 'Direct Customers referred by Sub-Retailers (Local Delivery Hubs). Generates 10% instant commission.'
                       : currentSection === 'customer-layer-2'
-                      ? 'Tier 2 Customers referred by Customer 1. Generates 15% for Customer 1 & 3% for Sub-Retailer.'
+                      ? 'Tier 2 Customers referred by Customer 1. Generates 10% for Customer 1 & 3% for Sub-Retailer.'
                       : currentSection === 'customer-layer-3'
-                      ? 'Tier 3 Customers referred by Customer 2. Generates 15% for Customer 2, 3% for C1 & 2% for Sub-Retailer.'
+                      ? 'Tier 3 Customers referred by Customer 2. Generates 10% for Customer 2, 3% for C1 & 2% for Sub-Retailer.'
                       : currentSection === 'sub-retailers'
                       ? 'Pincode & Local Executive Hubs responsible for doorstep pharma delivery.'
                       : `Manage all ${sectionTitle.toLowerCase()} in the network.`}
@@ -3471,7 +3567,7 @@ export default function AdminDashboard() {
                         ifsc_code: '',
                         upi_id: '',
                         sub_retailer_commission: 10,
-                        customer_commission: 5,
+                        customer_commission: 3,
                         status: 'active',
                       });
                       fetchHierarchyParentsForRole(targetRole);
@@ -3695,15 +3791,15 @@ export default function AdminDashboard() {
                                 <td className="p-3.5">
                                   {currentSection === 'customer-layer-1' ? (
                                     <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1 rounded-lg text-[10px] font-black inline-block">
-                                      Stage 1: 15% Sponsor Commission
+                                      Stage 1: 10% Sponsor Commission
                                     </span>
                                   ) : currentSection === 'customer-layer-2' ? (
                                     <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-1 rounded-lg text-[10px] font-black inline-block">
-                                      Stage 2: 15% (C1) + 3% (Sub-Retailer)
+                                      Stage 2: 10% (C1) + 3% (Sub-Retailer)
                                     </span>
                                   ) : currentSection === 'customer-layer-3' ? (
                                     <span className="bg-purple-50 text-purple-800 border border-purple-200 px-2 py-1 rounded-lg text-[10px] font-black inline-block">
-                                      Stage 3: 15% (C2) + 3% (C1) + 2% (SR)
+                                      Stage 3: 10% (C2) + 3% (C1) + 2% (SR)
                                     </span>
                                   ) : (
                                     <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-[10px] font-bold inline-block">
@@ -7036,6 +7132,104 @@ export default function AdminDashboard() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {currentSection === 'coupons' && (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <form onSubmit={handleSaveCoupon} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 text-xs xl:col-span-1">
+                <div>
+                  <h3 className="font-black text-slate-900 text-lg">{editingCoupon ? 'Edit Coupon' : 'Create Coupon'}</h3>
+                  <p className="text-xs text-slate-500">Cart value, discount, free delivery aur usage limit control karein.</p>
+                </div>
+                <input required placeholder="Coupon Code" value={couponForm.code} onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })} className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-black uppercase" />
+                <input required placeholder="Display Title" value={couponForm.title} onChange={(e) => setCouponForm({ ...couponForm, title: e.target.value })} className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                <textarea placeholder="Short description" value={couponForm.description} onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })} className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-medium" rows="2" />
+                <select value={couponForm.type} onChange={(e) => setCouponForm({ ...couponForm, type: e.target.value, free_delivery: e.target.value === 'free_delivery' ? true : couponForm.free_delivery })} className="w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold">
+                  <option value="percent">Percentage Discount</option>
+                  <option value="fixed">Fixed Amount Discount</option>
+                  <option value="free_delivery">Free Delivery Coupon</option>
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="number" placeholder="Value" value={couponForm.value} onChange={(e) => setCouponForm({ ...couponForm, value: e.target.value })} className="px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                  <input type="number" placeholder="Min Cart Value" value={couponForm.minimum_cart_value} onChange={(e) => setCouponForm({ ...couponForm, minimum_cart_value: e.target.value })} className="px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                  <input type="number" placeholder="Max Discount" value={couponForm.maximum_discount} onChange={(e) => setCouponForm({ ...couponForm, maximum_discount: e.target.value })} className="px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                  <input type="number" placeholder="Usage Limit" value={couponForm.usage_limit} onChange={(e) => setCouponForm({ ...couponForm, usage_limit: e.target.value })} className="px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                  <input type="datetime-local" value={couponForm.starts_at} onChange={(e) => setCouponForm({ ...couponForm, starts_at: e.target.value })} className="px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                  <input type="datetime-local" value={couponForm.expires_at} onChange={(e) => setCouponForm({ ...couponForm, expires_at: e.target.value })} className="px-3.5 py-2.5 bg-slate-50 border rounded-xl font-bold" />
+                </div>
+                <label className="flex items-center gap-2 font-bold text-slate-700">
+                  <input type="checkbox" checked={couponForm.free_delivery} onChange={(e) => setCouponForm({ ...couponForm, free_delivery: e.target.checked })} />
+                  Free delivery bhi apply kare
+                </label>
+                <label className="flex items-center gap-2 font-bold text-slate-700">
+                  <input type="checkbox" checked={couponForm.is_active} onChange={(e) => setCouponForm({ ...couponForm, is_active: e.target.checked })} />
+                  Coupon active
+                </label>
+                <div className="flex gap-2">
+                  <button disabled={savingCoupon} className="flex-1 bg-[#ff5722] text-white px-4 py-2.5 rounded-xl font-black disabled:opacity-60">
+                    {savingCoupon ? 'Saving...' : editingCoupon ? 'Update Coupon' : 'Create Coupon'}
+                  </button>
+                  {editingCoupon && (
+                    <button type="button" onClick={handleResetCouponForm} className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold">
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm xl:col-span-2">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-black text-slate-900 text-lg">Coupon Codes</h3>
+                    <p className="text-xs text-slate-500">Active coupons app cart page par eligible value ke hisaab se show honge.</p>
+                  </div>
+                  <button onClick={fetchData} className="px-3 py-2 bg-slate-100 rounded-xl text-xs font-bold flex items-center gap-1">
+                    <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-500 uppercase">
+                      <tr>
+                        <th className="p-3">Code</th>
+                        <th className="p-3">Offer</th>
+                        <th className="p-3">Cart Value</th>
+                        <th className="p-3">Usage</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {couponsList.map((coupon) => (
+                        <tr key={coupon.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-black text-brand-blue-800">{coupon.code}</td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900">{coupon.title}</div>
+                            <div className="text-slate-500">{coupon.type === 'percent' ? `${Number(coupon.value || 0)}% off` : coupon.type === 'fixed' ? `₹${Number(coupon.value || 0)} off` : 'Free delivery'}{coupon.free_delivery ? ' + Free delivery' : ''}</div>
+                          </td>
+                          <td className="p-3 font-bold">Min ₹{Number(coupon.minimum_cart_value || 0).toFixed(0)}</td>
+                          <td className="p-3">{coupon.used_count || 0}/{coupon.usage_limit || '∞'}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-1 rounded-full text-[10px] font-black ${coupon.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                              {coupon.is_active ? 'ACTIVE' : 'OFF'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right space-x-2">
+                            <button onClick={() => handleEditCoupon(coupon)} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg font-bold">Edit</button>
+                            <button onClick={() => handleDeleteCoupon(coupon)} className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-lg font-bold">Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                      {couponsList.length === 0 && (
+                        <tr>
+                          <td colSpan="6" className="p-8 text-center text-slate-400 font-bold">No coupons created yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -11500,7 +11694,7 @@ export default function AdminDashboard() {
                             <div className="flex items-center space-x-1.5 text-[10px] font-bold text-purple-900 bg-purple-50 px-2.5 py-1 rounded-xl border border-purple-200 shadow-2xs">
                               <span>Sub-Ret: {product.sub_retailer_commission !== undefined && product.sub_retailer_commission !== null ? product.sub_retailer_commission : (product.level_1_commission || 10)}%</span>
                               <span>•</span>
-                              <span>Cust 1: {product.customer_commission !== undefined && product.customer_commission !== null ? product.customer_commission : (product.level_2_commission || 5)}%</span>
+                              <span>Cust 1: {product.customer_commission !== undefined && product.customer_commission !== null ? product.customer_commission : (product.level_2_commission || 3)}%</span>
                               <span>•</span>
                               <span>Cust 2: {product.level_3_commission !== undefined && product.level_3_commission !== null ? product.level_3_commission : 2}%</span>
                             </div>
@@ -11735,7 +11929,7 @@ export default function AdminDashboard() {
                         step="0.1"
                         min="0"
                         max="100"
-                        value={priceForm.customer_commission !== undefined ? priceForm.customer_commission : (priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 5)}
+                        value={priceForm.customer_commission !== undefined ? priceForm.customer_commission : (priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 3)}
                         onChange={(e) => setPriceForm({ ...priceForm, customer_commission: e.target.value, level_2_commission: e.target.value })}
                         className="w-full px-3 py-2 bg-slate-50 border border-emerald-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
                       />
@@ -11772,7 +11966,7 @@ export default function AdminDashboard() {
                   {(() => {
                     const pPrice = Number(priceForm.product_price || priceForm.end_user_price) || 0;
                     const l1Pct = Number(priceForm.sub_retailer_commission !== undefined ? priceForm.sub_retailer_commission : (priceForm.level_1_commission !== undefined ? priceForm.level_1_commission : 10));
-                    const l2Pct = Number(priceForm.customer_commission !== undefined ? priceForm.customer_commission : (priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 5));
+                    const l2Pct = Number(priceForm.customer_commission !== undefined ? priceForm.customer_commission : (priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 3));
                     const l3Pct = Number(priceForm.level_3_commission !== undefined ? priceForm.level_3_commission : 2);
 
                     const l1Amt = ((pPrice * l1Pct) / 100).toFixed(2);
@@ -12342,7 +12536,7 @@ export default function AdminDashboard() {
                           <input
                             type="number"
                             step="0.01"
-                            value={item.customer_commission !== undefined && item.customer_commission !== null ? item.customer_commission : (item.level_2_commission || 5)}
+                            value={item.customer_commission !== undefined && item.customer_commission !== null ? item.customer_commission : (item.level_2_commission || 3)}
                             onChange={(e) => {
                               const val = e.target.value;
                               handleBulkProductItemChange(item.id, 'customer_commission', val);
