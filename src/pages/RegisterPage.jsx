@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw, Smartphone, X, UserCheck, AlertCircle, Building2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { sendRegisterOtp, verifyOtp, verifySponsor, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
+import { verifySponsor } from '../services/api';
 import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
 export const INDIAN_STATES_WITH_CODES = [
@@ -162,14 +162,13 @@ export default function RegisterPage() {
     return () => clearTimeout(timer);
   }, [formData.sponsor_code]);
 
-  // Phone OTP Verification State (Hybrid Firebase + Backend SMS)
+  // Phone OTP Verification State (Firebase only)
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [showPhoneOtpField, setShowPhoneOtpField] = useState(false);
   const [phoneOtpInput, setPhoneOtpInput] = useState('');
   const [phoneOtpSending, setPhoneOtpSending] = useState(false);
   const [phoneOtpVerifying, setPhoneOtpVerifying] = useState(false);
   const [phoneConfirmation, setPhoneConfirmation] = useState(null);
-  const [isBackendPhoneOtp, setIsBackendPhoneOtp] = useState(false);
   const [phoneOtpStatus, setPhoneOtpStatus] = useState('');
   const [phoneOtpError, setPhoneOtpError] = useState('');
 
@@ -195,39 +194,22 @@ export default function RegisterPage() {
     setPhoneOtpSending(true);
     setPhoneOtpError('');
     setPhoneOtpStatus('');
-    setIsBackendPhoneOtp(false);
+    setPhoneConfirmation(null);
 
     try {
-      // 1. Verify that phone is NOT already registered in database
-      const res = await sendPhoneOtp({ phone: cleanPhone, type: 'register' });
-      if (!res.data?.success) {
-        const msg = res.data?.message || 'This mobile number is already registered. Please log in.';
-        setPhoneOtpError(msg);
-        toast.error(msg);
-        setPhoneOtpSending(false);
-        return;
-      }
+      const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
+      );
+      const confirmation = await Promise.race([firebasePromise, timeoutPromise]);
 
-      // 2. Try Firebase Phone Auth with 12-second timeout
-      try {
-        const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-        );
-        const confirmation = await Promise.race([firebasePromise, timeoutPromise]);
-        setPhoneConfirmation(confirmation);
-        setIsBackendPhoneOtp(false);
-      } catch (fbErr) {
-        console.warn('Firebase SMS unavailable, switching to backend SMS OTP service:', fbErr.message);
-        setIsBackendPhoneOtp(true);
-      }
-
+      setPhoneConfirmation(confirmation);
       setShowPhoneOtpField(true);
       setPhoneResendTimer(60);
-      setPhoneOtpStatus(`SMS OTP sent to +91 ${cleanPhone}`);
-      toast.success(`SMS OTP sent to +91 ${cleanPhone}`);
+      setPhoneOtpStatus(`Firebase OTP sent to +91 ${cleanPhone}`);
+      toast.success(`Firebase OTP sent to +91 ${cleanPhone}`);
     } catch (err) {
-      const msg = err.response?.data?.message || 'This mobile number is already registered with an existing account. Please log in.';
+      const msg = err.message || 'Unable to send Firebase OTP. Please try again.';
       setPhoneOtpError(msg);
       toast.error(msg);
     } finally {
@@ -244,37 +226,20 @@ export default function RegisterPage() {
     setPhoneOtpVerifying(true);
     setPhoneOtpError('');
 
-    let isVerified = false;
-
-    // 1. Try Firebase Verification if confirmation exists
-    if (phoneConfirmation) {
-      try {
-        await phoneConfirmation.confirm(cleanOtp);
-        isVerified = true;
-      } catch (fbErr) {
-        console.warn('Firebase confirm failed in registration, checking backend OTP:', fbErr.message);
-      }
+    if (!phoneConfirmation) {
+      setPhoneOtpError('Please request a fresh Firebase OTP before verifying.');
+      setPhoneOtpVerifying(false);
+      return;
     }
 
-    // 2. If Firebase did not verify, verify with Backend OTP
-    if (!isVerified) {
-      try {
-        const res = await verifyPhoneOtp({ phone: formData.phone, otp: cleanOtp });
-        if (res.data?.success) {
-          isVerified = true;
-        }
-      } catch (backendErr) {
-        console.warn('Backend OTP verify failed in registration:', backendErr.response?.data?.message || backendErr.message);
-      }
-    }
-
-    if (isVerified) {
+    try {
+      await phoneConfirmation.confirm(cleanOtp);
       setPhoneVerified(true);
       setShowPhoneOtpField(false);
       setPhoneOtpStatus('Mobile number verified successfully!');
       toast.success('Mobile number verified successfully!');
-    } else {
-      setPhoneOtpError('Invalid or expired SMS OTP. Please check your SMS or click Resend.');
+    } catch (err) {
+      setPhoneOtpError(err.message || 'Invalid or expired Firebase OTP. Please check your SMS or click Resend.');
     }
     setPhoneOtpVerifying(false);
   };
@@ -696,4 +661,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-

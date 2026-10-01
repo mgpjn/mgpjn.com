@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone, sendPhoneOtp, verifyPhoneOtp } from '../services/api';
+import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone } from '../services/api';
 import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
 export default function LoginPage() {
@@ -56,12 +56,11 @@ export default function LoginPage() {
   const [superAdminResendTimer, setSuperAdminResendTimer] = useState(0);
   const [resending2Fa, setResending2Fa] = useState(false);
 
-  // Phone OTP Login State (Hybrid Firebase + Backend SMS)
+  // Phone OTP Login State (Firebase only)
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const [isBackendOtp, setIsBackendOtp] = useState(false);
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneTimer, setPhoneTimer] = useState(0);
@@ -186,7 +185,7 @@ export default function LoginPage() {
     }
   };
 
-  // Send Mobile Phone OTP for Login (Checks DB first -> Backend SMS / Firebase)
+  // Send Mobile Phone OTP for Login (Firebase only)
   const handleSendPhoneOtp = async (e) => {
     if (e) e.preventDefault();
     const cleanNumber = phoneNumber.replace(/\D/g, '');
@@ -196,38 +195,21 @@ export default function LoginPage() {
     }
     setPhoneLoading(true);
     setPhoneError('');
-    setIsBackendOtp(false);
+    setConfirmationResult(null);
 
     try {
-      // 1. Verify phone is registered in DB and initiate backend OTP
-      const res = await sendPhoneOtp({ phone: cleanNumber, type: 'login' });
-      if (!res.data?.success) {
-        const errMsg = res.data?.message || 'This mobile number is not registered with us. Please register first.';
-        setPhoneError(errMsg);
-        toast.error(errMsg);
-        setPhoneLoading(false);
-        return;
-      }
+      const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
+      );
+      const result = await Promise.race([firebasePromise, timeoutPromise]);
 
-      // 2. Also attempt Firebase SMS if available
-      try {
-        const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-        );
-        const result = await Promise.race([firebasePromise, timeoutPromise]);
-        setConfirmationResult(result);
-        setIsBackendOtp(false);
-      } catch (fbErr) {
-        console.warn('Firebase SMS unavailable, using backend SMS OTP:', fbErr.message);
-        setIsBackendOtp(true);
-      }
-
+      setConfirmationResult(result);
       setPhoneOtpSent(true);
       setPhoneTimer(60);
-      toast.success(res.data?.message || `SMS OTP sent to +91 ${cleanNumber}`);
+      toast.success(`Firebase OTP sent to +91 ${cleanNumber}`);
     } catch (err) {
-      const errMsg = err.response?.data?.message || 'This mobile number is not registered with us. Please register first.';
+      const errMsg = err.message || 'Unable to send Firebase OTP. Please try again.';
       setPhoneError(errMsg);
       toast.error(errMsg);
     } finally {
@@ -235,7 +217,7 @@ export default function LoginPage() {
     }
   };
 
-  // Verify Phone OTP & Login (Dual Firebase / Backend Verification)
+  // Verify Phone OTP & Login (Firebase only)
   const handleVerifyPhoneOtp = async (e, otpOverride) => {
     if (e && e.preventDefault) e.preventDefault();
     const cleanOtp = (otpOverride || phoneOtp).trim();
@@ -246,42 +228,18 @@ export default function LoginPage() {
     setPhoneLoading(true);
     setPhoneError('');
 
-    let isOtpValid = false;
-
-    // 1. Try Firebase Verification if confirmationResult exists
-    if (confirmationResult) {
-      try {
-        await confirmationResult.confirm(cleanOtp);
-        isOtpValid = true;
-      } catch (fbErr) {
-        console.warn('Firebase confirm failed, checking backend OTP:', fbErr.message);
-      }
-    }
-
-    // 2. If Firebase did not verify, verify with Backend OTP cache
-    if (!isOtpValid) {
-      try {
-        const backendRes = await verifyPhoneOtp({ phone: phoneNumber, otp: cleanOtp });
-        if (backendRes.data?.success) {
-          isOtpValid = true;
-        }
-      } catch (backendErr) {
-        console.warn('Backend OTP verification failed:', backendErr.response?.data?.message || backendErr.message);
-      }
-    }
-
-    if (!isOtpValid) {
+    if (!confirmationResult) {
       setPhoneLoading(false);
-      setPhoneError('Invalid or expired SMS OTP. Please check your SMS or click Resend.');
+      setPhoneError('Please request a fresh Firebase OTP before verifying.');
       return;
     }
 
-    // 3. Authorize with Backend Session
     try {
+      await confirmationResult.confirm(cleanOtp);
+
       const res = await loginWithPhone({
-        phone: phoneNumber,
-        otp: cleanOtp,
-        firebase_verified: Boolean(confirmationResult),
+        phone: phoneNumber.replace(/\D/g, ''),
+        firebase_verified: true,
       });
       if (res.data.success) {
         clearRecaptchaVerifier();
@@ -305,7 +263,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error('Phone login session error:', err);
-      setPhoneError(err.response?.data?.message || err.message || 'Failed to complete phone login. Please try again.');
+      setPhoneError(err.response?.data?.message || err.message || 'Invalid or expired Firebase OTP. Please check your SMS or click Resend.');
     } finally {
       setPhoneLoading(false);
     }
@@ -845,4 +803,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

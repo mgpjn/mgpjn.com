@@ -10,7 +10,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import {
   createOrder, getWalletTransactions, createRazorpayOrder, verifyRazorpayPayment,
-  sendPhoneOtp, verifyPhoneOtp, loginWithPhone, registerUser
+  loginWithPhone
 } from '../services/api';
 import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
@@ -122,38 +122,20 @@ export default function CheckoutPage() {
     setIsAccountNotFound(false);
 
     try {
-      // 1. Verify phone is registered in DB and send OTP via Fast2SMS/Backend
-      const res = await sendPhoneOtp({ phone: cleanPhone, type: 'login' });
-      if (!res.data?.success) {
-        const msg = res.data?.message || 'This mobile number is not registered with us.';
-        setPhoneOtpError(msg);
-        setIsAccountNotFound(true);
-        setPhoneOtpSending(false);
-        return;
-      }
+      const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'checkout-recaptcha-container');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
+      );
+      const result = await Promise.race([firebasePromise, timeoutPromise]);
 
-      // 2. Also attempt Firebase SMS with 12s timeout
-      try {
-        const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'checkout-recaptcha-container');
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-        );
-        const result = await Promise.race([firebasePromise, timeoutPromise]);
-        setPhoneConfirmation(result);
-      } catch (fbErr) {
-        console.warn('Firebase SMS fallback to backend SMS:', fbErr.message);
-      }
-
+      setPhoneConfirmation(result);
       setPhoneOtpSent(true);
       setPhoneTimer(60);
-      setPhoneOtpStatus(`SMS OTP sent to +91 ${cleanPhone}`);
-      toast.success(`SMS OTP sent to +91 ${cleanPhone}`);
+      setPhoneOtpStatus(`Firebase OTP sent to +91 ${cleanPhone}`);
+      toast.success(`Firebase OTP sent to +91 ${cleanPhone}`);
     } catch (err) {
-      const msg = err.response?.data?.message || 'This mobile number is not registered with us. Please create an account or sign in.';
+      const msg = err.message || 'Unable to send Firebase OTP. Please try again.';
       setPhoneOtpError(msg);
-      if (err.response?.status === 404 || (msg && msg.toLowerCase().includes('not registered'))) {
-        setIsAccountNotFound(true);
-      }
       toast.error(msg);
     } finally {
       setPhoneOtpSending(false);
@@ -169,42 +151,18 @@ export default function CheckoutPage() {
     setPhoneOtpVerifying(true);
     setPhoneOtpError('');
 
-    let isOtpValid = false;
-
-    // 1. Try Firebase confirmation if available
-    if (phoneConfirmation) {
-      try {
-        await phoneConfirmation.confirm(cleanOtp);
-        isOtpValid = true;
-      } catch (fbErr) {
-        console.warn('Firebase confirm failed, checking backend OTP:', fbErr.message);
-      }
-    }
-
-    // 2. Backend OTP Verification
-    if (!isOtpValid) {
-      try {
-        const backendRes = await verifyPhoneOtp({ phone: formData.phone, otp: cleanOtp });
-        if (backendRes.data?.success) {
-          isOtpValid = true;
-        }
-      } catch (backendErr) {
-        console.warn('Backend OTP verification failed:', backendErr.response?.data?.message || backendErr.message);
-      }
-    }
-
-    if (!isOtpValid) {
+    if (!phoneConfirmation) {
       setPhoneOtpVerifying(false);
-      setPhoneOtpError('Invalid or expired SMS OTP. Please check your SMS or click Resend.');
+      setPhoneOtpError('Please request a fresh Firebase OTP before verifying.');
       return;
     }
 
-    // 3. Complete Phone Login Session
     try {
+      await phoneConfirmation.confirm(cleanOtp);
+
       const res = await loginWithPhone({
         phone: formData.phone,
-        otp: cleanOtp,
-        firebase_verified: Boolean(phoneConfirmation),
+        firebase_verified: true,
       });
 
       if (res.data?.success && res.data?.token && res.data?.user) {
@@ -218,8 +176,12 @@ export default function CheckoutPage() {
       }
     } catch (err) {
       console.error('Phone login error:', err);
-      setPhoneOtpError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
-      toast.error('Failed to complete login session.');
+      const msg = err.response?.data?.message || err.message || 'Invalid or expired Firebase OTP. Please check your SMS or click Resend.';
+      setPhoneOtpError(msg);
+      if (err.response?.status === 404 || msg.toLowerCase().includes('not registered')) {
+        setIsAccountNotFound(true);
+      }
+      toast.error(msg);
     } finally {
       setPhoneOtpVerifying(false);
     }
@@ -322,6 +284,13 @@ export default function CheckoutPage() {
         notes: isTakeaway
           ? `[STORE TAKEAWAY / SELF PICKUP] ${formData.notes || ''}`.trim()
           : formData.notes,
+        sponsor_code:
+          localStorage.getItem('mediglaxo_sponsor_code') ||
+          sessionStorage.getItem('mediglaxo_sponsor_code') ||
+          document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('mediglaxo_ref='))
+            ?.split('=')[1],
         items: cartItems.map((item) => ({
           product_id: item.id,
           quantity: item.quantity,
