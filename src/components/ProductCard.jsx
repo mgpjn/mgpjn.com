@@ -4,6 +4,7 @@ import { ShoppingCart, Plus, Minus, Star, Zap, Share2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ShareProductModal from './ShareProductModal';
+import { getPackSubtitle, getProductPricing } from '../utils/pricing';
 
 export default function ProductCard({ product }) {
   const { cartItems, addToCart, updateQuantity, setIsDrawerOpen } = useCart();
@@ -12,64 +13,22 @@ export default function ProductCard({ product }) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const cartItem = cartItems.find((item) => item.id === product.id);
 
-  // Wholesale Rate is strictly for Sub-Retailer se upar ke saare roles (Retailer, Sub Distributor, Distributor, Super Distributor, Admin)
-  const isWholesaleAllowed = Boolean(
-    user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
-  );
-
-  const retailPrice = Number(product.retail_price || product.price || 0);
-
-  // Role-specific Wholesale Box Rate
-  let wholesalePrice = Number(product.wholesale_price || 0);
-  if (user) {
-    if (user.role === 'super_distributor' && product.sd_price) {
-      wholesalePrice = Number(product.sd_price);
-    } else if (user.role === 'distributor' && product.dist_price) {
-      wholesalePrice = Number(product.dist_price);
-    } else if (user.role === 'sub_distributor' && product.subd_price) {
-      wholesalePrice = Number(product.subd_price);
-    } else if (user.role === 'retailer' && product.retailer_price) {
-      wholesalePrice = Number(product.retailer_price);
-    }
-  }
-  if (!wholesalePrice) {
-    wholesalePrice = Number(product.retailer_price || product.wholesale_price || (retailPrice * 0.55));
-  }
-
-  const mrp = Number(product.mrp || (retailPrice * 1.35));
-  const discount = Math.round(((mrp - retailPrice) / mrp) * 100);
-
-  // Wholesale MRP & Profit Margin Calculation for Wholesaler / Retailer / Distributor
-  const wholesaleMrp = Number(
-    product.wholesale_mrp || (product.mrp ? product.mrp * 10 : (wholesalePrice * 1.5))
-  );
-  const wholesaleDiscount = wholesaleMrp > wholesalePrice 
-    ? Math.round(((wholesaleMrp - wholesalePrice) / wholesaleMrp) * 100) 
-    : 0;
-  const wholesaleSavings = Math.max(0, wholesaleMrp - wholesalePrice);
+  const pricing = getProductPricing(product, user);
+  const {
+    retailPrice,
+    retailMrp: mrp,
+    retailDiscount: discount,
+    wholesaleAllowed,
+    wholesalePrice,
+    wholesaleMrp,
+    wholesaleDiscount,
+    wholesaleSavings,
+  } = pricing;
 
   // Deterministic ratings and reviews for clean 1mg style presentation
   const idNum = typeof product.id === 'number' ? product.id : (product.id ? String(product.id).charCodeAt(0) : 7);
   const rating = ((4.2 + (idNum % 7) * 0.1)).toFixed(1);
   const reviewCount = ((idNum * 173) % 2200) + 180;
-
-  // Dynamic packaging format based on configured product metric
-  const getPackSubtitle = (p) => {
-    if (p.strip_packing && p.strip_packing.trim()) return p.strip_packing;
-    if (p.packaging_size && p.packaging_size.trim()) return p.packaging_size;
-    if (p.pack_size && p.pack_size.trim()) return p.pack_size;
-    if (p.subtitle && p.subtitle.trim()) return p.subtitle;
-    if (p.strip_unit && p.strip_unit.trim()) return `1 ${p.strip_unit}`;
-    const form = (p.dosage_form || '').toLowerCase();
-    if (form.includes('tablet')) return 'strip of 10 tablets';
-    if (form.includes('capsule')) return 'strip of 10 capsules';
-    if (form.includes('syrup')) return 'bottle of 100 ml Syrup';
-    if (form.includes('injection')) return 'vial of 1 injection';
-    if (form.includes('ointment') || form.includes('cream')) return 'tube of 30 gm Cream';
-    if (form.includes('powder')) return 'jar of 400 gm Powder';
-    if (form.includes('drop')) return 'bottle of 10 ml Drops';
-    return p.unit ? `1 ${p.unit}` : '1 Unit';
-  };
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -174,7 +133,7 @@ export default function ProductCard({ product }) {
         </div>
 
         {/* Wholesale Rate (Role-specific B2B packaging rate with Wholesale MRP & Discount) */}
-        {isWholesaleAllowed && (
+        {wholesaleAllowed && (
           <div className="bg-gradient-to-r from-emerald-50 to-teal-50/70 border border-emerald-300/90 p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-[8px] sm:text-[10px] shadow-2xs space-y-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-1">

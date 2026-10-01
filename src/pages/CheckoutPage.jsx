@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import {
   ShieldCheck, CreditCard, QrCode, Banknote, ArrowRight,
   Truck, CheckCircle2, Lock, Sparkles, Store, Wallet, AlertCircle,
-  Smartphone, RefreshCw, X, UserCheck, Eye, EyeOff
+  Smartphone, RefreshCw, X, UserCheck, Eye, EyeOff, MapPin, Plus
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +28,31 @@ const loadRazorpayScript = () => {
   });
 };
 
+const getAddressStorageKey = (user) => `mediglaxo_checkout_addresses_${user?.id || user?.phone || 'guest'}`;
+
+const normalizeAddress = (address) => ({
+  customer_name: address?.customer_name || address?.name || '',
+  phone: address?.phone || '',
+  email: address?.email || '',
+  shipping_address: address?.shipping_address || address?.address || '',
+  city: address?.city || '',
+  state: address?.state || 'Delhi',
+  pincode: address?.pincode || '',
+});
+
+const hasUsableAddress = (address) => Boolean(
+  address?.shipping_address && address?.city && address?.state && address?.pincode
+);
+
+const readSavedAddresses = (user) => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(getAddressStorageKey(user)) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+};
+
 export default function CheckoutPage() {
   const { cartItems, subtotal, deliveryCharge, finalTotal, clearCart } = useCart();
   const { user, setDirectSession, register } = useAuth();
@@ -49,6 +74,8 @@ export default function CheckoutPage() {
   const [error, setError] = useState('');
   const [walletBalance, setWalletBalance] = useState(user?.wallet_balance || 0);
   const [useWallet, setUseWallet] = useState(false);
+  const [addressMode, setAddressMode] = useState('new');
+  const [savedAddresses, setSavedAddresses] = useState([]);
 
   // Mobile Phone OTP Checkout & Login State
   const [phoneOtpSending, setPhoneOtpSending] = useState(false);
@@ -82,6 +109,24 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (user) {
+      const profileAddress = normalizeAddress({
+        customer_name: user.name,
+        phone: user.phone,
+        email: user.email,
+        shipping_address: user.address,
+        city: user.city,
+        state: user.state,
+        pincode: user.pincode,
+      });
+      const stored = readSavedAddresses(user);
+      const addresses = [
+        ...(hasUsableAddress(profileAddress) ? [{ ...profileAddress, label: 'Profile address' }] : []),
+        ...stored,
+      ].filter(hasUsableAddress);
+
+      setSavedAddresses(addresses);
+      setAddressMode(addresses.length > 0 ? 'saved' : 'new');
+
       setFormData((prev) => ({
         ...prev,
         customer_name: prev.customer_name || user.name || '',
@@ -106,6 +151,60 @@ export default function CheckoutPage() {
         .catch(() => {});
     }
   }, [user]);
+
+  const applyAddress = (address, mode = 'saved') => {
+    const normalized = normalizeAddress(address);
+    setAddressMode(mode);
+    setFormData((prev) => ({
+      ...prev,
+      ...normalized,
+      email: normalized.email || prev.email || user?.email || '',
+    }));
+  };
+
+  const startNewAddress = () => {
+    setAddressMode('new');
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: user?.name || prev.customer_name || '',
+      phone: user?.phone || prev.phone || '',
+      email: user?.email || prev.email || '',
+      shipping_address: '',
+      city: '',
+      state: user?.state || 'Delhi',
+      pincode: '',
+    }));
+  };
+
+  const startRecipientAddress = () => {
+    setAddressMode('recipient');
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: '',
+      phone: '',
+      shipping_address: '',
+      city: '',
+      state: user?.state || 'Delhi',
+      pincode: '',
+    }));
+  };
+
+  const rememberCheckoutAddress = () => {
+    if (!user || !hasUsableAddress(formData)) return;
+    const key = getAddressStorageKey(user);
+    const current = {
+      ...normalizeAddress(formData),
+      label: addressMode === 'recipient' ? 'Recipient address' : 'Previous address',
+      saved_at: new Date().toISOString(),
+    };
+    const existing = readSavedAddresses(user);
+    const filtered = existing.filter((addr) => (
+      `${addr.shipping_address}|${addr.city}|${addr.pincode}`.toLowerCase()
+      !== `${current.shipping_address}|${current.city}|${current.pincode}`.toLowerCase()
+    ));
+    localStorage.setItem(key, JSON.stringify([current, ...filtered].slice(0, 5)));
+    setSavedAddresses([current, ...filtered].slice(0, 5));
+  };
 
   const handleSendCheckoutOtp = async (targetPhone) => {
     const cleanPhone = (targetPhone || formData.phone || '').replace(/\D/g, '');
@@ -306,6 +405,7 @@ export default function CheckoutPage() {
           throw new Error(orderRes.data?.message || 'Could not create order.');
         }
         const placedOrder = orderRes.data.order;
+        rememberCheckoutAddress();
 
         // 2. Load Razorpay Checkout SDK
         const isLoaded = await loadRazorpayScript();
@@ -358,9 +458,11 @@ export default function CheckoutPage() {
                 order_id: placedOrder.id,
               });
               clearCart();
+              rememberCheckoutAddress();
               navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
             } catch (vErr) {
               clearCart();
+              rememberCheckoutAddress();
               navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
             } finally {
               setLoading(false);
@@ -382,6 +484,7 @@ export default function CheckoutPage() {
       const res = await createOrder(orderPayload);
       if (res.data.success) {
         const placedOrder = res.data.order;
+        rememberCheckoutAddress();
         clearCart();
         navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
       }
@@ -642,6 +745,91 @@ export default function CheckoutPage() {
               <Truck className="w-5 h-5 text-brand-blue-800" />
               <span>1. Delivery &amp; Contact Details</span>
             </h3>
+
+            {user && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => savedAddresses[0] ? applyAddress(savedAddresses[0], 'saved') : startNewAddress()}
+                    className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                      addressMode === 'saved'
+                        ? 'border-brand-blue-800 bg-brand-blue-50/60'
+                        : 'border-slate-200 bg-slate-50 hover:border-brand-blue-300'
+                    }`}
+                  >
+                    <MapPin className="w-4 h-4 text-brand-blue-800 mb-1.5" />
+                    <div className="text-xs font-black text-slate-900">Use previous address</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      {savedAddresses.length > 0 ? 'Saved/profile address available' : 'No saved address yet'}
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={startNewAddress}
+                    className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                      addressMode === 'new'
+                        ? 'border-emerald-600 bg-emerald-50/70'
+                        : 'border-slate-200 bg-slate-50 hover:border-emerald-300'
+                    }`}
+                  >
+                    <Plus className="w-4 h-4 text-emerald-700 mb-1.5" />
+                    <div className="text-xs font-black text-slate-900">Add new address</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">Fresh delivery location</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={startRecipientAddress}
+                    className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                      addressMode === 'recipient'
+                        ? 'border-brand-orange-500 bg-orange-50/80'
+                        : 'border-slate-200 bg-slate-50 hover:border-brand-orange-300'
+                    }`}
+                  >
+                    <UserCheck className="w-4 h-4 text-brand-orange-500 mb-1.5" />
+                    <div className="text-xs font-black text-slate-900">Order for someone else</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">Recipient name and phone</div>
+                  </button>
+                </div>
+
+                {savedAddresses.length > 0 && addressMode === 'saved' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {savedAddresses.slice(0, 4).map((address, index) => (
+                      <button
+                        key={`${address.shipping_address}-${address.pincode}-${index}`}
+                        type="button"
+                        onClick={() => applyAddress(address, 'saved')}
+                        className="p-3 rounded-2xl bg-white border border-slate-200 hover:border-brand-blue-500 hover:bg-brand-blue-50/30 transition-all text-left"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-xs font-black text-slate-900">
+                              {address.label || 'Previous address'}
+                            </div>
+                            <div className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                              {address.customer_name || user.name} • {address.phone || user.phone}
+                              <br />
+                              {address.shipping_address}, {address.city}, {address.state} - {address.pincode}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-brand-blue-800 bg-brand-blue-50 px-2 py-0.5 rounded-full">
+                            Use
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {addressMode === 'recipient' && (
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-2xl text-xs text-orange-900 font-semibold">
+                Recipient details bhar do. Order account aapke login se place hoga, delivery kisi aur ke name/number/address par ja sakti hai.
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

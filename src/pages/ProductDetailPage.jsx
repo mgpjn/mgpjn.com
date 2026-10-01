@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { FALLBACK_PRODUCTS } from '../data/fallbackProducts';
 import ProductCard from '../components/ProductCard';
 import ShareProductModal from '../components/ShareProductModal';
+import { getProductPricing } from '../utils/pricing';
 
 export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const params = useParams();
@@ -18,10 +19,6 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
   const idOrSlug = params.slug || params.idOrSlug || params.id;
   const { user } = useAuth();
   const { addToCart, setIsDrawerOpen } = useCart();
-  // Wholesale / Bulk Rate is strictly reserved for sub-retailer se upar ke saare roles (Retailers, Sub Distributors, Distributors, Super Distributors, Admins)
-  const isWholesaleAllowed = Boolean(
-    user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
-  );
 
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
@@ -52,11 +49,15 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
       .then((res) => {
         if (res.data.success) {
           const p = res.data.product;
+          const fetchedPricing = getProductPricing(p, user);
           setProduct(p);
           setRelated(res.data.related || []);
-          if (isWholesaleAllowed) {
+          if (fetchedPricing.wholesaleAllowed) {
             setPricingMode('wholesale');
             setQuantity(p.wholesale_min_qty || 5);
+          } else {
+            setPricingMode('retail');
+            setQuantity(1);
           }
         }
       })
@@ -66,16 +67,20 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           (p) => String(p.id) === String(idOrSlug) || p.slug === idOrSlug || (p.name && p.name.toLowerCase().includes(String(idOrSlug).toLowerCase()))
         ) || FALLBACK_PRODUCTS[0];
         if (fallback) {
+          const fallbackPricing = getProductPricing(fallback, user);
           setProduct(fallback);
           setRelated(FALLBACK_PRODUCTS.filter((p) => p.id !== fallback.id).slice(0, 4));
-          if (isWholesaleAllowed) {
+          if (fallbackPricing.wholesaleAllowed) {
             setPricingMode('wholesale');
             setQuantity(fallback.wholesale_min_qty || 5);
+          } else {
+            setPricingMode('retail');
+            setQuantity(1);
           }
         }
       })
       .finally(() => setLoading(false));
-  }, [idOrSlug, isWholesaleAllowed]);
+  }, [idOrSlug, user?.id, user?.role]);
 
   if (loading) {
     return (
@@ -97,43 +102,24 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
     );
   }
 
-  const retailPrice = Number(product.retail_price || product.price || 0);
-
-  // Role-specific Wholesale Box Rate
-  let wholesalePrice = Number(product.wholesale_price || 0);
-  if (user) {
-    if (user.role === 'super_distributor' && product.sd_price) {
-      wholesalePrice = Number(product.sd_price);
-    } else if (user.role === 'distributor' && product.dist_price) {
-      wholesalePrice = Number(product.dist_price);
-    } else if (user.role === 'sub_distributor' && product.subd_price) {
-      wholesalePrice = Number(product.subd_price);
-    } else if (user.role === 'retailer' && product.retailer_price) {
-      wholesalePrice = Number(product.retailer_price);
-    }
-  }
-  if (!wholesalePrice) {
-    wholesalePrice = Number(product.retailer_price || product.wholesale_price || (retailPrice * 0.55));
-  }
-
+  const pricing = getProductPricing(product, user);
+  const {
+    retailPrice,
+    retailMrp: mrp,
+    wholesaleAllowed,
+    wholesalePrice,
+    wholesaleMrp,
+    wholesaleDiscount,
+    wholesaleSavings,
+  } = pricing;
   const wholesaleMinQty = product.wholesale_min_qty || 5;
-  const mrp = Number(product.mrp || (retailPrice * 1.35));
 
-  // Wholesale MRP & Trade Profit Margin Calculation
-  const wholesaleMrp = Number(
-    product.wholesale_mrp || (product.mrp ? product.mrp * 10 : (wholesalePrice * 1.5))
-  );
-  const wholesaleDiscount = wholesaleMrp > wholesalePrice 
-    ? Math.round(((wholesaleMrp - wholesalePrice) / wholesaleMrp) * 100) 
-    : 0;
-  const wholesaleSavings = Math.max(0, wholesaleMrp - wholesalePrice);
-
-  const isWholesaleSelected = isWholesaleAllowed && (pricingMode === 'wholesale' || quantity >= wholesaleMinQty);
+  const isWholesaleSelected = wholesaleAllowed && pricingMode === 'wholesale';
   const currentUnitPrice = isWholesaleSelected ? wholesalePrice : retailPrice;
   const currentTotal = currentUnitPrice * quantity;
 
   const handleSelectMode = (mode) => {
-    if (!isWholesaleAllowed) return;
+    if (mode === 'wholesale' && !wholesaleAllowed) return;
     setPricingMode(mode);
     if (mode === 'wholesale' && quantity < wholesaleMinQty) {
       setQuantity(wholesaleMinQty);
@@ -299,7 +285,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           </div>
 
           {/* Pricing Display */}
-          {isWholesaleAllowed ? (
+          {wholesaleAllowed ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700 block uppercase tracking-wider">
@@ -315,7 +301,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
                 <div
                   onClick={() => handleSelectMode('retail')}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                    pricingMode === 'retail' && quantity < wholesaleMinQty
+                    pricingMode === 'retail'
                       ? 'border-brand-blue-800 bg-brand-blue-50/40 shadow-sm'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}

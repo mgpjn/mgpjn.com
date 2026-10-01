@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getProductPricing } from '../utils/pricing';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
+  const { user } = useAuth();
   const [cartItems, setCartItems] = useState(() => {
     const saved = localStorage.getItem('mediglaxo_cart');
     return saved ? JSON.parse(saved) : [];
@@ -47,55 +50,19 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
   };
 
-  // Check if current logged-in user is a B2B partner (Distributor / Retailer)
-  const getUser = () => {
-    try {
-      const sessionUser = sessionStorage.getItem('mediglaxo_session_user');
-      if (sessionUser) return JSON.parse(sessionUser);
-      const userJson = localStorage.getItem('mediglaxo_user');
-      return userJson ? JSON.parse(userJson) : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const user = getUser();
-  // Wholesale pricing is strictly reserved for sub-retailer se upar ke saare roles (Retailers, Sub Distributors, Distributors, Super Distributors, Admins)
-  const isB2BWholesaleEligible = Boolean(
-    user && (user.role_level >= 3 || ['retailer', 'sub_distributor', 'distributor', 'super_distributor', 'admin', 'super_admin'].includes(user.role))
-  );
-  const isB2BPartner = isB2BWholesaleEligible;
-
   // Process item prices with Dual Pricing logic (Retail vs Wholesale)
   const processedItems = cartItems.map((item) => {
-    const retailRate = Number(item.retail_price || item.price || 0);
-
-    // Role-specific Wholesale Box Rate
-    let wholesaleRate = Number(item.wholesale_price || 0);
-    if (user) {
-      if (user.role === 'super_distributor' && item.sd_price) {
-        wholesaleRate = Number(item.sd_price);
-      } else if (user.role === 'distributor' && item.dist_price) {
-        wholesaleRate = Number(item.dist_price);
-      } else if (user.role === 'sub_distributor' && item.subd_price) {
-        wholesaleRate = Number(item.subd_price);
-      } else if (user.role === 'retailer' && item.retailer_price) {
-        wholesaleRate = Number(item.retailer_price);
-      }
-    }
-    if (!wholesaleRate) {
-      wholesaleRate = Number(item.retailer_price || item.wholesale_price || (retailRate * 0.55));
-    }
+    const pricing = getProductPricing(item, user);
+    const retailRate = pricing.retailPrice;
+    const wholesaleRate = pricing.wholesalePrice;
     const minWholesaleQty = item.wholesale_min_qty || 5;
 
-    // Wholesale rate is applied ONLY for Retailer and above roles
-    const isWholesale = isB2BWholesaleEligible;
+    // Wholesale rate is applied only when this logged-in user has an explicit product rate.
+    const isWholesale = pricing.wholesaleAllowed;
     const effectiveUnitPrice = isWholesale ? wholesaleRate : retailRate;
     const itemTotal = effectiveUnitPrice * item.quantity;
-    const retailMrp = Number(item.mrp || (retailRate * 1.35));
-    const wholesaleMrp = Number(
-      item.wholesale_mrp || (item.mrp ? item.mrp * 10 : (wholesaleRate * 1.5))
-    );
+    const retailMrp = pricing.retailMrp;
+    const wholesaleMrp = pricing.wholesaleMrp || retailMrp;
     const effectiveMrp = isWholesale ? wholesaleMrp : retailMrp;
     const itemDiscount = effectiveMrp > effectiveUnitPrice 
       ? Math.round(((effectiveMrp - effectiveUnitPrice) / effectiveMrp) * 100) 
@@ -104,6 +71,7 @@ export const CartProvider = ({ children }) => {
 
     return {
       ...item,
+      price: effectiveUnitPrice,
       retailRate,
       wholesaleRate,
       wholesaleMrp,
@@ -124,6 +92,7 @@ export const CartProvider = ({ children }) => {
   const totalSavings = Math.max(0, totalMrp - subtotal);
   const deliveryCharge = subtotal >= 500 || subtotal === 0 ? 0 : 50;
   const finalTotal = subtotal + deliveryCharge;
+  const isB2BPartner = processedItems.some((item) => item.isWholesale);
 
   return (
     <CartContext.Provider

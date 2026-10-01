@@ -27,6 +27,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
   const searchRef = useRef(null);
   const mobileSearchRef = useRef(null);
   const navTimerRef = useRef(null);
+  const searchRequestRef = useRef(0);
 
   const handleMouseEnterCat = (catId) => {
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
@@ -54,22 +55,32 @@ export default function Navbar({ onOpenPrescriptionModal }) {
       .catch((err) => console.error(err));
   }, []);
 
-  // Debounced live search (executes strictly 350ms AFTER typing stops)
+  // Debounced live search (executes after typing pauses and ignores stale responses)
   useEffect(() => {
-    if (searchTerm.trim().length >= 2) {
+    const query = searchTerm.trim();
+    if (query.length >= 1) {
       setIsSearching(true);
+      setShowSuggestions(true);
+      const requestId = searchRequestRef.current + 1;
+      searchRequestRef.current = requestId;
       const timer = setTimeout(() => {
-        getSearchSuggestions(searchTerm.trim())
+        getSearchSuggestions(query)
           .then((res) => {
+            if (searchRequestRef.current !== requestId) return;
             setSuggestions(res.data.products || []);
             setShowSuggestions(true);
           })
-          .catch(() => setSuggestions([]))
-          .finally(() => setIsSearching(false));
-      }, 350);
+          .catch(() => {
+            if (searchRequestRef.current === requestId) setSuggestions([]);
+          })
+          .finally(() => {
+            if (searchRequestRef.current === requestId) setIsSearching(false);
+          });
+      }, 220);
 
       return () => clearTimeout(timer);
     } else {
+      searchRequestRef.current += 1;
       setSuggestions([]);
       setShowSuggestions(false);
       setIsSearching(false);
