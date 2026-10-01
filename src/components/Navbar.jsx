@@ -190,6 +190,28 @@ export default function Navbar({ onOpenPrescriptionModal }) {
 
   return (
     <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-slate-100">
+      {/* 0. Festive Navratri Mahotsav Celebration Bar */}
+      <div className="bg-gradient-to-r from-red-600 via-amber-600 to-orange-600 text-white text-[11px] sm:text-xs py-1.5 px-3 shadow-inner border-b border-amber-500/30 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 truncate mx-auto sm:mx-0">
+            <span className="flex-shrink-0 animate-bounce">🪔</span>
+            <span className="font-extrabold tracking-wide uppercase text-amber-200">
+              Shubh Navratri Mahotsav:
+            </span>
+            <span className="truncate">
+              9 Sacred Days of Health &amp; Savings! Flat Festive Discounts + Extra 10% Off with Code <span className="bg-white/20 font-black px-1.5 py-0.5 rounded text-amber-100 border border-white/25">NAVRATRI9</span>
+            </span>
+          </div>
+          <div className="hidden md:flex items-center space-x-3 text-amber-100 flex-shrink-0 font-medium text-xs">
+            <span>🌸 Pure Ayurvedic &amp; Vrat Vitality</span>
+            <span>•</span>
+            <Link to="/shop?category=ayurvedic-herbal" className="underline hover:text-white font-bold transition-colors">
+              Shop Festive Specials →
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* 1. Top Pharmaceutical Trust Header */}
       <div className="bg-brand-blue-950 text-white text-xs py-1.5 px-4 hidden xl:block border-b border-brand-blue-900">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

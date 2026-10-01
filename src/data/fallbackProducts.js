@@ -293,3 +293,39 @@ export const FALLBACK_CATEGORIES = [
 export const FALLBACK_HOT_SELLING = FALLBACK_PRODUCTS.slice(0, 8);
 export const FALLBACK_FEATURED = FALLBACK_PRODUCTS;
 export const FALLBACK_TOP_DISCOUNTS = FALLBACK_PRODUCTS.filter(p => (p.discount_percentage || 0) >= 25);
+
+export const FALLBACK_BANNERS = [
+  {
+    id: 1,
+    title: "🌸 Navratri Mahotsav Mega Health Sale 🪔",
+    subtitle: "SPECIAL 9-DAY FESTIVE SAVINGS • UP TO 40% OFF",
+    highlight: "FLAT 10% EXTRA CASHBACK",
+    code: "NAVRATRI9",
+    tagline: "Celebrate pure wellness & auspicious health blessings for your entire family",
+    image: "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=1600&auto=format&fit=crop&q=80",
+    link: "/shop",
+    badge: "Navratri Maha Bachat"
+  },
+  {
+    id: 2,
+    title: "🌿 Shubh Navratri: Ayurvedic & Fasting Vitality Care",
+    subtitle: "FLAT 25% OFF ON AYURVEDIC TONICS & ENERGY ESSENTIALS",
+    highlight: "100% PURE HERBAL",
+    code: "VRAT25",
+    tagline: "Sustain your divine fasting energy with natural tonics, multivitamins & electrolytes",
+    image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1600&auto=format&fit=crop&q=80",
+    link: "/shop?category=ayurvedic-herbal",
+    badge: "Vrat & Herbal Essentials"
+  },
+  {
+    id: 3,
+    title: "✨ Jai Mata Di: Wholesale & Retail Festive Bonanza",
+    subtitle: "HIGHEST PARTNER MARGINS & FREE PRIORITY DISPATCH",
+    highlight: "FESTIVE BULK DEALS",
+    code: "MAHABACHAT",
+    tagline: "Empower your pharmacy with genuine WHO-GMP batch certified medicines & swift express delivery",
+    image: "https://images.unsplash.com/photo-1586015555751-63c27b0b9248?w=1600&auto=format&fit=crop&q=80",
+    link: "/shop",
+    badge: "Festive Wholesale Bachat"
+  }
+];
