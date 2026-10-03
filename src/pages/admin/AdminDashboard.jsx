@@ -837,6 +837,7 @@ export default function AdminDashboard() {
         setReconcileModalTarget(null);
         setReconcileForm({ transaction_id: '', payment_method: 'online', admin_note: '', trigger_mlm: true });
         fetchPaymentsData(paymentPage);
+        fetchOrdersData(orderPage);
         toast.success(res.data.message || 'Payment successfully reconciled and marked as PAID!');
       }
     } catch (err) {
@@ -5358,6 +5359,13 @@ export default function AdminDashboard() {
                           <td className="p-3 font-black text-slate-900">
                             ₹{Number(ord.total_amount).toFixed(2)}
                             <span className="text-[10px] text-slate-400 block uppercase font-normal">{ord.payment_method} ({ord.payment_status})</span>
+                            {['super_admin', 'admin'].includes(user?.role) && !['paid', 'refunded', 'cancelled'].includes(ord.payment_status) && ord.order_status !== 'cancelled' && (
+                              <button type="button" className="text-xs text-emerald-700 underline mt-1" onClick={() => {
+                                setReconcileModalTarget(ord);
+                                const method = ord.other_payment_method || ord.payment_method;
+                                setReconcileForm({ transaction_id: '', payment_method: ['cod', 'takeaway', 'bank_transfer', 'upi_qr', 'wallet'].includes(method) ? method : 'online', admin_note: '', trigger_mlm: true });
+                              }}>Record payment received</button>
+                            )}
                           </td>
                           <td className="p-3">
                             {canDispatchOrder ? (
@@ -12619,14 +12627,14 @@ export default function AdminDashboard() {
 
               <div>
                 <label className="font-extrabold text-slate-800 block mb-1">
-                  Bank UTR / Razorpay Payment ID / Transaction Ref *
+                  {['cod', 'takeaway'].includes(reconcileForm.payment_method) ? 'Cash collection / receipt reference *' : 'Bank UTR / Razorpay Payment ID / Transaction Ref *'}
                 </label>
                 <input
                   type="text"
                   required
                   value={reconcileForm.transaction_id}
                   onChange={(e) => setReconcileForm({ ...reconcileForm, transaction_id: e.target.value })}
-                  placeholder="e.g. UTR1234567890 / pay_QW4567..."
+                  placeholder={['cod', 'takeaway'].includes(reconcileForm.payment_method) ? 'Cash received — receipt / collection reference' : 'e.g. UTR1234567890 / pay_QW4567...'}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
                 />
               </div>
@@ -12662,17 +12670,9 @@ export default function AdminDashboard() {
                 ></textarea>
               </div>
 
-              <label className="flex items-center space-x-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={reconcileForm.trigger_mlm}
-                  onChange={(e) => setReconcileForm({ ...reconcileForm, trigger_mlm: e.target.checked })}
-                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
-                />
-                <span className="font-bold text-slate-800">
-                  Distribute 3-Level Referral Commissions to upline partners immediately
-                </span>
-              </label>
+              <p className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 font-bold text-emerald-800">
+                Confirmed payments automatically credit eligible referral wallets at 10%, 3%, 2%. Delivery status alone does not confirm payment.
+              </p>
 
               {/* Action Buttons */}
               <div className="pt-2 flex items-center justify-end space-x-3 border-t">

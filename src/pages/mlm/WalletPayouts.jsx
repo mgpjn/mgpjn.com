@@ -19,7 +19,14 @@ export default function WalletPayouts() {
       setWallet(w.data); setPayouts(p.data.payouts);
     } catch (e) { setError(errorText(e)); }
   };
-  useEffect(() => { load(); }, [page, payoutPage, filter]);
+  useEffect(() => {
+    load();
+    const refresh = () => { if (document.visibilityState === 'visible') load(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const interval = window.setInterval(refresh, 15000);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); window.clearInterval(interval); };
+  }, [page, payoutPage, filter]);
   const change = (key,value) => { setForm((f) => ({ ...f, [key]: value })); setSummary(null); setRequestKey(crypto.randomUUID()); };
   const submit = async (e) => {
     e.preventDefault(); if (busy) return; setBusy(true); setError(''); setMessage('');

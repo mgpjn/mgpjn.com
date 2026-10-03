@@ -4,7 +4,7 @@ import {
   Wallet, Users, Network, TrendingUp, Copy, Check, QrCode,
   ArrowUpRight, ArrowDownRight, Award, ShieldCheck, ChevronRight, Share2,
   Layers, Percent, Sparkles, Building2, Store, MapPin, UserCheck, ShoppingBag,
-  Clock, CheckCircle, Package, ArrowRight, HelpCircle, FileText, Truck, Printer
+  Clock, CheckCircle, Package, ArrowRight, HelpCircle, FileText, Truck, Printer, RefreshCw
 } from 'lucide-react';
 import { getMlmDashboard, updateDeliveryStatus } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -49,6 +49,15 @@ export default function MlmDashboard() {
 
   useEffect(() => {
     loadDashboard();
+    const refresh = () => { if (document.visibilityState === 'visible') loadDashboard(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const interval = window.setInterval(refresh, 15000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      window.clearInterval(interval);
+    };
   }, []);
 
   const referralCode = user?.referral_code || 'MG1001';
@@ -142,6 +151,10 @@ export default function MlmDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
+        <p>Commission enters your wallet after payment is confirmed. COD cash must be recorded as received.</p>
+        <button type="button" onClick={loadDashboard} className="flex items-center gap-1 font-bold text-brand-blue-800"><RefreshCw className="w-4 h-4" />Refresh balance</button>
+      </div>
       {/* Top Header & Shareable Referral Banner */}
       <div className="bg-gradient-to-r from-brand-blue-950 via-brand-blue-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl border border-white/10">
         <div className="space-y-2">
