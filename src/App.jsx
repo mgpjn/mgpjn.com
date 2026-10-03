@@ -144,12 +144,18 @@ function MlmProtectedRoute({ children }) {
 
 function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const requestedRedirect = params.get('redirect') || params.get('return_url');
+  const redirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
+    && !/^\/(login|register)(?:[/?#]|$)/.test(requestedRedirect) ? requestedRedirect : null;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-xs text-slate-400">Loading MediGlaxo...</div>;
   }
 
   if (user) {
+    if (redirect) return <Navigate to={redirect} replace />;
     const role = user.role;
     if (role === 'admin' || role === 'super_admin') {
       return <Navigate to="/admin" replace />;

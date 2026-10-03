@@ -4,8 +4,10 @@ import { User, Shield, Phone, Mail, MapPin, Building, CreditCard, Lock, CheckCir
 import { useAuth } from '../../context/AuthContext';
 import { getProfile, updateProfile } from '../../services/api';
 
+import LoginSecuritySetup from '../../components/auth/LoginSecuritySetup';
+
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const { user, token, isImpersonated, setUser: updateUser } = useAuth();
   const [profileUser, setProfileUser] = useState(user);
   const [formData, setFormData] = useState({
     name: '',
@@ -96,6 +98,8 @@ export default function ProfilePage() {
           {error}
         </div>
       )}
+
+      {!isImpersonated && <LoginSecuritySetup user={user} token={token} />}
 
       {/* Wallet Overview Card */}
       <div className="bg-gradient-to-r from-emerald-900 to-teal-800 text-white rounded-3xl p-6 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">

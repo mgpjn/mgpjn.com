@@ -4,15 +4,15 @@ import toast from 'react-hot-toast';
 import {
   ShieldCheck, CreditCard, QrCode, Banknote, ArrowRight,
   Truck, CheckCircle2, Lock, Sparkles, Store, Wallet, AlertCircle,
-  Smartphone, RefreshCw, X, UserCheck, Eye, EyeOff, MapPin, Plus
+  UserCheck, MapPin, Plus
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import {
   createOrder, getWalletTransactions, createRazorpayOrder, verifyRazorpayPayment,
-  loginWithPhone
+  quoteOrder, getActiveCoupons
 } from '../services/api';
-import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
+import { buildQuotePayload, quoteErrorMessage, verifyQuote } from '../services/checkoutPricing';
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -54,8 +54,8 @@ const readSavedAddresses = (user) => {
 };
 
 export default function CheckoutPage() {
-  const { cartItems, subtotal, deliveryCharge, finalTotal, clearCart } = useCart();
-  const { user, setDirectSession, register } = useAuth();
+  const { cartItems, subtotal: cartSubtotal, deliveryCharge, clearCart } = useCart();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -72,40 +72,55 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [walletBalance, setWalletBalance] = useState(user?.wallet_balance || 0);
+  const [walletBalance, setWalletBalance] = useState(user?.wallet_balance ? Number(user.wallet_balance) : 0);
   const [useWallet, setUseWallet] = useState(false);
   const [addressMode, setAddressMode] = useState('new');
   const [savedAddresses, setSavedAddresses] = useState([]);
 
-  // Mobile Phone OTP Checkout & Login State
-  const [phoneOtpSending, setPhoneOtpSending] = useState(false);
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [phoneOtpVerifying, setPhoneOtpVerifying] = useState(false);
-  const [phoneOtpInput, setPhoneOtpInput] = useState('');
-  const [phoneTimer, setPhoneTimer] = useState(0);
-  const [phoneConfirmation, setPhoneConfirmation] = useState(null);
-  const [phoneOtpError, setPhoneOtpError] = useState('');
-  const [phoneOtpStatus, setPhoneOtpStatus] = useState('');
-  const [isAccountNotFound, setIsAccountNotFound] = useState(false);
-
-  // Quick Register Modal/Inline State
-  const [showQuickRegister, setShowQuickRegister] = useState(false);
-  const [quickPassword, setQuickPassword] = useState('');
-  const [showQuickPassword, setShowQuickPassword] = useState(false);
-
+  const [couponInput, setCouponInput] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [offers, setOffers] = useState([]);
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState('');
+  const [quoteRetry, setQuoteRetry] = useState(0);
+  const pricingPayload = buildQuotePayload({ items: cartItems, state: formData.state, pincode: formData.pincode,
+    paymentMethod: formData.payment_method, useWallet, walletBalance, couponCode });
+  const quoteKey = JSON.stringify({ token, ...pricingPayload });
+  const quoteReady = Boolean(user && quote?.key === quoteKey);
+  const summary = quoteReady ? quote.data.payment_summary : null;
   useEffect(() => {
-    return () => {
-      clearRecaptchaVerifier();
-    };
-  }, []);
-
+    if (!user || !cartItems.length) { setQuote(null); return; }
+    const controller = new AbortController();
+    let active = true;
+    setQuoteError('');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await quoteOrder(pricingPayload, { signal: controller.signal });
+        const data = verifyQuote(res.data);
+        if (active) setQuote({ key: quoteKey, data });
+      } catch (err) { if (active) { setQuote(null); setQuoteError(quoteErrorMessage(err)); } }
+    }, 350);
+    return () => { active = false; clearTimeout(timer); controller.abort(); };
+  }, [quoteKey, quoteRetry]);
   useEffect(() => {
-    let interval = null;
-    if (phoneTimer > 0) {
-      interval = setInterval(() => setPhoneTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [phoneTimer]);
+    let active = true;
+    getActiveCoupons({ subtotal: summary?.subtotal ?? cartSubtotal, delivery_charge: formData.payment_method === 'takeaway' ? 0 : deliveryCharge })
+      .then((res) => { if (active) setOffers(res.data?.coupons || []); }).catch(() => { if (active) setOffers([]); });
+    return () => { active = false; };
+  }, [summary?.subtotal, cartSubtotal, deliveryCharge, formData.payment_method]);
+  const applyCoupon = async (code = couponInput) => {
+    const cleaned = code.trim().toUpperCase();
+    if (!user) { setCouponError('Sign in to apply a coupon to your order.'); return; }
+    if (!cleaned) { setCouponError('Enter a coupon code.'); return; }
+    setCouponBusy(true); setCouponError('');
+    try {
+      verifyQuote((await quoteOrder({ ...pricingPayload, coupon_code: cleaned })).data);
+      setCouponCode(cleaned); setCouponInput(cleaned); setQuoteRetry((value) => value + 1);
+    } catch (err) { setCouponError(quoteErrorMessage(err)); }
+    finally { setCouponBusy(false); }
+  };
 
   useEffect(() => {
     if (user) {
@@ -206,131 +221,13 @@ export default function CheckoutPage() {
     setSavedAddresses([current, ...filtered].slice(0, 5));
   };
 
-  const handleSendCheckoutOtp = async (targetPhone) => {
-    const cleanPhone = (targetPhone || formData.phone || '').replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      const msg = 'Please enter a valid 10-digit mobile number.';
-      setPhoneOtpError(msg);
-      toast.error(msg);
-      return;
-    }
-
-    setPhoneOtpSending(true);
-    setPhoneOtpError('');
-    setPhoneOtpStatus('');
-    setIsAccountNotFound(false);
-
-    try {
-      const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'checkout-recaptcha-container');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-      );
-      const result = await Promise.race([firebasePromise, timeoutPromise]);
-
-      setPhoneConfirmation(result);
-      setPhoneOtpSent(true);
-      setPhoneTimer(60);
-      setPhoneOtpStatus(`Firebase OTP sent to +91 ${cleanPhone}`);
-      toast.success(`Firebase OTP sent to +91 ${cleanPhone}`);
-    } catch (err) {
-      const msg = err.message || 'Unable to send Firebase OTP. Please try again.';
-      setPhoneOtpError(msg);
-      toast.error(msg);
-    } finally {
-      setPhoneOtpSending(false);
-    }
-  };
-
-  const handleVerifyCheckoutOtp = async (cleanOtpOverride) => {
-    const cleanOtp = (cleanOtpOverride || phoneOtpInput).trim();
-    if (cleanOtp.length !== 6) {
-      setPhoneOtpError('Please enter the 6-digit SMS OTP.');
-      return;
-    }
-    setPhoneOtpVerifying(true);
-    setPhoneOtpError('');
-
-    if (!phoneConfirmation) {
-      setPhoneOtpVerifying(false);
-      setPhoneOtpError('Please request a fresh Firebase OTP before verifying.');
-      return;
-    }
-
-    try {
-      await phoneConfirmation.confirm(cleanOtp);
-
-      const res = await loginWithPhone({
-        phone: formData.phone,
-        firebase_verified: true,
-      });
-
-      if (res.data?.success && res.data?.token && res.data?.user) {
-        clearRecaptchaVerifier();
-        setDirectSession(res.data.token, res.data.user);
-        setPhoneOtpSent(false);
-        setPhoneOtpInput('');
-        setPhoneOtpError('');
-        setPhoneOtpStatus('');
-        toast.success(`🎉 Welcome back, ${res.data.user.name || 'Customer'}! Account verified.`);
-      }
-    } catch (err) {
-      console.error('Phone login error:', err);
-      const msg = err.response?.data?.message || err.message || 'Invalid or expired Firebase OTP. Please check your SMS or click Resend.';
-      setPhoneOtpError(msg);
-      if (err.response?.status === 404 || msg.toLowerCase().includes('not registered')) {
-        setIsAccountNotFound(true);
-      }
-      toast.error(msg);
-    } finally {
-      setPhoneOtpVerifying(false);
-    }
-  };
-
-  const handleQuickRegister = async (e) => {
-    if (e) e.preventDefault();
-    const cleanPhone = (formData.phone || '').replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      toast.error('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-    if (!formData.customer_name?.trim()) {
-      toast.error('Please enter your full name in the form.');
-      return;
-    }
-    if (!quickPassword || quickPassword.length < 6) {
-      toast.error('Please create a password of at least 6 characters.');
-      return;
-    }
-
-    setPhoneOtpSending(true);
-    try {
-      const res = await register({
-        name: formData.customer_name,
-        phone: cleanPhone,
-        email: formData.email || undefined,
-        password: quickPassword,
-        role: 'customer',
-      });
-      setShowQuickRegister(false);
-      setIsAccountNotFound(false);
-      setPhoneOtpSent(false);
-      toast.success(`🎉 Account created! Welcome to MediGlaxo, ${formData.customer_name}.`);
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Registration failed.';
-      toast.error(msg);
-      setPhoneOtpError(msg);
-    } finally {
-      setPhoneOtpSending(false);
-    }
-  };
-
   const isTakeaway = formData.payment_method === 'takeaway';
-  const effectiveDeliveryCharge = isTakeaway ? 0 : deliveryCharge;
-  const payableTotal = subtotal + effectiveDeliveryCharge;
-
-  const walletAmountUsed = useWallet ? Math.min(payableTotal, walletBalance) : 0;
-  const remainingPayable = Math.max(0, payableTotal - walletAmountUsed);
-  const isFullWallet = useWallet && walletAmountUsed >= payableTotal;
+  const subtotal = summary?.subtotal ?? cartSubtotal;
+  const effectiveDeliveryCharge = summary?.delivery_charge ?? (isTakeaway ? 0 : deliveryCharge);
+  const payableTotal = summary?.total_amount ?? subtotal + effectiveDeliveryCharge;
+  const walletAmountUsed = summary?.wallet_used ?? 0;
+  const remainingPayable = summary?.payable_now ?? payableTotal;
+  const isFullWallet = Boolean(summary && payableTotal > 0 && walletAmountUsed >= payableTotal);
 
   if (cartItems.length === 0) {
     return (
@@ -364,10 +261,18 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (loading) return;
+    if (!quoteReady || couponBusy) { setError('Please wait for your order amount to be verified.'); return; }
     setLoading(true);
     setError('');
 
     try {
+      const verified = verifyQuote((await quoteOrder(pricingPayload)).data);
+      const freshSummary = verified.payment_summary;
+      if (JSON.stringify(freshSummary) !== JSON.stringify(summary)) {
+        setQuote({ key: quoteKey, data: verified });
+        throw new Error('Your order amount has changed. Review the updated total, then place your order again.');
+      }
       const orderPayload = {
         customer_name: formData.customer_name,
         phone: formData.phone,
@@ -376,9 +281,10 @@ export default function CheckoutPage() {
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
-        payment_method: isFullWallet ? 'wallet' : (walletAmountUsed > 0 ? 'wallet_split' : formData.payment_method),
-        other_payment_method: (walletAmountUsed > 0 && !isFullWallet) ? formData.payment_method : null,
-        wallet_amount_used: walletAmountUsed,
+        payment_method: pricingPayload.payment_method,
+        other_payment_method: pricingPayload.other_payment_method,
+        coupon_code: couponCode || null,
+        wallet_amount_used: freshSummary.wallet_used,
         delivery_type: isTakeaway ? 'takeaway' : 'home_delivery',
         notes: isTakeaway
           ? `[STORE TAKEAWAY / SELF PICKUP] ${formData.notes || ''}`.trim()
@@ -398,7 +304,8 @@ export default function CheckoutPage() {
 
       const isOnlinePayment = !isFullWallet && (formData.payment_method === 'online' || formData.payment_method === 'upi_qr');
 
-      if (isOnlinePayment && remainingPayable > 0) {
+      if (isOnlinePayment && freshSummary.payable_now > 0) {
+        if (!await loadRazorpayScript()) throw new Error('Payment gateway could not load. Please try again.');
         // 1. Create order in DB (marked pending)
         const orderRes = await createOrder(orderPayload);
         if (!orderRes.data?.success) {
@@ -407,17 +314,11 @@ export default function CheckoutPage() {
         const placedOrder = orderRes.data.order;
         rememberCheckoutAddress();
 
-        // 2. Load Razorpay Checkout SDK
-        const isLoaded = await loadRazorpayScript();
-        if (!isLoaded) {
-          clearCart();
-          navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
-          return;
-        }
+        const chargedSummary = verifyQuote(orderRes.data).payment_summary;
 
         // 3. Create Razorpay Order
         const rzpOrderRes = await createRazorpayOrder({
-          amount: remainingPayable,
+          amount: chargedSummary.payable_now,
           order_number: placedOrder.order_number,
           customer_name: formData.customer_name,
           customer_email: formData.email,
@@ -450,20 +351,19 @@ export default function CheckoutPage() {
           handler: async function (response) {
             try {
               setLoading(true);
-              await verifyRazorpayPayment({
+              const paymentRes = await verifyRazorpayPayment({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 order_number: placedOrder.order_number,
                 order_id: placedOrder.id,
               });
+              if (!paymentRes.data?.success) throw new Error(paymentRes.data?.message || 'Payment verification is pending.');
               clearCart();
               rememberCheckoutAddress();
               navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
             } catch (vErr) {
-              clearCart();
-              rememberCheckoutAddress();
-              navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
+              setError(`Payment could not be verified for order ${placedOrder.order_number}. Check My Orders before trying again. ${quoteErrorMessage(vErr)}`);
             } finally {
               setLoading(false);
             }
@@ -482,6 +382,7 @@ export default function CheckoutPage() {
 
       // Standard COD, Takeaway, or 100% Wallet Order
       const res = await createOrder(orderPayload);
+      if (!res.data?.success) throw new Error(res.data?.message || 'Order could not be placed.');
       if (res.data.success) {
         const placedOrder = res.data.order;
         rememberCheckoutAddress();
@@ -489,7 +390,7 @@ export default function CheckoutPage() {
         navigate(`/order-success/${placedOrder.order_number}`, { state: { order: placedOrder } });
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to process order. Please try again.');
+      setError(quoteErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -507,213 +408,16 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {/* Invisible reCAPTCHA container for Checkout OTP */}
-      <div id="checkout-recaptcha-container"></div>
 
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Shipping & Payment Details */}
-        <div className="lg:col-span-8 space-y-6">
+        <fieldset disabled={loading || couponBusy} className="lg:col-span-8 space-y-6 min-w-0">
           {!user ? (
-            /* ======================================================== */
-            /* ⚡ QUICK CHECKOUT WITH MOBILE OTP CARD (FOR EXISTING ACCOUNTS) */
-            /* ======================================================== */
-            <div className="bg-gradient-to-br from-amber-50 via-orange-50/70 to-amber-50 border-2 border-amber-300 rounded-3xl p-6 md:p-7 shadow-md space-y-5 animate-in fade-in">
-              <div className="flex items-start space-x-3.5">
-                <div className="w-11 h-11 bg-brand-orange-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-brand-orange-500/20">
-                  <Smartphone className="w-6 h-6 stroke-[2.5]" />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <h3 className="text-sm md:text-base font-black text-slate-900">
-                      ⚡ Quick Checkout with Mobile OTP
-                    </h3>
-                    <span className="text-[10px] font-black uppercase bg-brand-orange-500 text-white px-2 py-0.5 rounded-full shadow-2xs">
-                      Fast Login
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    Already have an account? Enter your registered mobile number below to sign in instantly with a 6-digit SMS OTP — no password needed!
-                  </p>
-                </div>
-              </div>
-
-              {phoneOtpError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{phoneOtpError}</span>
-                </div>
-              )}
-
-              {phoneOtpStatus && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center space-x-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                  <span>{phoneOtpStatus}</span>
-                </div>
-              )}
-
-              {!phoneOtpSent ? (
-                /* Step 1: Mobile Phone Input & Send OTP Button */
-                <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row gap-2.5">
-                    <div className="relative flex flex-1">
-                      <span className="inline-flex items-center px-3.5 bg-slate-100 border border-r-0 border-slate-300 rounded-l-xl text-xs font-bold text-slate-700">
-                        +91
-                      </span>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="Enter 10-Digit Registered Number"
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-r-xl text-xs font-bold focus:outline-none focus:border-brand-orange-500 shadow-2xs"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSendCheckoutOtp()}
-                      disabled={phoneOtpSending || (formData.phone || '').replace(/\D/g, '').length < 10}
-                      className="px-6 py-2.5 bg-brand-orange-500 hover:bg-brand-orange-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-orange-500/20 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed shrink-0"
-                    >
-                      {phoneOtpSending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Smartphone className="w-3.5 h-3.5" />}
-                      <span>{phoneOtpSending ? 'Sending OTP...' : 'Send SMS OTP'}</span>
-                    </button>
-                  </div>
-
-                  {isAccountNotFound && (
-                    <div className="p-3.5 bg-amber-100/70 border border-amber-300 rounded-2xl space-y-2">
-                      <div className="flex items-center justify-between text-xs text-amber-950 font-bold">
-                        <span>New to MediGlaxo? Create account in 10 seconds:</span>
-                        <button
-                          type="button"
-                          onClick={() => setShowQuickRegister(!showQuickRegister)}
-                          className="text-brand-orange-600 underline text-xs font-bold cursor-pointer"
-                        >
-                          {showQuickRegister ? 'Hide' : 'Quick Register Now'}
-                        </button>
-                      </div>
-
-                      {showQuickRegister && (
-                        <div className="space-y-2.5 pt-1 animate-in fade-in">
-                          <input
-                            type="text"
-                            name="customer_name"
-                            value={formData.customer_name}
-                            onChange={handleChange}
-                            placeholder="Your Full Name (e.g. Amit Patel)"
-                            className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs focus:outline-none focus:border-brand-orange-500"
-                          />
-                          <div className="relative">
-                            <input
-                              type={showQuickPassword ? 'text' : 'password'}
-                              value={quickPassword}
-                              onChange={(e) => setQuickPassword(e.target.value)}
-                              placeholder="Create Password (min 6 chars)"
-                              className="w-full pl-3.5 pr-10 py-2 bg-white border border-amber-300 rounded-xl text-xs focus:outline-none focus:border-brand-orange-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowQuickPassword(!showQuickPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
-                            >
-                              {showQuickPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleQuickRegister}
-                            disabled={phoneOtpSending}
-                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                          >
-                            {phoneOtpSending ? 'Creating Account...' : 'Create Account & Continue'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                    <span>Prefer standard login?</span>
-                    <div className="flex items-center space-x-3">
-                      <Link to="/login?redirect=/checkout" className="text-brand-blue-800 font-bold hover:underline">
-                        Password Sign In
-                      </Link>
-                      <span className="text-slate-300">•</span>
-                      <Link to="/register?redirect=/checkout" className="text-brand-orange-600 font-bold hover:underline">
-                        Register Account
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Step 2: 6-Digit OTP Verification Box */
-                <div className="p-4 bg-white/90 border-2 border-brand-orange-300 rounded-2xl space-y-3 shadow-sm animate-in fade-in">
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                    <span className="flex items-center space-x-1.5">
-                      <ShieldCheck className="w-4 h-4 text-brand-orange-500" />
-                      <span>Enter 6-Digit SMS OTP:</span>
-                    </span>
-                    <div className="flex items-center space-x-2">
-                      {phoneTimer > 0 ? (
-                        <span className="text-[10px] text-slate-400 font-semibold">Resend in {phoneTimer}s</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSendCheckoutOtp()}
-                          disabled={phoneOtpSending}
-                          className="text-[11px] text-brand-orange-600 hover:text-brand-orange-700 font-bold underline cursor-pointer"
-                        >
-                          Resend OTP
-                        </button>
-                      )}
-                      <span className="text-slate-300">•</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPhoneOtpSent(false);
-                          setPhoneOtpInput('');
-                          setPhoneOtpError('');
-                          setPhoneOtpStatus('');
-                        }}
-                        className="text-[11px] text-rose-600 hover:text-rose-700 font-bold flex items-center space-x-0.5 cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        <span>Change Number</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      autoFocus
-                      value={phoneOtpInput}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        setPhoneOtpInput(val);
-                        if (val.length === 6) {
-                          handleVerifyCheckoutOtp(val);
-                        }
-                      }}
-                      placeholder="e.g. 123456"
-                      className="w-2/3 px-3.5 py-2.5 bg-orange-50/50 border-2 border-orange-300 rounded-xl font-mono text-center font-black tracking-[6px] text-base outline-none focus:border-brand-orange-500 shadow-2xs"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleVerifyCheckoutOtp()}
-                      disabled={phoneOtpVerifying || phoneOtpInput.length !== 6}
-                      className="w-1/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 disabled:opacity-50 transition-all shadow-md shadow-brand-orange-500/20 cursor-pointer"
-                    >
-                      {phoneOtpVerifying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                      <span>{phoneOtpVerifying ? 'Verifying...' : 'Verify OTP'}</span>
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    OTP sent to: <strong>+91 {formData.phone}</strong>. Code valid for 15 minutes.
-                  </p>
-                </div>
-              )}
+            <div className="bg-brand-blue-50 border border-brand-blue-100 rounded-3xl p-6 space-y-3">
+              <h3 className="font-extrabold text-brand-blue-800">Sign in to complete your order</h3>
+              <p className="text-xs text-slate-600">Use your login PIN or fingerprint. Mobile/email OTP and password are also available.</p>
+              <Link to="/login?redirect=/checkout" className="inline-block bg-brand-blue-800 text-white px-5 py-3 rounded-xl text-xs font-bold">Login with PIN / OTP</Link>
+              <Link to="/register?redirect=/checkout" className="block text-xs font-bold text-brand-orange-500">Create Customer Account</Link>
             </div>
           ) : (
             /* Logged in Account Banner */
@@ -848,17 +552,7 @@ export default function CheckoutPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold text-slate-700">Mobile Number (For Delivery SMS) *</label>
-                  {!user && (
-                    <button
-                      type="button"
-                      onClick={() => handleSendCheckoutOtp()}
-                      disabled={phoneOtpSending || (formData.phone || '').replace(/\D/g, '').length < 10}
-                      className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 disabled:opacity-40 cursor-pointer flex items-center space-x-1"
-                    >
-                      {phoneOtpSending && <RefreshCw className="w-3 h-3 animate-spin" />}
-                      <span>{phoneOtpSending ? 'Sending...' : '⚡ Verify via OTP'}</span>
-                    </button>
-                  )}
+
                 </div>
                 <input
                   type="tel"
@@ -1136,14 +830,17 @@ export default function CheckoutPage() {
               </div>
             )}
           </div>
-        </div>
+        </fieldset>
 
         {/* Right Order Review */}
         <div className="lg:col-span-4 bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-6">
           <h3 className="font-black text-slate-900 text-base">Review Items ({cartItems.length})</h3>
 
           <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 pr-1 space-y-2">
-            {cartItems.map((item) => (
+            {cartItems.map((cartItem) => {
+              const serverItem = quoteReady ? quote.data.items?.find((entry) => entry.product_id === cartItem.id) : null;
+              const item = { ...cartItem, price: serverItem?.unit_price ?? cartItem.price };
+              return (
               <div key={item.id} className="pt-2 flex items-center justify-between text-xs">
                 <div>
                   <span className="font-bold text-slate-800 block truncate max-w-[180px]">{item.name}</span>
@@ -1151,9 +848,24 @@ export default function CheckoutPage() {
                 </div>
                 <span className="font-bold text-slate-900">₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>
-            ))}
+            ); })}
           </div>
 
+          <section className="border border-slate-200 rounded-2xl p-4 space-y-3" aria-label="Apply coupon code">
+            <label htmlFor="coupon-code" className="block text-xs font-extrabold text-slate-800">Apply Coupon Code</label>
+            <div className="flex gap-2">
+              <input id="coupon-code" autoComplete="off" maxLength={60} value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!couponBusy && !loading) applyCoupon(); } }} placeholder="Enter coupon code" disabled={loading || couponBusy} className="min-w-0 flex-1 px-3 py-2.5 border border-slate-200 rounded-xl text-xs uppercase" />
+              <button type="button" onClick={() => applyCoupon()} disabled={couponBusy || loading} className="bg-brand-blue-800 text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50">{couponBusy ? 'Checking...' : 'Apply'}</button>
+            </div>
+            {couponCode && <div className="flex justify-between items-center gap-2 text-xs text-emerald-700"><span>{couponCode} {quoteReady ? 'applied' : '— verifying'}</span><button type="button" disabled={loading || couponBusy} onClick={() => { setCouponCode(''); setCouponInput(''); setCouponError(''); }} className="font-bold text-rose-600">Remove</button></div>}
+            {couponError && <p role="alert" className="text-xs text-rose-600">{couponError}</p>}
+            {offers.length > 0 && <details><summary className="text-xs font-bold text-brand-blue-800 cursor-pointer">Available offers</summary><div className="mt-2 space-y-2">{offers.slice(0, 5).map((offer) => <button key={offer.code} type="button" disabled={couponBusy || loading} onClick={() => applyCoupon(offer.code)} className="block text-left w-full border border-dashed border-slate-200 p-2 rounded-lg text-xs"><strong>{offer.code}</strong><span className="block text-slate-500">{offer.title}</span></button>)}</div></details>}
+            {!user && <Link to="/login?redirect=/checkout" className="block text-xs font-bold text-brand-blue-800">Sign in to apply your coupon</Link>}
+          </section>
+          {user && <div role={quoteError ? 'alert' : 'status'} className={`text-xs ${quoteError ? 'text-rose-600' : 'text-slate-500'}`}>
+            {quoteError || (quoteReady ? 'Order amount verified' : 'Verifying your order amount...')}
+            {quoteError && <button type="button" onClick={() => setQuoteRetry((value) => value + 1)} className="block font-bold mt-1">Retry verification</button>}
+          </div>}
           <div className="space-y-2 text-xs pt-4 border-t border-slate-100">
             <div className="flex justify-between text-slate-600">
               <span>Subtotal</span>
@@ -1174,6 +886,11 @@ export default function CheckoutPage() {
               </span>
             </div>
 
+            {summary?.platform_fee > 0 && <div className="flex justify-between text-slate-600"><span>Platform Fee</span><span>₹{summary.platform_fee.toFixed(2)}</span></div>}
+            {summary?.cod_charge > 0 && <div className="flex justify-between text-slate-600"><span>COD Fee</span><span>₹{summary.cod_charge.toFixed(2)}</span></div>}
+            {summary?.coupon_discount > 0 && <div className="flex justify-between text-emerald-700 font-bold"><span>Coupon Discount</span><span>- ₹{summary.coupon_discount.toFixed(2)}</span></div>}
+            {summary?.delivery_discount > 0 && <p className="text-emerald-700 text-[11px]">Delivery savings: ₹{summary.delivery_discount.toFixed(2)} (included above)</p>}
+            <div className="flex justify-between font-bold text-slate-700"><span>Order Total</span><span>₹{payableTotal.toFixed(2)}</span></div>
             {walletAmountUsed > 0 && (
               <div className="flex justify-between text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
                 <span className="flex items-center space-x-1">
@@ -1191,49 +908,15 @@ export default function CheckoutPage() {
           </div>
 
           {!user ? (
-            <div className="space-y-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const cleanPhone = (formData.phone || '').replace(/\D/g, '');
-                  if (cleanPhone.length === 10) {
-                    if (!phoneOtpSent) {
-                      handleSendCheckoutOtp(cleanPhone);
-                    } else {
-                      window.scrollTo({ top: 100, behavior: 'smooth' });
-                      toast('Please enter the 6-digit SMS OTP above to verify & place your order.', { icon: '🔑' });
-                    }
-                  } else {
-                    window.scrollTo({ top: 100, behavior: 'smooth' });
-                    toast.error('Please enter your 10-digit mobile number above to receive OTP.');
-                  }
-                }}
-                className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all cursor-pointer"
-              >
-                <Smartphone className="w-4 h-4" />
-                <span>
-                  {phoneOtpSent
-                    ? `Enter 6-Digit OTP Above to Complete Order • ₹${payableTotal.toFixed(2)}`
-                    : `⚡ Verify OTP & Place Order • ₹${payableTotal.toFixed(2)}`}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <div className="text-center text-[11px] text-slate-500">
-                Want to sign in with password instead?{' '}
-                <Link to="/login?redirect=/checkout" className="text-brand-blue-800 font-bold hover:underline">
-                  Password Login
-                </Link>
-              </div>
-            </div>
+            <Link to="/login?redirect=/checkout" className="block text-center w-full bg-brand-orange-500 text-white py-4 rounded-2xl font-bold text-xs">Sign In &amp; Continue Checkout</Link>
           ) : (
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !quoteReady || couponBusy}
               className="w-full bg-brand-blue-800 hover:bg-brand-blue-900 text-white py-4 rounded-2xl font-bold text-xs shadow-xl shadow-brand-blue-800/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
             >
-              {loading ? (
-                <span>Placing Order...</span>
+              {loading || !quoteReady ? (
+                <span>{loading ? 'Placing Order...' : 'Verifying Total...'}</span>
               ) : (
                 <>
                   <span>

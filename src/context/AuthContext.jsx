@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getProfile, loginUser, logoutUser, registerUser } from '../services/api';
 
+import LoginSecuritySetup from '../components/auth/LoginSecuritySetup';
+import { clearQuickLogin, keepQuickLoginForAccount, quickLoginState, unlockDeviceLogin, unlockLoginPin } from '../services/quickLogin';
+
 const AuthContext = createContext(null);
 
 const SESSION_DURATION_MS = 48 * 60 * 60 * 1000; // 48 Hours in milliseconds
@@ -56,6 +59,8 @@ export const AuthProvider = ({ children }) => {
     return null;
   });
 
+  const [offerSetup, setOfferSetup] = useState(false);
+
   const [loading, setLoading] = useState(!user && Boolean(token));
 
   const clearSession = () => {
@@ -68,6 +73,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('mediglaxo_user');
       localStorage.removeItem('mediglaxo_login_time');
     }
+    setOfferSetup(false);
     setToken(null);
     setUser(null);
   };
@@ -132,6 +138,8 @@ export const AuthProvider = ({ children }) => {
       return res.data;
     }
     if (res.data?.success && res.data?.token) {
+      keepQuickLoginForAccount(res.data.user.id);
+      setOfferSetup(res.data.user.role !== 'super_admin');
       const now = Date.now().toString();
       localStorage.setItem('mediglaxo_token', res.data.token);
       localStorage.setItem('mediglaxo_user', JSON.stringify(res.data.user));
@@ -146,6 +154,8 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     const res = await registerUser(userData);
     if (res.data.success) {
+      keepQuickLoginForAccount(res.data.user.id);
+      setOfferSetup(res.data.user.role !== 'super_admin');
       const now = Date.now().toString();
       localStorage.setItem('mediglaxo_token', res.data.token);
       localStorage.setItem('mediglaxo_user', JSON.stringify(res.data.user));
@@ -159,7 +169,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      if (token) await logoutUser();
+      if (token && (isImpersonated || (!quickLoginState(user?.id).pin && !quickLoginState(user?.id).biometric))) await logoutUser();
     } catch (e) {
       console.error(e);
     } finally {
@@ -169,7 +179,9 @@ export const AuthProvider = ({ children }) => {
 
   const isImpersonated = Boolean(sessionStorage.getItem('mediglaxo_is_impersonated'));
 
-  const setDirectSession = (newToken, newUser) => {
+  const setDirectSession = (newToken, newUser, offer = true) => {
+    keepQuickLoginForAccount(newUser?.id);
+    setOfferSetup(offer && newUser?.role !== 'super_admin');
     const now = Date.now().toString();
     localStorage.setItem('mediglaxo_token', newToken);
     if (newUser) {
@@ -182,9 +194,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const restoreQuickSession = async (unlock, phone) => {
+    const saved = await unlock();
+    try {
+      const res = await getProfile({ headers: { Authorization: `Bearer ${saved.token}` } });
+      if (!res.data?.success || String(res.data.user?.id) !== String(saved.userId) || res.data.user?.role === 'super_admin' || (res.data.user?.status && res.data.user.status !== 'active')) {
+        clearQuickLogin();
+        throw new Error('Please sign in with OTP or password again.');
+      }
+      if (phone && String(res.data.user.phone || '').replace(/\D/g, '').slice(-10) !== phone) {
+        throw new Error('This mobile number does not match the saved PIN account. Use OTP/password for this number.');
+      }
+      setDirectSession(saved.token, res.data.user, false);
+      return res.data;
+    } catch (err) {
+      if ([401, 403].includes(err.response?.status)) {
+        clearQuickLogin();
+        throw new Error('Saved login expired. Please sign in with OTP or password again.');
+      }
+      throw err;
+    }
+  };
+  const loginWithPin = (pin, phone) => restoreQuickSession(() => unlockLoginPin(pin), phone);
+  const loginWithDevice = () => restoreQuickSession(unlockDeviceLogin);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser, setImpersonatedSession, setDirectSession, isImpersonated }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser, setImpersonatedSession, setDirectSession, isImpersonated, loginWithPin, loginWithDevice }}>
       {children}
+      {offerSetup && user && token && !isImpersonated && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/50 flex items-center justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Set up login security">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto"><LoginSecuritySetup user={user} token={token} onClose={() => setOfferSetup(false)} /></div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };

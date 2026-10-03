@@ -1,22 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, KeyRound, Mail, CheckCircle2, RefreshCw, X, ShieldCheck, Smartphone, Lock, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa, loginWithPhone } from '../services/api';
-import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
+import { sendForgotPasswordOtp, resetPasswordWithOtp, verifySuperAdmin2Fa, resendSuperAdmin2Fa } from '../services/api';
+import QuickLoginPanel from '../components/auth/QuickLoginPanel';
+import LoginOtpForm from '../components/auth/LoginOtpForm';
 
 export default function LoginPage() {
   const { user, login, setDirectSession } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || searchParams.get('return_url');
-
-  useEffect(() => {
-    return () => {
-      clearRecaptchaVerifier();
-    };
-  }, []);
 
   useEffect(() => {
     if (user) {
@@ -37,8 +32,9 @@ export default function LoginPage() {
     }
   }, [user, navigate, redirectUrl]);
 
-  // Login Modes: 'password' | 'phone_otp'
-  const [loginMode, setLoginMode] = useState('password');
+  // PIN is primary; OTP/password remain available.
+  const [loginMode, setLoginMode] = useState('pin');
+  const [otpIdentifier, setOtpIdentifier] = useState('');
 
   // Password Login State
   const [loginInput, setLoginInput] = useState('');
@@ -55,15 +51,6 @@ export default function LoginPage() {
   const [verifying2Fa, setVerifying2Fa] = useState(false);
   const [superAdminResendTimer, setSuperAdminResendTimer] = useState(0);
   const [resending2Fa, setResending2Fa] = useState(false);
-
-  // Phone OTP Login State (Firebase only)
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [phoneOtp, setPhoneOtp] = useState('');
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState('');
-  const [phoneTimer, setPhoneTimer] = useState(0);
 
   // Forgot Password / OTP Modal State
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -92,14 +79,6 @@ export default function LoginPage() {
     }
     return () => clearInterval(interval);
   }, [superAdminResendTimer]);
-
-  useEffect(() => {
-    let interval = null;
-    if (phoneTimer > 0) {
-      interval = setInterval(() => setPhoneTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [phoneTimer]);
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
@@ -185,90 +164,6 @@ export default function LoginPage() {
     }
   };
 
-  // Send Mobile Phone OTP for Login (Firebase only)
-  const handleSendPhoneOtp = async (e) => {
-    if (e) e.preventDefault();
-    const cleanNumber = phoneNumber.replace(/\D/g, '');
-    if (cleanNumber.length < 10) {
-      setPhoneError('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-    setPhoneLoading(true);
-    setPhoneError('');
-    setConfirmationResult(null);
-
-    try {
-      const firebasePromise = sendFirebasePhoneOtp(cleanNumber, 'recaptcha-container');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-      );
-      const result = await Promise.race([firebasePromise, timeoutPromise]);
-
-      setConfirmationResult(result);
-      setPhoneOtpSent(true);
-      setPhoneTimer(60);
-      toast.success(`Firebase OTP sent to +91 ${cleanNumber}`);
-    } catch (err) {
-      const errMsg = err.message || 'Unable to send Firebase OTP. Please try again.';
-      setPhoneError(errMsg);
-      toast.error(errMsg);
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  // Verify Phone OTP & Login (Firebase only)
-  const handleVerifyPhoneOtp = async (e, otpOverride) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const cleanOtp = (otpOverride || phoneOtp).trim();
-    if (cleanOtp.length !== 6) {
-      setPhoneError('Please enter the 6-digit OTP received on your mobile.');
-      return;
-    }
-    setPhoneLoading(true);
-    setPhoneError('');
-
-    if (!confirmationResult) {
-      setPhoneLoading(false);
-      setPhoneError('Please request a fresh Firebase OTP before verifying.');
-      return;
-    }
-
-    try {
-      await confirmationResult.confirm(cleanOtp);
-
-      const res = await loginWithPhone({
-        phone: phoneNumber.replace(/\D/g, ''),
-        firebase_verified: true,
-      });
-      if (res.data.success) {
-        clearRecaptchaVerifier();
-        setDirectSession(res.data.token, res.data.user);
-        toast.success(res.data.message || 'Login successful!');
-        if (redirectUrl) {
-          navigate(redirectUrl, { replace: true });
-          return;
-        }
-
-        const role = res.data.user.role;
-        if (role === 'admin' || role === 'super_admin') {
-          navigate('/admin');
-        } else if (['super_distributor', 'distributor', 'sub_distributor', 'retailer'].includes(role)) {
-          navigate('/hierarchy');
-        } else if (role === 'sub_retailer' || role === 'member') {
-          navigate('/mlm');
-        } else {
-          navigate('/shop');
-        }
-      }
-    } catch (err) {
-      console.error('Phone login session error:', err);
-      setPhoneError(err.response?.data?.message || err.message || 'Invalid or expired Firebase OTP. Please check your SMS or click Resend.');
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
   const handleSendForgotOtp = async (e) => {
     if (e) e.preventDefault();
     if (!forgotEmail) {
@@ -331,8 +226,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
-      {/* Invisible reCAPTCHA container */}
-      <div id="recaptcha-container"></div>
 
       <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl space-y-6">
         <div className="text-center space-y-3">
@@ -423,39 +316,14 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
-            {/* Login Mode Toggle Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-2xl">
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode('password');
-                  setError('');
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
-                  loginMode === 'password'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Password</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginMode('phone_otp');
-                  setPhoneError('');
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
-                  loginMode === 'phone_otp'
-                    ? 'bg-white text-brand-orange-600 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Mobile OTP</span>
-              </button>
+            <div className="flex bg-slate-100 p-1 rounded-2xl" aria-label="Sign in methods">
+              {[{ mode: 'pin', label: 'PIN', Icon: KeyRound }, { mode: 'phone_otp', label: 'Mobile / Email OTP', Icon: Smartphone }, { mode: 'password', label: 'Password', Icon: Lock }].map(({ mode, label, Icon }) => (
+                <button key={mode} type="button" aria-pressed={loginMode === mode} onClick={() => { setLoginMode(mode); setError(''); }} className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${loginMode === mode ? 'bg-white text-brand-blue-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}>
+                  <Icon className="w-3.5 h-3.5 shrink-0" /><span>{label}</span>
+                </button>
+              ))}
             </div>
+            {loginMode === 'pin' && <QuickLoginPanel onUseOtp={(phone) => { setOtpIdentifier(phone); setLoginMode('phone_otp'); }} />}
 
             {/* Mode A: Password Login */}
             {loginMode === 'password' && (
@@ -534,109 +402,7 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Mode B: Mobile OTP Login */}
-            {loginMode === 'phone_otp' && (
-              <div className="space-y-4">
-                {phoneError && (
-                  <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold text-center">
-                    {phoneError}
-                  </div>
-                )}
-
-                {!phoneOtpSent ? (
-                  /* Step 1: Input Phone Number */
-                  <form onSubmit={handleSendPhoneOtp} className="space-y-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">10-Digit Mobile Number *</label>
-                      <div className="relative flex">
-                        <span className="inline-flex items-center px-3.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-bold text-slate-600">
-                          +91
-                        </span>
-                        <input
-                          type="tel"
-                          maxLength={10}
-                          required
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                          placeholder="9876543210"
-                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl text-xs font-bold focus:bg-white focus:outline-none focus:border-brand-orange-500"
-                        />
-                      </div>
-                      <span className="text-[10px] text-slate-400 block mt-1">Instant SMS OTP via Firebase authentication</span>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={phoneLoading || phoneNumber.length !== 10}
-                      className="w-full bg-brand-orange-500 hover:bg-brand-orange-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-lg shadow-brand-orange-500/20 flex items-center justify-center space-x-2 transition-all disabled:opacity-50 cursor-pointer"
-                    >
-                      {phoneLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
-                      <span>{phoneLoading ? 'Sending SMS OTP...' : 'Send Mobile OTP'}</span>
-                    </button>
-                  </form>
-                ) : (
-                  /* Step 2: Enter SMS OTP */
-                  <form onSubmit={handleVerifyPhoneOtp} className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-xs font-bold text-slate-700">Enter 6-Digit SMS OTP *</label>
-                        {phoneTimer > 0 ? (
-                          <span className="text-[10px] text-slate-400 font-bold">Resend in {phoneTimer}s</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleSendPhoneOtp}
-                            disabled={phoneLoading}
-                            className="text-[11px] font-bold text-brand-orange-500 hover:underline cursor-pointer"
-                          >
-                            Resend SMS
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        required
-                        autoFocus
-                        value={phoneOtp}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          setPhoneOtp(val);
-                          if (val.length === 6) {
-                            handleVerifyPhoneOtp(null, val);
-                          }
-                        }}
-                        placeholder="e.g. 123456"
-                        className="w-full text-center tracking-[8px] font-mono text-lg font-black py-2.5 bg-orange-50/50 border-2 border-orange-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:border-brand-orange-500"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-1">Sent to: +91 {phoneNumber}</span>
-                    </div>
-
-                    <div className="flex space-x-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPhoneOtpSent(false);
-                          setPhoneOtp('');
-                          setPhoneError('');
-                        }}
-                        className="w-1/3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
-                      >
-                        Change
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={phoneLoading || phoneOtp.length !== 6}
-                        className="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {phoneLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        <span>{phoneLoading ? 'Verifying...' : 'Verify & Login'}</span>
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
+            {loginMode === 'phone_otp' && <LoginOtpForm initialIdentifier={otpIdentifier} />}
           </>
         )}
 

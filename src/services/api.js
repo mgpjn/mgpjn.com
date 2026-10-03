@@ -13,7 +13,7 @@ const api = axios.create({
 // Attach bearer token if present and handle FormData headers properly
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('mediglaxo_session_token') || localStorage.getItem('mediglaxo_token');
-  if (token) {
+  if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   if (config.data instanceof FormData) {
@@ -33,6 +33,7 @@ export const getFeaturedProducts = () => api.get('/products/featured');
 export const getSearchSuggestions = (q) => api.get('/products/search-suggestions', { params: { q } });
 
 // Cart & Orders & GST Invoice
+export const quoteOrder = (data, config) => api.post('/orders/quote', data, config);
 export const createOrder = (orderData) => api.post('/orders', orderData);
 export const getOrder = (id) => api.get(`/orders/${id}`);
 export const getOrderInvoice = (id) => api.get(`/orders/${id}/invoice`);
@@ -49,9 +50,11 @@ export const uploadPrescription = (data) => api.post('/prescriptions/upload', da
 export const getUserPrescriptions = () => api.get('/user/prescriptions');
 
 // Auth
+export const sendLoginOtp = (data) => api.post('/auth/send-login-otp', data);
+export const loginWithOtp = (data) => api.post('/auth/login-otp', data);
 export const loginUser = (credentials) => api.post('/auth/login', credentials);
 export const registerUser = (userData) => api.post('/auth/register', userData);
-export const getProfile = () => api.get('/auth/profile');
+export const getProfile = (config) => api.get('/auth/profile', config);
 export const updateProfile = (data) => api.post('/auth/profile', data);
 export const sendForgotPasswordOtp = (data) => api.post('/auth/forgot-password-otp', data);
 export const resetPasswordWithOtp = (data) => api.post('/auth/reset-password-otp', data);

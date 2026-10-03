@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, ChevronDown, ChevronUp, CheckCircle2, Mail, RefreshCw, Smartphone, X, UserCheck, AlertCircle, Building2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { verifySponsor } from '../services/api';
-import { sendFirebasePhoneOtp, clearRecaptchaVerifier } from '../config/firebase';
 
 export const INDIAN_STATES_WITH_CODES = [
   { name: 'Andhra Pradesh', code: '37' },
@@ -50,12 +49,6 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || searchParams.get('return_url');
-
-  useEffect(() => {
-    return () => {
-      clearRecaptchaVerifier();
-    };
-  }, []);
 
   useEffect(() => {
     if (user) {
@@ -106,17 +99,6 @@ export default function RegisterPage() {
     role: 'customer',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [phoneResendTimer, setPhoneResendTimer] = useState(0);
-
-  useEffect(() => {
-    let interval = null;
-    if (phoneResendTimer > 0) {
-      interval = setInterval(() => setPhoneResendTimer((prev) => prev - 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [phoneResendTimer]);
-
-  // Sync detected sponsor when query parameter or storage changes
   useEffect(() => {
     if (detectedSponsor && (!formData.sponsor_code || formData.sponsor_code !== detectedSponsor)) {
       setFormData((prev) => ({ ...prev, sponsor_code: detectedSponsor }));
@@ -162,97 +144,20 @@ export default function RegisterPage() {
     return () => clearTimeout(timer);
   }, [formData.sponsor_code]);
 
-  // Phone OTP Verification State (Firebase only)
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [showPhoneOtpField, setShowPhoneOtpField] = useState(false);
-  const [phoneOtpInput, setPhoneOtpInput] = useState('');
-  const [phoneOtpSending, setPhoneOtpSending] = useState(false);
-  const [phoneOtpVerifying, setPhoneOtpVerifying] = useState(false);
-  const [phoneConfirmation, setPhoneConfirmation] = useState(null);
-  const [phoneOtpStatus, setPhoneOtpStatus] = useState('');
-  const [phoneOtpError, setPhoneOtpError] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === 'phone' && phoneVerified) {
-      setPhoneVerified(false);
-      setShowPhoneOtpField(false);
-      setPhoneOtpStatus('');
-    }
-  };
-
-  const handleSendPhoneOtp = async () => {
-    const cleanPhone = formData.phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      setPhoneOtpError('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-    setPhoneOtpSending(true);
-    setPhoneOtpError('');
-    setPhoneOtpStatus('');
-    setPhoneConfirmation(null);
-
-    try {
-      const firebasePromise = sendFirebasePhoneOtp(cleanPhone, 'register-recaptcha-container');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firebase service timed out')), 12000)
-      );
-      const confirmation = await Promise.race([firebasePromise, timeoutPromise]);
-
-      setPhoneConfirmation(confirmation);
-      setShowPhoneOtpField(true);
-      setPhoneResendTimer(60);
-      setPhoneOtpStatus(`Firebase OTP sent to +91 ${cleanPhone}`);
-      toast.success(`Firebase OTP sent to +91 ${cleanPhone}`);
-    } catch (err) {
-      const msg = err.message || 'Unable to send Firebase OTP. Please try again.';
-      setPhoneOtpError(msg);
-      toast.error(msg);
-    } finally {
-      setPhoneOtpSending(false);
-    }
-  };
-
-  const handleVerifyPhoneOtp = async (cleanOtpOverride) => {
-    const cleanOtp = (cleanOtpOverride || phoneOtpInput).trim();
-    if (cleanOtp.length !== 6) {
-      setPhoneOtpError('Please enter the 6-digit SMS OTP.');
-      return;
-    }
-    setPhoneOtpVerifying(true);
-    setPhoneOtpError('');
-
-    if (!phoneConfirmation) {
-      setPhoneOtpError('Please request a fresh Firebase OTP before verifying.');
-      setPhoneOtpVerifying(false);
-      return;
-    }
-
-    try {
-      await phoneConfirmation.confirm(cleanOtp);
-      setPhoneVerified(true);
-      setShowPhoneOtpField(false);
-      setPhoneOtpStatus('Mobile number verified successfully!');
-      toast.success('Mobile number verified successfully!');
-    } catch (err) {
-      setPhoneOtpError(err.message || 'Invalid or expired Firebase OTP. Please check your SMS or click Resend.');
-    }
-    setPhoneOtpVerifying(false);
+    setFormData((prev) => ({ ...prev, [name]: name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Register handleSubmit called with:', formData);
     setLoading(true);
     setError('');
 
     try {
       const data = await register(formData);
-      console.log('Registration success data:', data);
       toast.success('Account created successfully! Welcome to MediGlaxo.');
       if (redirectUrl) {
         navigate(redirectUrl, { replace: true });
@@ -273,8 +178,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
-      {/* Invisible reCAPTCHA container */}
-      <div id="register-recaptcha-container"></div>
 
       <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl space-y-6">
         <div className="text-center space-y-3">
@@ -307,137 +210,24 @@ export default function RegisterPage() {
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              Email Address <span className="text-slate-400 font-normal">(Optional)</span>
+              Email Address *
             </label>
             <input
               type="email"
+              required
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="ankit@gmail.com (Optional)"
+              placeholder="ankit@gmail.com"
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-brand-blue-700"
             />
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center space-x-1.5">
-                <label className="text-xs font-bold text-slate-700">Mobile Number *</label>
-                <span className="text-[10px] text-slate-400 font-normal">(OTP Optional)</span>
-              </div>
-              {phoneVerified ? (
-                <span className="inline-flex items-center space-x-1 text-[11px] font-bold text-emerald-600">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Mobile Verified</span>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSendPhoneOtp}
-                  disabled={phoneOtpSending || formData.phone.length < 10}
-                  className="text-[11px] font-bold text-brand-orange-500 hover:text-brand-orange-600 disabled:opacity-40 cursor-pointer flex items-center space-x-1"
-                >
-                  {phoneOtpSending && <RefreshCw className="w-3 h-3 animate-spin" />}
-                  <span>{phoneOtpSending ? 'Sending SMS...' : 'Verify Mobile (Optional)'}</span>
-                </button>
-              )}
-            </div>
-            <div className="relative flex">
-              <span className="inline-flex items-center px-3 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-bold text-slate-600">
-                +91
-              </span>
-              <input
-                type="tel"
-                required
-                maxLength={10}
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="9876543210"
-                className={`w-full px-3.5 py-2.5 border rounded-r-xl text-xs focus:bg-white focus:outline-none ${
-                  phoneVerified ? 'bg-emerald-50/40 border-emerald-300 font-bold' : 'bg-slate-50 border-slate-200 focus:border-brand-blue-700'
-                }`}
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Mobile OTP verification is optional. You can skip it and create your account directly.
-            </p>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Mobile Number *</label>
+            <input aria-label="Mobile Number" type="tel" name="phone" required pattern="[0-9]{10}" maxLength={10} autoComplete="tel-national" value={formData.phone} onChange={handleChange} placeholder="10-digit mobile number" className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs" />
+            <p className="text-[11px] text-slate-500 mt-1">Instant account creation. Set up your login PIN after signup.</p>
           </div>
-
-          {/* Mobile Phone OTP Verification Box */}
-          {showPhoneOtpField && !phoneVerified && (
-            <div className="p-3.5 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2 animate-in fade-in">
-              <div className="flex items-center justify-between text-xs font-bold text-orange-950">
-                <span>Enter 6-Digit SMS OTP:</span>
-                <div className="flex items-center space-x-2">
-                  {phoneResendTimer > 0 ? (
-                    <span className="text-[10px] text-slate-500 font-semibold">Resend in {phoneResendTimer}s</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleSendPhoneOtp}
-                      disabled={phoneOtpSending}
-                      className="text-[10px] text-brand-orange-600 hover:text-brand-orange-700 font-bold underline cursor-pointer"
-                    >
-                      Resend OTP
-                    </button>
-                  )}
-                  <span className="text-slate-300">•</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPhoneOtpField(false);
-                      setPhoneOtpError('');
-                      setPhoneOtpStatus('');
-                    }}
-                    className="text-[10px] text-rose-600 hover:text-rose-700 font-bold flex items-center space-x-0.5 cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                    <span>Skip</span>
-                  </button>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={phoneOtpInput}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setPhoneOtpInput(val);
-                    if (val.length === 6) {
-                      handleVerifyPhoneOtp(val);
-                    }
-                  }}
-                  placeholder="SMS Code"
-                  className="w-2/3 px-3 py-2 bg-white border border-orange-300 rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-brand-orange-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleVerifyPhoneOtp()}
-                  disabled={phoneOtpVerifying || phoneOtpInput.length !== 6}
-                  className="w-1/3 bg-brand-orange-500 hover:bg-brand-orange-600 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1 disabled:opacity-50 cursor-pointer"
-                >
-                  {phoneOtpVerifying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                  <span>Verify</span>
-                </button>
-              </div>
-              {phoneOtpError && <p className="text-[11px] text-rose-600 font-bold">{phoneOtpError}</p>}
-              {phoneOtpStatus && <p className="text-[11px] text-emerald-700 font-semibold">{phoneOtpStatus}</p>}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPhoneOtpField(false);
-                  setPhoneOtpError('');
-                  setPhoneOtpStatus('');
-                }}
-                className="w-full text-center text-[11px] text-slate-500 hover:text-slate-800 underline font-medium pt-1 cursor-pointer block"
-              >
-                Skip verification &amp; create account directly
-              </button>
-            </div>
-          )}
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Create Password *</label>
