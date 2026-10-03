@@ -197,7 +197,7 @@ export default function OrderTrackingPage() {
             ))}
             <div className="pt-2 border-t flex justify-between font-black text-sm text-slate-900">
               <span>Total Paid:</span>
-              <span className="text-brand-blue-900">₹{order.total_amount.toFixed(2)}</span>
+              <span className="text-brand-blue-900">{order.total_amount != null ? `₹${Number(order.total_amount).toFixed(2)}` : 'Sign in as the buyer to view billing details'}</span>
             </div>
           </div>
         </div>

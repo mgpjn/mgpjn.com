@@ -74,7 +74,9 @@ export const getGenealogyTree = () => api.get('/mlm/tree');
 export const getDirectReferrals = (page = 1) => api.get(`/mlm/referrals?page=${page}`);
 export const getCustomerOrders = (page = 1) => api.get(`/mlm/customer-orders?page=${page}`);
 export const getMlmCommissions = (page = 1) => api.get(`/mlm/commissions?page=${page}`);
-export const getWalletTransactions = (page = 1) => api.get(`/mlm/wallet?page=${page}`);
+export const getWalletTransactions = (page = 1, filter = 'all') => api.get('/mlm/wallet', { params: {page, filter} });
+export const getPayoutRequests = (page = 1) => api.get('/mlm/payout-requests', {params:{page}});
+export const previewPayout = (data) => api.post('/mlm/payout-preview', data);
 export const requestPayout = (payoutData) => api.post('/mlm/payout-request', payoutData);
 
 // Admin Control Panel

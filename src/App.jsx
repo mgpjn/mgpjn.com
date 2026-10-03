@@ -221,7 +221,7 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-success/:id" element={<OrderSuccessPage />} />
           <Route path="/track-order" element={<OrderTrackingPage />} />
-          <Route path="/invoice/:id" element={<InvoiceView />} />
+          <Route path="/invoice/:id" element={<ProtectedRoute><InvoiceView /></ProtectedRoute>} />
           <Route
             path="/login"
             element={

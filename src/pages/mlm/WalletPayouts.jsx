@@ -1,401 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Wallet, ArrowDownRight, ArrowUpRight, CheckCircle2, AlertCircle,
-  Building2, QrCode, CreditCard, Filter, RefreshCw, Sparkles, ArrowLeft, Download
-} from 'lucide-react';
-import { exportPassbookReport } from '../../utils/excelExport';
-import { getWalletTransactions, requestPayout } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-
+import { getWalletTransactions, getPayoutRequests, previewPayout, requestPayout, getProfile } from '../../services/api';
+import { exportPassbookReport } from '../../utils/excelExport';
+const money = (v) => `₹${Number(v || 0).toFixed(2)}`;
+const errorText = (e) => Object.values(e.response?.data?.errors || {}).flat()[0] || e.response?.data?.message || 'Unable to complete this request. Please try again.';
 export default function WalletPayouts() {
-  const { user } = useAuth();
-  const [transactions, setTransactions] = useState([]);
-  const [balance, setBalance] = useState(user?.wallet_balance || 0);
-  const [loading, setLoading] = useState(true);
-  const [filterCategory, setFilterCategory] = useState('all');
-
-  // Payout Form
-  const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
-  const [accountDetails, setAccountDetails] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-
-  // Prefill default account details from profile if empty
-  useEffect(() => {
-    if (!accountDetails && user) {
-      if (paymentMethod === 'bank_transfer' && (user.account_number || user.bank_name)) {
-        setAccountDetails(
-          `Bank: ${user.bank_name || 'N/A'}\nA/C: ${user.account_number || ''}\nIFSC: ${user.ifsc_code || ''}\nName: ${user.name || ''}`.trim()
-        );
-      } else if (paymentMethod === 'upi' && user.upi_id) {
-        setAccountDetails(user.upi_id);
-      }
-    }
-  }, [user, paymentMethod]);
-
-  const loadWallet = () => {
-    setLoading(true);
-    getWalletTransactions()
-      .then((res) => {
-        if (res.data?.success) {
-          setTransactions(res.data.transactions?.data || res.data.transactions || []);
-          setBalance(res.data.balance !== undefined ? parseFloat(res.data.balance) : 0);
-        }
-      })
-      .catch((err) => console.error('Failed to load wallet transactions:', err))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadWallet();
-  }, []);
-
-  const handleRequestPayout = async (e) => {
-    e.preventDefault();
-    const withdrawAmount = parseFloat(amount);
-
-    if (isNaN(withdrawAmount) || withdrawAmount < 500) {
-      setError('Minimum withdrawal amount is ₹500. Amounts less than ₹500 cannot be requested.');
-      return;
-    }
-    if (withdrawAmount > balance) {
-      setError(`Requested amount (₹${withdrawAmount}) exceeds your available wallet balance (₹${balance.toFixed(2)}).`);
-      return;
-    }
-
-    setSubmitting(true);
-    setError('');
-    setMessage('');
-
+  const { user, setUser } = useAuth();
+  const [wallet, setWallet] = useState({ transactions: { data: [] }, balance: 0 });
+  const [payouts, setPayouts] = useState({ data: [] });
+  const [page, setPage] = useState(1); const [payoutPage, setPayoutPage] = useState(1);
+  const [filter, setFilter] = useState('all'); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  const [form, setForm] = useState({ amount: '', payment_method: 'bank_transfer', account_holder: user?.name || '', bank_name: user?.bank_name || '', bank_account: user?.account_number || '', bank_ifsc: user?.ifsc_code || '', account_details: user?.upi_id || '' });
+  const [summary, setSummary] = useState(null); const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const load = async () => {
     try {
-      const res = await requestPayout({
-        amount: withdrawAmount,
-        payment_method: paymentMethod,
-        account_details: accountDetails,
-      });
-
-      if (res.data?.success) {
-        setMessage('Withdrawal request of ₹' + withdrawAmount.toFixed(2) + ' submitted successfully! Funds will be credited after admin review.');
-        setAmount('');
-        loadWallet();
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit withdrawal request.');
-    } finally {
-      setSubmitting(false);
-    }
+      const [w,p] = await Promise.all([getWalletTransactions(page, filter), getPayoutRequests(payoutPage)]);
+      setWallet(w.data); setPayouts(p.data.payouts);
+    } catch (e) { setError(errorText(e)); }
   };
-
-  // Filtered transactions
-  const filteredTransactions = transactions.filter((tx) => {
-    if (filterCategory === 'all') return true;
-    if (filterCategory === 'credit') return tx.type === 'credit';
-    if (filterCategory === 'debit') return tx.type === 'debit';
-    if (filterCategory === 'order_payment') return tx.category === 'order_payment' || tx.description?.toLowerCase().includes('order');
-    if (filterCategory === 'payout') return tx.category === 'payout_withdrawal' || tx.description?.toLowerCase().includes('payout');
-    return true;
-  });
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              My Wallet &amp; Passbook
-            </h1>
-            <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-brand-blue-50 text-brand-blue-800 border border-brand-blue-200">
-              {user?.role?.replace('_', ' ') || 'Partner'}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Real-time wallet balance, detailed transaction ledger, and instant bank/UPI withdrawal desk (Min ₹500).
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={loadWallet}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center space-x-1.5 shadow-2xs"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-          <Link
-            to="/shop"
-            className="px-4 py-2 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center space-x-1"
-          >
-            <span>Shop with Wallet</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Top Metrics Cards with Opening Animations */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <div className="bg-gradient-to-tr from-brand-blue-950 via-brand-blue-900 to-brand-blue-800 rounded-3xl p-6 text-white space-y-3 shadow-lg shadow-brand-blue-900/20 relative overflow-hidden animate-card-in-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-blue-200 uppercase font-bold tracking-wider">Available Wallet Balance</span>
-            <Wallet className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            ₹{balance.toFixed(2)}
-          </div>
-          <div className="flex items-center justify-between text-[11px] text-blue-200 pt-2 border-t border-white/10">
-            <span>Usable at Checkout &amp; Withdrawable</span>
-            <span className="font-bold text-emerald-300">Active</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3 animate-card-in-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs uppercase font-bold tracking-wider">Total Earnings / Turnover</span>
-            <Sparkles className="w-5 h-5 text-amber-500" />
-          </div>
-          <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            ₹{(user?.total_earned || balance).toFixed(2)}
-          </div>
-          <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span>Referral commissions + network profit</span>
-            <span className="font-bold text-slate-600">{user?.rank || 'Associate'}</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-3 sm:col-span-2 lg:col-span-1 animate-card-in-3">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs uppercase font-bold tracking-wider">Withdrawal Policy</span>
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">
-            Minimum ₹500
-          </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed pt-2 border-t border-slate-100">
-            Withdrawal requests of ₹500 or more are processed via NEFT / IMPS or direct UPI transfer.
-          </p>
-        </div>
-      </div>
-
-      {/* Main Grid: Left Request Form, Right Ledger */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: Request Withdrawal */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-6">
-          <div>
-            <h3 className="font-extrabold text-base text-slate-900 flex items-center space-x-2">
-              <Building2 className="w-5 h-5 text-brand-blue-800" />
-              <span>Request Payout / Withdrawal</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Minimum withdrawal amount is <strong>₹500</strong>. Enter your desired amount and payout details.
-            </p>
-          </div>
-
-          {message && (
-            <div className="p-3.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-bold flex items-start space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <span>{message}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold flex items-start space-x-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {balance < 500 && (
-            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start space-x-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="block font-bold">Minimum Balance Notice:</strong>
-                <span>You currently have ₹{balance.toFixed(2)}. You can request a withdrawal once your balance reaches ₹500 or more.</span>
-              </div>
-            </div>
-          )}
-
-          <form onSubmit={handleRequestPayout} className="space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Withdrawal Amount (₹) *</label>
-              <input
-                type="number"
-                min="500"
-                step="1"
-                required
-                placeholder="Min. 500"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-black focus:outline-none focus:border-brand-blue-600"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-2">Payout Transfer Method *</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('bank_transfer')}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
-                    paymentMethod === 'bank_transfer'
-                      ? 'border-brand-blue-800 bg-brand-blue-50/50 text-brand-blue-900'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span className="text-xs font-bold">Bank Transfer (NEFT/IMPS)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('upi')}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-center space-y-1.5 transition-all ${
-                    paymentMethod === 'upi'
-                      ? 'border-brand-blue-800 bg-brand-blue-50/50 text-brand-blue-900'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span className="text-xs font-bold">UPI / VPA</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                {paymentMethod === 'bank_transfer' ? 'Bank Account Details *' : 'UPI ID / VPA *'}
-              </label>
-              {paymentMethod === 'bank_transfer' ? (
-                <textarea
-                  rows="3"
-                  required
-                  placeholder="Bank Name, Account Number, IFSC Code, Account Holder Name"
-                  value={accountDetails}
-                  onChange={(e) => setAccountDetails(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-brand-blue-600 font-mono"
-                />
-              ) : (
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. mobile@upi, username@okhdfcbank"
-                  value={accountDetails}
-                  onChange={(e) => setAccountDetails(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:border-brand-blue-600"
-                />
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting || balance < 500}
-              className="w-full py-3 bg-brand-blue-800 hover:bg-brand-blue-900 text-white rounded-xl text-xs font-black shadow-md shadow-brand-blue-800/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {submitting ? 'Submitting Request...' : 'Submit Withdrawal Request'}
-            </button>
-          </form>
-        </div>
-
-        {/* Right: Passbook / Transaction History */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 md:p-8 border border-slate-100 shadow-sm space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="font-extrabold text-base text-slate-900">Wallet Passbook &amp; Ledger</h3>
-              <p className="text-xs text-slate-400">Chronological history of all credits, order payments &amp; withdrawals.</p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => exportPassbookReport(transactions, balance, user)}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
-                title="Download Official MediGlaxo Passbook Statement in Excel"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Statement (Excel)</span>
-              </button>
-
-              {/* Filter Tabs */}
-              <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setFilterCategory('all')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'}`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterCategory('credit')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'credit' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600'}`}
-                >
-                  Credits (+)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterCategory('debit')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${filterCategory === 'debit' ? 'bg-white text-rose-700 shadow-2xs' : 'text-slate-600'}`}
-                >
-                  Debits (-)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="py-16 text-center text-slate-400 text-xs">Loading wallet ledger...</div>
-          ) : filteredTransactions.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              No transactions found in this category.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1">
-              {filteredTransactions.map((tx) => {
-                const isCredit = tx.type === 'credit';
-                return (
-                  <div key={tx.id} className="py-3.5 flex items-center justify-between text-xs hover:bg-slate-50/50 px-2 rounded-xl transition-colors">
-                    <div className="flex items-center space-x-3 min-w-0 pr-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isCredit ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                      }`}>
-                        {isCredit ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-bold text-slate-800 truncate block">{tx.description}</span>
-                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
-                            tx.category === 'order_payment' ? 'bg-blue-100 text-blue-800' :
-                            tx.category === 'payout_withdrawal' ? 'bg-purple-100 text-purple-800' :
-                            tx.category === 'wallet_refund' ? 'bg-amber-100 text-amber-800' :
-                            isCredit ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
-                          }`}>
-                            {tx.category?.replace('_', ' ') || tx.type}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                          {new Date(tx.created_at).toLocaleString('en-IN', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short'
-                          })}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-right flex-shrink-0">
-                      <span className={`font-black text-sm block ${isCredit ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toFixed(2)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block">
-                        Bal: ₹{Number(tx.balance_after || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+  useEffect(() => { load(); }, [page, payoutPage, filter]);
+  const change = (key,value) => { setForm((f) => ({ ...f, [key]: value })); setSummary(null); setRequestKey(crypto.randomUUID()); };
+  const submit = async (e) => {
+    e.preventDefault(); if (busy) return; setBusy(true); setError(''); setMessage('');
+    try {
+      if (!summary) { const r = await previewPayout({ amount: Number(form.amount) }); setSummary(r.data.summary); }
+      else {
+        const payload = form.payment_method === 'bank_transfer' ? { ...form, account_details: undefined } : { amount: form.amount, payment_method: 'upi', account_details: form.account_details };
+        await requestPayout({ ...payload, amount: summary.amount, request_key: requestKey });
+        setMessage('Withdrawal requested. Your gross amount is reserved; follow its status below.'); setSummary(null); setForm((f) => ({ ...f, amount: '' })); setRequestKey(crypto.randomUUID());
+        await load(); const profile = await getProfile(); setUser(profile.data.user);
+      }
+    } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
+  };
+  return <main className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
+    <h1 className="text-2xl font-black">My Wallet & Withdrawals</h1>
+    <section className="rounded-2xl bg-brand-blue-800 text-white p-6 flex flex-wrap justify-between gap-4">
+      <div><p>Available to spend</p><strong className="text-3xl">{money(wallet.balance)}</strong><p className="text-sm mt-2">Medicine purchases have no TDS. Bank withdrawals have 5% TDS.</p></div>
+      <Link to="/shop" className="bg-white text-brand-blue-800 rounded-xl p-3 h-fit font-bold">Buy medicines with wallet</Link>
+    </section>
+    {error && <p role="alert" className="text-rose-700 bg-rose-50 p-3 rounded-xl">{error}</p>}
+    {message && <p role="status" className="text-emerald-700 bg-emerald-50 p-3 rounded-xl">{message}</p>}
+    <div className="grid md:grid-cols-2 gap-6">
+      <form onSubmit={submit} className="bg-white border rounded-2xl p-5 space-y-4">
+        <h2 className="font-extrabold text-lg">Request a withdrawal</h2><p className="text-sm text-slate-500">Minimum ₹500. Admin reviews and transfers your payout.</p>
+        <fieldset disabled={busy} className="space-y-3">
+          <label className="block text-sm">Amount (₹)<input aria-label="Withdrawal amount" required type="number" min="500" step="0.01" max={wallet.balance} value={form.amount} onChange={(e)=>change('amount',e.target.value)} className="block border rounded-xl p-3 w-full mt-1" /></label>
+          <label className="block text-sm">Transfer method<select value={form.payment_method} onChange={(e)=>change('payment_method',e.target.value)} className="block border rounded-xl p-3 w-full"><option value="bank_transfer">Bank transfer</option><option value="upi">UPI</option></select></label>
+          {form.payment_method === 'bank_transfer' ? ['account_holder','bank_name','bank_account','bank_ifsc'].map((key) => <label key={key} className="block text-sm">{{account_holder:'Account holder',bank_name:'Bank name',bank_account:'Account number',bank_ifsc:'IFSC code'}[key]}<input name={key} required value={form[key]} inputMode={key==='bank_account'?'numeric':undefined} pattern={key==='bank_account'?'[0-9]{9,18}':key==='bank_ifsc'?'[A-Z]{4}0[A-Z0-9]{6}':undefined} maxLength={key==='bank_ifsc'?11:key==='bank_account'?18:100} onChange={(e)=>change(key,key==='bank_ifsc'?e.target.value.toUpperCase():e.target.value)} className="block border rounded-xl p-3 w-full mt-1" /></label>) : <label className="block text-sm">UPI ID<input required value={form.account_details} onChange={(e)=>change('account_details',e.target.value)} className="block border rounded-xl p-3 w-full" /></label>}
+        </fieldset>
+        {summary && <div aria-label="Withdrawal review" className="bg-blue-50 rounded-xl p-4 text-sm space-y-2"><p>Requested: <b>{money(summary.amount)}</b></p><p>TDS (5%): <b>{money(summary.tds_amount)}</b></p><p>Bank payout: <b>{money(summary.net_payable)}</b></p><p>Remaining wallet: {money(summary.remaining_balance)}</p><p>Confirm your amount and destination before submitting.</p></div>}
+        <button disabled={busy || Number(wallet.balance)<500} className="w-full bg-brand-blue-800 text-white rounded-xl p-3 font-bold disabled:opacity-40">{busy?'Please wait…':summary?'Confirm withdrawal request':'Review withdrawal'}</button>
+      </form>
+      <section className="bg-white border rounded-2xl p-5 space-y-3"><h2 className="font-extrabold text-lg">Withdrawal history</h2>
+        {!payouts.data?.length && <p className="text-slate-500">No withdrawal requests yet.</p>}
+        {payouts.data?.map((p)=><article key={p.id} className="border rounded-xl p-4 text-sm space-y-2"><div className="flex justify-between font-bold"><span>Request #{p.id}</span><span className="capitalize">{p.status==='pending'?'Requested':p.status}</span></div><p>{money(p.amount)} · TDS {money(p.admin_fee)} · Net {money(p.net_payable)}</p><p>{p.account_details}</p>{p.transaction_ref && <p>Bank reference: {p.transaction_ref}</p>}{p.admin_note && <p>{p.admin_note}</p>}<ol className="text-xs text-slate-500 space-y-1">{p.events?.map((ev)=><li key={ev.id}>{new Date(ev.created_at).toLocaleString()} · {ev.status} {ev.note && `— ${ev.note}`}</li>)}</ol></article>)}
+        <Pagination data={payouts} setPage={setPayoutPage}/>
+      </section>
     </div>
-  );
+    <section className="bg-white border rounded-2xl p-5 space-y-4"><h2 className="font-extrabold text-lg">Wallet credit / debit history</h2><button onClick={()=>exportPassbookReport(wallet.transactions?.data||[],wallet.balance,user)} className="border rounded-xl p-2 text-sm">Export this history page</button><select aria-label="Wallet history filter" value={filter} onChange={(e)=>{setFilter(e.target.value);setPage(1);}} className="border rounded-xl p-2">{['all','credit','debit','referral_income','order_payment','payout_withdrawal','payout_refund','commission_reversal'].map((c)=><option key={c} value={c}>{c.replaceAll('_',' ')}</option>)}</select>
+      <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th>Date</th><th>Description / Status</th><th>Credit / Debit</th><th>Balance</th></tr></thead><tbody>{wallet.transactions?.data?.map((t)=><tr key={t.id} className="border-t"><td className="py-3 pr-3">{new Date(t.created_at).toLocaleDateString()}</td><td className="py-3 pr-3">{t.description}<p className="text-xs text-slate-500">{t.status} · {t.category?.replaceAll('_',' ')}</p></td><td className={t.type==='credit'?'text-emerald-700':'text-rose-700'}>{t.type==='credit'?'+':'−'}{money(t.amount)}</td><td>{money(t.balance_after)}</td></tr>)}</tbody></table></div><Pagination data={wallet.transactions} setPage={setPage}/>
+    </section>
+  </main>;
 }
+function Pagination({data,setPage}) { return data?.last_page>1 && <div className="flex gap-4 text-sm"><button disabled={data.current_page<=1} onClick={()=>setPage(data.current_page-1)}>Previous</button><span>{data.current_page} / {data.last_page}</span><button disabled={data.current_page>=data.last_page} onClick={()=>setPage(data.current_page+1)}>Next</button></div>; }

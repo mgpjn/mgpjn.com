@@ -5,19 +5,22 @@ import { getMlmCommissions } from '../../services/api';
 
 export default function CommissionsLedger() {
   const [commissions, setCommissions] = useState([]);
+  const [page,setPage]=useState(1);
+  const [last,setLast]=useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedStage, setSelectedStage] = useState('all');
 
   useEffect(() => {
-    getMlmCommissions()
+    getMlmCommissions(page)
       .then((res) => {
         if (res.data.success) {
           setCommissions(res.data.commissions.data || []);
+          setLast(res.data.commissions.last_page || 1);
         }
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   const filtered = commissions.filter((c) => {
     if (selectedStage === 'all') return true;
@@ -34,12 +37,12 @@ export default function CommissionsLedger() {
           </Link>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Referral Income Audit Ledger</h1>
           <p className="text-xs text-slate-500">
-            Statement of 3-Stage referral income: Stage 1 (10%), Stage 2 (3%), Stage 3 (2%).
+            Current plan: 10%, 3%, 2%. Historical entries retain their recorded rates.
           </p>
         </div>
 
         <div className="flex items-center space-x-2 text-xs">
-          <span className="font-bold text-slate-500">Filter Stage:</span>
+          <span className="font-bold text-slate-500">Stage on this page:</span>
           <select
             value={selectedStage}
             onChange={(e) => setSelectedStage(e.target.value)}
@@ -61,13 +64,13 @@ export default function CommissionsLedger() {
               <th className="p-3">Stage &amp; Income Rate</th>
               <th className="p-3">Purchased By</th>
               <th className="p-3">Order Number</th>
-              <th className="p-3 text-right">Referral Income</th>
+              <th className="p-3">Status</th><th className="p-3 text-right">Credit / Reversal</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="5" className="p-6 text-center text-slate-400">
+                <td colSpan="6" className="p-6 text-center text-slate-400">
                   {loading ? 'Loading ledger...' : 'No referral income records found.'}
                 </td>
               </tr>
@@ -86,8 +89,8 @@ export default function CommissionsLedger() {
                   </td>
                   <td className="p-3 font-semibold text-slate-800">{c.from_user?.name || 'Customer'}</td>
                   <td className="p-3 font-mono text-slate-500">#{c.order?.order_number}</td>
-                  <td className="p-3 text-right font-black text-emerald-600 text-sm">
-                    +₹{c.commission_amount.toFixed(2)}
+                  <td className="p-3">{c.status}</td><td className="p-3 text-right font-black text-sm">
+                    {c.status === 'reversed' ? '−' : '+'}₹{Number(c.commission_amount).toFixed(2)}
                   </td>
                 </tr>
               ))
@@ -95,6 +98,7 @@ export default function CommissionsLedger() {
           </tbody>
         </table>
       </div>
+      {last>1 && <div className="flex gap-4"><button disabled={page<=1} onClick={()=>setPage(page-1)}>Previous</button><span>{page} / {last}</span><button disabled={page>=last} onClick={()=>setPage(page+1)}>Next</button></div>}
     </div>
   );
 }

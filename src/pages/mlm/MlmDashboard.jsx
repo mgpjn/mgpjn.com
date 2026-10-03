@@ -388,7 +388,7 @@ export default function MlmDashboard() {
                       ₹{ord.total_amount.toFixed(2)}
                     </td>
                     <td className="p-3 font-black text-emerald-600 text-sm">
-                      +₹{ord.commission_earned.toFixed(2)}
+                      {ord.commission_status === 'estimated' ? 'Estimated ' : '+'}₹{Number(ord.commission_status === 'estimated' ? ord.commission_estimated : ord.commission_earned).toFixed(2)}
                     </td>
                     <td className="p-3">
                       <div className="flex items-center space-x-1.5">

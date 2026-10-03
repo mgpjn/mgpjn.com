@@ -56,6 +56,7 @@ import {
   getAdminCoupons, storeAdminCoupon, updateAdminCoupon, deleteAdminCoupon,
   getHierarchyParents
 } from '../../services/api';
+import WithdrawalDesk from '../../components/admin/WithdrawalDesk';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
 import DispatchModal from '../../components/orders/DispatchModal';
 import OrderTrackingModal from '../../components/orders/OrderTrackingModal';
@@ -283,6 +284,10 @@ export default function AdminDashboard() {
   const [isOrderLoading, setIsOrderLoading] = useState(false);
   const [payoutsList, setPayoutsList] = useState({ data: [] });
   const [selectedInvoiceOrderId, setSelectedInvoiceOrderId] = useState(null);
+  const openPrivateInvoice = (id) => {
+    if (user?.role !== 'super_admin') { toast.error('Invoice access is available to the buyer and Super Admin.'); return; }
+    setSelectedInvoiceOrderId(id);
+  };
   const [dispatchTargetOrder, setDispatchTargetOrder] = useState(null);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [trackingTargetOrder, setTrackingTargetOrder] = useState(null);
@@ -1622,11 +1627,11 @@ export default function AdminDashboard() {
         product_id: priceTargetProduct.id,
         mrp: parseFloat(priceForm.mrp) || 0,
         product_price: parseFloat(priceForm.product_price) || parseFloat(priceForm.end_user_price) || 0,
-        level_1_commission: subRetComm,
-        level_2_commission: cust1Comm,
-        level_3_commission: cust2Comm,
-        sub_retailer_commission: subRetComm,
-        customer_commission: cust1Comm,
+        level_1_commission: 10,
+        level_2_commission: 3,
+        level_3_commission: 2,
+        sub_retailer_commission: 10,
+        customer_commission: 3,
         sd_margin: parseFloat(priceForm.sd_margin) || 0,
         dist_margin: parseFloat(priceForm.dist_margin) || 0,
         subd_margin: parseFloat(priceForm.subd_margin) || 0,
@@ -1865,19 +1870,6 @@ export default function AdminDashboard() {
             updated.wholesale_mrp = Math.round(mrp * mult * 100) / 100;
           }
         }
-        if (bulkBatchRates.sub_retailer_commission !== '') {
-          const val = parseFloat(bulkBatchRates.sub_retailer_commission) || 0;
-          updated.sub_retailer_commission = val;
-          updated.level_1_commission = val;
-        }
-        if (bulkBatchRates.customer_commission !== '') {
-          const val = parseFloat(bulkBatchRates.customer_commission) || 0;
-          updated.customer_commission = val;
-          updated.level_2_commission = val;
-        }
-        if (bulkBatchRates.level_3_commission !== '') {
-          updated.level_3_commission = parseFloat(bulkBatchRates.level_3_commission) || 0;
-        }
         if (bulkBatchRates.sd_margin !== '') updated.sd_margin = parseFloat(bulkBatchRates.sd_margin) || 0;
         if (bulkBatchRates.dist_margin !== '') updated.dist_margin = parseFloat(bulkBatchRates.dist_margin) || 0;
         if (bulkBatchRates.subd_margin !== '') updated.subd_margin = parseFloat(bulkBatchRates.subd_margin) || 0;
@@ -1914,11 +1906,11 @@ export default function AdminDashboard() {
             dist_price: parseFloat(item.dist_price) || 0,
             subd_price: parseFloat(item.subd_price) || 0,
             retailer_price: parseFloat(item.retailer_price) || 0,
-            level_1_commission: subRetComm,
-            level_2_commission: cust1Comm,
-            level_3_commission: cust2Comm,
-            sub_retailer_commission: subRetComm,
-            customer_commission: cust1Comm,
+            level_1_commission: 10,
+            level_2_commission: 3,
+            level_3_commission: 2,
+            sub_retailer_commission: 10,
+            customer_commission: 3,
             sd_margin: parseFloat(item.sd_margin) || 2.0,
             dist_margin: parseFloat(item.dist_margin) || 5.0,
             subd_margin: parseFloat(item.subd_margin) || 10.0,
@@ -3209,7 +3201,7 @@ export default function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setSelectedInvoiceOrderId(ord.id);
+                                    openPrivateInvoice(ord.id);
                                     navigate('/admin/orders');
                                   }}
                                   className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] cursor-pointer"
@@ -5429,7 +5421,7 @@ export default function AdminDashboard() {
 
                               {/* GST Bill */}
                               <button
-                                onClick={() => setSelectedInvoiceOrderId(ord.id)}
+                                onClick={() => openPrivateInvoice(ord.id)}
                                 className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center space-x-1 transition-colors cursor-pointer border border-brand-orange-200"
                               >
                                 <Printer className="w-3.5 h-3.5" />
@@ -6248,7 +6240,7 @@ export default function AdminDashboard() {
                                   </button>
                                   {po.order_id && (
                                     <button
-                                      onClick={() => setSelectedInvoiceOrderId(po.order_id)}
+                                      onClick={() => openPrivateInvoice(po.order_id)}
                                       className="bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-600 border border-brand-orange-200 px-2.5 py-1 rounded-lg font-bold text-xs inline-flex items-center space-x-1"
                                     >
                                       <Printer className="w-3 h-3" />
@@ -6692,109 +6684,7 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* TAB 2: PAYOUT & WITHDRAWAL REQUESTS */}
-              {walletTab === 'payouts' && (
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="font-black text-slate-900 text-base">Partner Commission Payouts &amp; Bank Transfers</h3>
-                      <p className="text-xs text-slate-500">Review, verify and process downline distributor withdrawal requests.</p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-slate-50 uppercase text-[10px] font-bold text-slate-500 border-b border-slate-100">
-                        <tr>
-                          <th className="p-3.5">REQUEST ID</th>
-                          <th className="p-3.5">PARTNER</th>
-                          <th className="p-3.5">GROSS WITHDRAWAL</th>
-                          <th className="p-3.5">TDS / CHARGES (5%)</th>
-                          <th className="p-3.5">NET PAYABLE</th>
-                          <th className="p-3.5">BANK ACCOUNT / UPI</th>
-                          <th className="p-3.5">STATUS</th>
-                          <th className="p-3.5 text-right">ACTION</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {payoutsList?.data?.length === 0 ? (
-                          <tr><td colSpan="8" className="p-8 text-center text-slate-400">No payout requests in the ledger.</td></tr>
-                        ) : (
-                          payoutsList?.data?.map((pay) => {
-                            const gross = parseFloat(pay.amount || 0);
-                            const fee = pay.admin_fee ? parseFloat(pay.admin_fee) : Math.round(gross * 0.05 * 100) / 100;
-                            const net = pay.net_payable ? parseFloat(pay.net_payable) : (gross - fee);
-                            return (
-                              <tr key={pay.id} className="hover:bg-slate-50/60 transition-colors">
-                                <td className="p-3.5 font-bold text-[#ff5722]">#PAY-{pay.id}</td>
-                                <td className="p-3.5">
-                                  <span className="font-bold text-slate-900 block">{pay.user?.name || 'Partner'}</span>
-                                  <span className="text-[10px] text-slate-400 font-mono">{pay.user?.referral_code ? `REF: ${pay.user?.referral_code} • ` : ''}{pay.user?.phone}</span>
-                                </td>
-                                <td className="p-3.5 font-black text-slate-900">₹{gross.toFixed(2)}</td>
-                                <td className="p-3.5 text-rose-600 font-semibold">-₹{fee.toFixed(2)}</td>
-                                <td className="p-3.5 font-black text-emerald-600">₹{net.toFixed(2)}</td>
-                                <td className="p-3.5 font-mono text-[11px] max-w-[200px] truncate" title={pay.account_details}>
-                                  {pay.account_details}
-                                </td>
-                                <td className="p-3.5">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                    pay.status === 'approved'
-                                      ? 'bg-emerald-50 text-emerald-700'
-                                      : pay.status === 'pending'
-                                      ? 'bg-amber-50 text-amber-700'
-                                      : 'bg-rose-50 text-rose-700'
-                                  }`}>
-                                    {pay.status}
-                                  </span>
-                                </td>
-                                <td className="p-3.5 text-right space-x-1.5">
-                                  {pay.status === 'pending' ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          const ref = prompt('Enter Bank UTR / Transaction Reference ID:', 'UTR' + Date.now().toString().slice(-8));
-                                          if (ref !== null) {
-                                            await processAdminPayout(pay.id, { action: 'approve', transaction_ref: ref });
-                                            fetchWalletData();
-                                            toast.success('Payout marked as Approved & Settled.');
-                                          }
-                                        }}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg font-bold text-[11px] shadow-xs cursor-pointer"
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={async () => {
-                                          const note = prompt('Reason for rejection (Funds will be refunded automatically to partner wallet):', 'Account details mismatched');
-                                          if (note !== null) {
-                                            await processAdminPayout(pay.id, { action: 'reject', admin_note: note });
-                                            fetchWalletData();
-                                            toast.success('Payout rejected and ₹' + pay.amount + ' refunded to partner wallet.');
-                                          }
-                                        }}
-                                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1 rounded-lg font-bold text-[11px] cursor-pointer"
-                                      >
-                                        Reject &amp; Refund
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      {pay.transaction_ref || pay.admin_note || 'Completed'}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              {walletTab === 'payouts' && <WithdrawalDesk />}
 
               {/* TAB 3: SYSTEM WALLET LEDGER & AUDIT TRAIL */}
               {walletTab === 'transactions' && (
@@ -7086,7 +6976,7 @@ export default function AdminDashboard() {
                               {rx.order || rx.order_id ? (
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedInvoiceOrderId(rx.order_id || rx.order?.id)}
+                                  onClick={() => openPrivateInvoice(rx.order_id || rx.order?.id)}
                                   className="bg-brand-blue-50 text-brand-blue-800 border border-brand-blue-200 px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-brand-blue-100 transition-colors"
                                   title="View Linked Order Bill"
                                 >
@@ -9144,7 +9034,7 @@ export default function AdminDashboard() {
                         </span>
                       </div>
                       <p className="text-[10px] text-blue-700">
-                        This Super Distributor operates directly under Company / Super Admin. Product rates and dynamic referral commissions can be configured separately in the "Assign Products & Set Price" tab.
+                        This Super Distributor operates directly under Company / Super Admin. Product rates and fixed 10%, 3%, 2% referral commissions can be viewed in the "Assign Products & Set Price" tab.
                       </p>
                     </div>
                   )}
@@ -11047,7 +10937,7 @@ export default function AdminDashboard() {
                       type="button"
                       onClick={() => {
                         setShowPOModal(false);
-                        setSelectedInvoiceOrderId(selectedPO.order_id);
+                        openPrivateInvoice(selectedPO.order_id);
                       }}
                       className="bg-brand-orange-50 text-brand-orange-600 border border-brand-orange-200 px-4 py-2 rounded-xl font-bold flex items-center space-x-1.5"
                     >
@@ -11525,10 +11415,10 @@ export default function AdminDashboard() {
                   type="button"
                   onClick={() => handleOpenBulkPricingModal(assignTargetUser, selectedAssignProductIds)}
                   className="px-3.5 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer hover:scale-105 active:scale-95"
-                  title="Bulk Edit Pricing & Commissions for this Super Distributor"
+                  title="Bulk edit prices; referral rates are fixed at 10%, 3%, 2%"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span>⚡ Bulk Set Prices &amp; Commissions</span>
+                  <span>⚡ Bulk Set Prices · View Fixed Commissions</span>
                   {selectedAssignProductIds.length > 0 && (
                     <span className="bg-amber-400 text-purple-950 px-1.5 py-0.2 rounded-full text-[10px] font-black">
                       {selectedAssignProductIds.length}
@@ -11874,7 +11764,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-                {/* 3-Stage Dynamic Referral Commission (Configurable per Super Distributor + Product) */}
+                {/* Fixed 3-Stage Referral Commission */}
                 <div className="bg-amber-50/80 border border-amber-300 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -11884,80 +11774,56 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <span className="text-[10px] bg-amber-600 text-white font-black px-2.5 py-0.5 rounded-full">
-                      Stage 1: Sub-Ret • Stage 2: Cust 1 • Stage 3: Cust 2
+                      Stage 1: Direct sponsor • Stage 2: Parent sponsor • Stage 3: Next sponsor
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-900 leading-relaxed">
-                    Referral commissions are calculated strictly across 3 hierarchy stages: 1st stage is Sub-Retailer hub, 2nd stage is Customer 1 (C1), and 3rd stage is Customer 2 (C2).
+                    Referral income is fixed at 10%, 3%, 2% for the nearest three active sponsors. Rates are view-only.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-[11px] font-black text-slate-800">
-                          Stage 1: Sub-Retailer (%)
+                          Stage 1: Direct sponsor (%)
                         </label>
                         <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded">
                           Sub-Retailer Hub
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={priceForm.sub_retailer_commission !== undefined ? priceForm.sub_retailer_commission : (priceForm.level_1_commission !== undefined ? priceForm.level_1_commission : 10)}
-                        onChange={(e) => setPriceForm({ ...priceForm, sub_retailer_commission: e.target.value, level_1_commission: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 border border-amber-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none"
-                      />
+                      <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 1 commission">10% · Fixed</output>
                       <span className="text-[10px] text-slate-500 block mt-1">
-                        Direct Sub-Retailer (Pincode Store / Hub)
+                        Direct referrer of the buyer
                       </span>
                     </div>
 
                     <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-[11px] font-black text-slate-800">
-                          Stage 2: Customer 1 (%)
+                          Stage 2: Parent sponsor (%)
                         </label>
                         <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-1.5 py-0.5 rounded">
                           Customer 1 (C1)
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={priceForm.customer_commission !== undefined ? priceForm.customer_commission : (priceForm.level_2_commission !== undefined ? priceForm.level_2_commission : 3)}
-                        onChange={(e) => setPriceForm({ ...priceForm, customer_commission: e.target.value, level_2_commission: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 border border-emerald-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                      />
+                      <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 2 commission">3% · Fixed</output>
                       <span className="text-[10px] text-slate-500 block mt-1">
-                        Immediate sponsor customer (Customer-1)
+                        Sponsor of the direct referrer
                       </span>
                     </div>
 
                     <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-[11px] font-black text-slate-800">
-                          Stage 3: Customer 2 (%)
+                          Stage 3: Next sponsor (%)
                         </label>
                         <span className="text-[9px] bg-sky-100 text-sky-800 font-extrabold px-1.5 py-0.5 rounded">
                           Customer 2 (C2)
                         </span>
                       </div>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={priceForm.level_3_commission !== undefined ? priceForm.level_3_commission : 2}
-                        onChange={(e) => setPriceForm({ ...priceForm, level_3_commission: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 border border-sky-300 rounded-xl font-black text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none"
-                      />
+                      <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 3 commission">2% · Fixed</output>
                       <span className="text-[10px] text-slate-500 block mt-1">
-                        Secondary upline customer (Customer-2)
+                        Sponsor of the Stage 2 referrer
                       </span>
                     </div>
                   </div>
@@ -11987,17 +11853,17 @@ export default function AdminDashboard() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
                           <div className="bg-amber-50 border border-amber-200 text-amber-900 p-2 rounded-lg">
-                            <span className="text-[10px] font-bold block text-amber-700">Stage 1: Sub-Retailer</span>
+                            <span className="text-[10px] font-bold block text-amber-700">Stage 1: Direct sponsor</span>
                             <strong className="text-xs font-black">₹{l1Amt}</strong>
                             <span className="text-[10px] text-amber-600 block">({l1Pct}%)</span>
                           </div>
                           <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-2 rounded-lg">
-                            <span className="text-[10px] font-bold block text-emerald-700">Stage 2: Customer 1 (C1)</span>
+                            <span className="text-[10px] font-bold block text-emerald-700">Stage 2: Parent sponsor (C1)</span>
                             <strong className="text-xs font-black">₹{l2Amt}</strong>
                             <span className="text-[10px] text-emerald-600 block">({l2Pct}%)</span>
                           </div>
                           <div className="bg-sky-50 border border-sky-200 text-sky-900 p-2 rounded-lg">
-                            <span className="text-[10px] font-bold block text-sky-700">Stage 3: Customer 2 (C2)</span>
+                            <span className="text-[10px] font-bold block text-sky-700">Stage 3: Next sponsor (C2)</span>
                             <strong className="text-xs font-black">₹{l3Amt}</strong>
                             <span className="text-[10px] text-sky-600 block">({l3Pct}%)</span>
                           </div>
@@ -12272,7 +12138,7 @@ export default function AdminDashboard() {
                     <h3 className="text-base sm:text-lg font-black tracking-tight">
                       {bulkPricingTargetDistributor
                         ? `⚡ Bulk Pricing & Rates for ${bulkPricingTargetDistributor.name} (${bulkPricingTargetDistributor.state || 'All States'})`
-                        : '⚡ Bulk Product Price, Tier Rates & Commission Editor'}
+                        : '⚡ Bulk Product Price & Tier Rate Editor'}
                     </h3>
                     <span className="bg-amber-400 text-purple-950 px-2.5 py-0.5 rounded-full text-[11px] font-black">
                       {bulkProductsList.length} Medicines in Batch
@@ -12280,8 +12146,8 @@ export default function AdminDashboard() {
                   </div>
                   <p className="text-[11px] text-purple-200/80">
                     {bulkPricingTargetDistributor
-                      ? `Assign custom Super Distributor rates, downline wholesale tiers & commissions for ${bulkPricingTargetDistributor.name}'s network.`
-                      : 'Modify printed MRP, customer selling rates, post wholesale prices (SD, Dist, Sub-D, Retailer) & dynamic commissions in one place.'}
+                      ? `Assign custom Super Distributor rates, downline wholesale tiers for ${bulkPricingTargetDistributor.name}'s network. Referral rates stay fixed at 10%, 3%, 2%.`
+                      : 'Modify printed MRP, customer selling rates, post wholesale prices (SD, Dist, Sub-D, Retailer) & fixed referral commissions in one place.'}
                   </p>
                 </div>
               </div>
@@ -12309,7 +12175,7 @@ export default function AdminDashboard() {
                     type="button"
                     onClick={handleAutoCalculateTierRates}
                     className="px-3 py-1.5 bg-purple-900 hover:bg-purple-950 text-amber-300 hover:text-white rounded-xl text-xs font-black shadow-sm flex items-center space-x-1.5 transition-all cursor-pointer"
-                    title="Auto-calculate standard wholesale tiers, wholesale MRP & 10/5/2 commissions based on printed MRP"
+                    title="Auto-calculate standard wholesale tiers, wholesale MRP & 10/3/2 commissions based on printed MRP"
                   >
                     <span>✨ Auto-Calculate All Tier Rates &amp; Wholesale MRP</span>
                   </button>
@@ -12329,33 +12195,15 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-amber-900 block mb-0.5">Stage 1: Sub-Ret (%)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 10"
-                      value={bulkBatchRates.sub_retailer_commission}
-                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, sub_retailer_commission: e.target.value, level_1_commission: e.target.value })}
-                      className="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-lg text-xs font-bold text-amber-950 focus:outline-none focus:border-amber-600"
-                    />
+                    <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 1 commission">10% · Fixed</output>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-emerald-900 block mb-0.5">Stage 2: Cust 1 (%)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 5"
-                      value={bulkBatchRates.customer_commission}
-                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, customer_commission: e.target.value, level_2_commission: e.target.value })}
-                      className="w-full px-2.5 py-1.5 bg-emerald-50/50 border border-emerald-300 rounded-lg text-xs font-bold text-emerald-950 focus:outline-none focus:border-emerald-600"
-                    />
+                    <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 2 commission">3% · Fixed</output>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-sky-900 block mb-0.5">Stage 3: Cust 2 (%)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 2"
-                      value={bulkBatchRates.level_3_commission}
-                      onChange={(e) => setBulkBatchRates({ ...bulkBatchRates, level_3_commission: e.target.value })}
-                      className="w-full px-2.5 py-1.5 bg-sky-50/50 border border-sky-300 rounded-lg text-xs font-bold text-sky-950 focus:outline-none focus:border-sky-600"
-                    />
+                    <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 3 commission">2% · Fixed</output>
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-600 block mb-0.5">MRP Off (%)</label>
@@ -12516,45 +12364,19 @@ export default function AdminDashboard() {
                           />
                         </td>
 
-                        {/* Stage 1: Sub-Retailer Commission % */}
+                        {/* Stage 1: Direct sponsor Commission % */}
                         <td className="p-2 bg-amber-50/20">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.sub_retailer_commission !== undefined && item.sub_retailer_commission !== null ? item.sub_retailer_commission : (item.level_1_commission || 10)}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              handleBulkProductItemChange(item.id, 'sub_retailer_commission', val);
-                              handleBulkProductItemChange(item.id, 'level_1_commission', val);
-                            }}
-                            className="w-16 px-1.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-black text-amber-950 focus:border-amber-600 focus:outline-none text-center"
-                          />
+                          <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 1 commission">10% · Fixed</output>
                         </td>
 
-                        {/* Stage 2: Customer 1 Commission % */}
+                        {/* Stage 2: Parent sponsor Commission % */}
                         <td className="p-2 bg-emerald-50/20">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.customer_commission !== undefined && item.customer_commission !== null ? item.customer_commission : (item.level_2_commission || 3)}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              handleBulkProductItemChange(item.id, 'customer_commission', val);
-                              handleBulkProductItemChange(item.id, 'level_2_commission', val);
-                            }}
-                            className="w-16 px-1.5 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-black text-emerald-950 focus:border-emerald-600 focus:outline-none text-center"
-                          />
+                          <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 2 commission">3% · Fixed</output>
                         </td>
 
-                        {/* Stage 3: Customer 2 Commission % */}
+                        {/* Stage 3: Next sponsor Commission % */}
                         <td className="p-2 bg-sky-50/20">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.level_3_commission !== undefined && item.level_3_commission !== null ? item.level_3_commission : 2}
-                            onChange={(e) => handleBulkProductItemChange(item.id, 'level_3_commission', e.target.value)}
-                            className="w-16 px-1.5 py-1 bg-white border border-sky-300 rounded-lg text-xs font-black text-sky-950 focus:border-sky-600 focus:outline-none text-center"
-                          />
+                          <output className="block p-2 font-black text-slate-700" aria-label="Fixed Stage 3 commission">2% · Fixed</output>
                         </td>
                       </tr>
                     ))}
