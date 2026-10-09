@@ -234,7 +234,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
               </div>
               <h2 className="mt-2 text-lg sm:text-2xl font-black tracking-tight">Install MediGlaxo app for faster orders</h2>
               <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-2xl">
-                Direct website download is available while the latest Google Play update is pending.
+                Direct website download is available while the latest store update is pending.
               </p>
             </div>
           </div>

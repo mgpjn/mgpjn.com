@@ -35,7 +35,7 @@ export default function AppDownloadPage() {
                 Download MediGlaxo Pharma Junction App
               </h1>
               <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
-                Use the direct APK download while the Google Play update is pending. The website download is hosted from MediGlaxo's official server for the latest app build.
+                Use the direct APK download while the store update is pending. The website download is hosted from MediGlaxo's official server for the latest app build.
               </p>
             </div>
 
