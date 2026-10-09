@@ -4,7 +4,7 @@ import {
   Pill, Activity, Sparkles, ShieldCheck, Truck, Clock,
   ChevronRight, ChevronLeft, Percent, Award, HeartHandshake, PhoneCall,
   Search, Upload, CheckCircle2, Flame, Star, Tag, Layers, ArrowRight,
-  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap
+  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Download, Smartphone, PlayCircle
 } from 'lucide-react';
 import { getCategories, getHomepageData, getFeaturedProducts, getBanners } from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -220,6 +220,45 @@ export default function HomePage({ onOpenPrescriptionModal }) {
           </div>
         </section>
       )}
+
+      {/* Android App Download Strip */}
+      <section className="w-full max-w-7xl px-2.5 sm:px-4 mx-auto">
+        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-brand-blue-950 via-brand-blue-900 to-slate-950 text-white p-4 sm:p-6 shadow-xl border border-brand-blue-800/30 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center flex-shrink-0">
+              <Smartphone className="h-6 w-6 text-cyan-200" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-orange-500/15 border border-brand-orange-400/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-orange-100">
+                Latest Android APK
+              </div>
+              <h2 className="mt-2 text-lg sm:text-2xl font-black tracking-tight">Install MediGlaxo app for faster orders</h2>
+              <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-2xl">
+                Direct website download is available while the latest Google Play update reaches all users.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
+            <Link
+              to="/app"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange-500 px-4 py-2.5 text-xs sm:text-sm font-black text-white hover:bg-brand-orange-600 shadow-lg shadow-orange-500/20"
+            >
+              <Download className="h-4 w-4" />
+              Download App
+            </Link>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.mgpjn.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs sm:text-sm font-black text-white hover:bg-white/15"
+            >
+              <PlayCircle className="h-4 w-4" />
+              Google Play
+            </a>
+          </div>
+        </div>
+      </section>
 
       {/* 1.5 🌸 SHUBH NAVRATRI MAHOTSAV - FESTIVE OFFERS & VRAT ESSENTIALS SHOWCASE */}
       <section className="w-full max-w-7xl px-2.5 sm:px-4 mx-auto">
@@ -611,4 +650,3 @@ export default function HomePage({ onOpenPrescriptionModal }) {
     </div>
   );
 }
-

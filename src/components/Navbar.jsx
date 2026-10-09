@@ -4,7 +4,8 @@ import {
   Search, ShoppingCart, FileText, Phone, User as UserIcon,
   ChevronDown, Menu, X, ShieldCheck, HeartPulse, LogOut,
   Network, LayoutDashboard, Sparkles, Plus, AlertCircle, Users,
-  Loader2, Pill, Package, Award, ChevronRight, ArrowRight, Truck, Wallet
+  Loader2, Pill, Package, Award, ChevronRight, ArrowRight, Truck, Wallet,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -242,6 +243,10 @@ export default function Navbar({ onOpenPrescriptionModal }) {
           </div>
 
           <div className="flex items-center space-x-5">
+            <Link to="/app" className="hover:text-brand-orange-400 transition-colors font-bold flex items-center gap-1.5">
+              <Download className="w-3.5 h-3.5" />
+              <span>Download App</span>
+            </Link>
             <Link to="/track-order" className="hover:text-brand-orange-400 transition-colors font-medium">
               Track Order
             </Link>
@@ -311,6 +316,14 @@ export default function Navbar({ onOpenPrescriptionModal }) {
 
           {/* Action CTAs */}
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+            <Link
+              to="/app"
+              className="hidden md:flex items-center space-x-1.5 bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-700 border border-brand-orange-200 px-3 py-2 rounded-xl text-xs font-black transition-all"
+            >
+              <Download className="w-4 h-4" />
+              <span>App</span>
+            </Link>
+
             {/* Wallet Quick Pill */}
             {user && (
               <Link
@@ -768,6 +781,15 @@ export default function Navbar({ onOpenPrescriptionModal }) {
 
             {/* Mobile Actions */}
             <div className="space-y-2">
+              <Link
+                to="/app"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full bg-brand-orange-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Android App</span>
+              </Link>
+
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);

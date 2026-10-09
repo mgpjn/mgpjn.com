@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Mail, MapPin, ShieldCheck, Truck, Headphones, Lock } from 'lucide-react';
+import { Phone, Mail, MapPin, ShieldCheck, Truck, Headphones, Lock, Download, PlayCircle } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -63,6 +63,24 @@ export default function Footer() {
               <p><strong>Legal Name:</strong> MEDIGLAXO PHARMA</p>
               <p><strong>GSTIN:</strong> 24ABVFM0075D1ZA</p>
             </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Link
+                to="/app"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange-500 px-4 py-2.5 text-xs font-black text-white hover:bg-brand-orange-600"
+              >
+                <Download className="h-4 w-4" />
+                Download Android App
+              </Link>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.mgpjn.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-black text-slate-200 hover:bg-slate-800"
+              >
+                <PlayCircle className="h-4 w-4" />
+                Get it on Google Play
+              </a>
+            </div>
           </div>
 
           {/* Quick Links */}
@@ -74,6 +92,7 @@ export default function Footer() {
               <li><Link to="/shop?category=ayurvedic" className="hover:text-brand-orange-400 transition-colors">Ayurvedic Healthcare</Link></li>
               <li><Link to="/shop?category=fitness-health" className="hover:text-brand-orange-400 transition-colors">Fitness Supplements</Link></li>
               <li><Link to="/track-order" className="hover:text-brand-orange-400 transition-colors">Track Your Order</Link></li>
+              <li><Link to="/app" className="hover:text-brand-orange-400 transition-colors font-bold">Download Android App</Link></li>
             </ul>
           </div>
 

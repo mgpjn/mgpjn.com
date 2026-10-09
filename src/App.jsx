@@ -50,6 +50,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import InvoiceView from './pages/InvoiceView';
+import AppDownloadPage from './pages/AppDownloadPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
@@ -221,6 +222,8 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-success/:id" element={<OrderSuccessPage />} />
           <Route path="/track-order" element={<OrderTrackingPage />} />
+          <Route path="/app" element={<AppDownloadPage />} />
+          <Route path="/download-app" element={<AppDownloadPage />} />
           <Route path="/invoice/:id" element={<ProtectedRoute><InvoiceView /></ProtectedRoute>} />
           <Route
             path="/login"
