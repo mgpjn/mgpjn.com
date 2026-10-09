@@ -4,7 +4,7 @@ import {
   Pill, Activity, Sparkles, ShieldCheck, Truck, Clock,
   ChevronRight, ChevronLeft, Percent, Award, HeartHandshake, PhoneCall,
   Search, Upload, CheckCircle2, Flame, Star, Tag, Layers, ArrowRight,
-  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Download, Smartphone, PlayCircle
+  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Download, Smartphone
 } from 'lucide-react';
 import { getCategories, getHomepageData, getFeaturedProducts, getBanners } from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -234,7 +234,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
               </div>
               <h2 className="mt-2 text-lg sm:text-2xl font-black tracking-tight">Install MediGlaxo app for faster orders</h2>
               <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-2xl">
-                Direct website download is available while the latest Google Play update reaches all users.
+                Direct website download is available while the latest Google Play update is pending.
               </p>
             </div>
           </div>
@@ -247,15 +247,6 @@ export default function HomePage({ onOpenPrescriptionModal }) {
               <Download className="h-4 w-4" />
               Download App
             </Link>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.mgpjn.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs sm:text-sm font-black text-white hover:bg-white/15"
-            >
-              <PlayCircle className="h-4 w-4" />
-              Google Play
-            </a>
           </div>
         </div>
       </section>

@@ -225,24 +225,24 @@ export default function Navbar({ onOpenPrescriptionModal }) {
       </div>
 
       {/* 1. Top Pharmaceutical Trust Header */}
-      <div className="bg-brand-blue-950 text-white text-xs py-1.5 px-4 hidden xl:block border-b border-brand-blue-900">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <span className="flex items-center space-x-1.5 font-semibold text-amber-300">
-              <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>WHO-GMP Certified Products • ISO 9001:2015 Licensed Pharma Portal</span>
+      <div className="bg-brand-blue-950 text-white text-[11px] py-1.5 px-4 hidden xl:block border-b border-brand-blue-900">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-5">
+          <div className="min-w-0 flex items-center gap-5">
+            <span className="min-w-0 flex items-center gap-1.5 font-semibold text-amber-300">
+              <Award className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+              <span className="truncate">WHO-GMP Certified Products • ISO 9001:2015 Licensed Pharma Portal</span>
             </span>
-            <span className="flex items-center space-x-1.5 font-medium text-slate-200">
-              <Phone className="w-3.5 h-3.5 text-brand-orange-400" />
-              <span>Pharmacist Helpline: <strong className="text-white">+91 9650582703</strong></span>
+            <span className="flex items-center gap-1.5 font-medium text-slate-200 whitespace-nowrap">
+              <Phone className="w-3.5 h-3.5 text-brand-orange-400 flex-shrink-0" />
+              <span>Helpline: <strong className="text-white">+91 9650582703</strong></span>
             </span>
-            <span className="flex items-center space-x-1 text-slate-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="flex items-center gap-1 text-slate-300 whitespace-nowrap">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
               <span>100% Batch Certificate Verified</span>
             </span>
           </div>
 
-          <div className="flex items-center space-x-5">
+          <div className="flex flex-shrink-0 items-center gap-4 whitespace-nowrap">
             <Link to="/app" className="hover:text-brand-orange-400 transition-colors font-bold flex items-center gap-1.5">
               <Download className="w-3.5 h-3.5" />
               <span>Download App</span>
@@ -321,7 +321,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
               className="hidden md:flex items-center space-x-1.5 bg-brand-orange-50 hover:bg-brand-orange-100 text-brand-orange-700 border border-brand-orange-200 px-3 py-2 rounded-xl text-xs font-black transition-all"
             >
               <Download className="w-4 h-4" />
-              <span>App</span>
+              <span>Download App</span>
             </Link>
 
             {/* Wallet Quick Pill */}

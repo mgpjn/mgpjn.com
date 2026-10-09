@@ -4,8 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Download,
-  ExternalLink,
-  PlayCircle,
   ShieldCheck,
   Smartphone,
   Wifi,
@@ -13,7 +11,6 @@ import {
 
 const apkUrl = 'https://api.mgpjn.com/api/v1/app/download';
 const directApkUrl = 'https://api.mgpjn.com/downloads/MediGlaxo-latest.apk';
-const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.mgpjn.app';
 
 export default function AppDownloadPage() {
   const installSteps = [
@@ -38,7 +35,7 @@ export default function AppDownloadPage() {
                 Download MediGlaxo Pharma Junction App
               </h1>
               <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
-                Use the direct APK download if the Google Play update is still pending. The website download is hosted from MediGlaxo's official server for the latest app build.
+                Use the direct APK download while the Google Play update is pending. The website download is hosted from MediGlaxo's official server for the latest app build.
               </p>
             </div>
 
@@ -49,16 +46,6 @@ export default function AppDownloadPage() {
               >
                 <Download className="h-5 w-5" />
                 Download APK
-              </a>
-              <a
-                href={playStoreUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15"
-              >
-                <PlayCircle className="h-5 w-5" />
-                Download with Google Play
-                <ExternalLink className="h-4 w-4" />
               </a>
             </div>
 
@@ -108,7 +95,7 @@ export default function AppDownloadPage() {
                   <div className="flex items-start gap-2">
                     <Wifi className="mt-0.5 h-4 w-4 text-brand-blue-800" />
                     <p>
-                      If your phone blocks APK install, choose settings from the prompt and allow this browser only for this installation. Keep Google Play link for future automatic updates.
+                      If your phone blocks APK install, choose settings from the prompt and allow this browser only for this installation.
                     </p>
                   </div>
                 </div>
@@ -121,7 +108,7 @@ export default function AppDownloadPage() {
       <section className="max-w-7xl mx-auto px-4 py-10 sm:py-14 grid lg:grid-cols-3 gap-5">
         {[
           ['Latest Website Build', 'Direct APK download is available immediately from the official MediGlaxo server.'],
-          ['Google Play Option', 'Use Play Store when the update reaches your device. Until then, APK gives the latest build.'],
+          ['Direct APK Download', 'Use the website APK while the Play Store update is pending.'],
           ['Safe Installation', 'The app package remains com.mgpjn.app, so it installs as the MediGlaxo Android app.'],
         ].map(([title, body]) => (
           <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
