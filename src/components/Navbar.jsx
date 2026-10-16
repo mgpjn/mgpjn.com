@@ -561,12 +561,6 @@ export default function Navbar({ onOpenPrescriptionModal }) {
             })}
           </div>
 
-          <div className="hidden xl:flex items-center space-x-2 text-[11px] font-semibold text-slate-500">
-            <span className="flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>100% Genuine Pharmacy</span>
-            </span>
-          </div>
         </div>
 
         {/* 🌟 FULL PAGE WIDTH MEGA MENU DROPDOWN */}
@@ -738,7 +732,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                             <span className="text-[11px] font-semibold text-slate-200">Certified Quality</span>
                           </div>
                           <h5 className="font-black text-base tracking-tight leading-snug">
-                            100% Genuine {activeCat.name}
+                            {activeCat.name}
                           </h5>
                           <p className="text-[11px] text-slate-300 leading-relaxed">
                             Formulated under strict CDSCO quality standards with verified batch test certificates.

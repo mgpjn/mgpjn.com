@@ -23,7 +23,7 @@ export default function ShareProductModal({ isOpen, onClose, product }) {
     : '';
 
   const shareTitle = `Buy ${product.name} Online - Genuine Medicine at Best Price`;
-  const shareText = `Check out *${product.name}* on MGPJN at just ₹${price}${discountText}!\n100% Genuine WHO-GMP Certified Medicine with Express Home Delivery.\n\nOrder now: ${shareUrl}`;
+  const shareText = `Check out *${product.name}* on MGPJN at just ₹${price}${discountText}!\nBrowse product details and delivery options on MediGlaxo.\n\nOrder now: ${shareUrl}`;
 
   const handleCopyLink = async () => {
     try {

@@ -23,7 +23,7 @@ export default function Footer() {
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-white font-bold text-sm">100% Genuine Pharma</h4>
+              <h4 className="text-white font-bold text-sm">Medicine Catalog</h4>
               <p className="text-xs text-slate-400 mt-0.5">Sourced directly from verified licensed manufacturers.</p>
             </div>
           </div>

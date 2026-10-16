@@ -19,7 +19,7 @@ export default function AboutUsPage() {
           <div className="w-12 h-12 rounded-2xl bg-brand-blue-50 text-brand-blue-800 flex items-center justify-center font-bold">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h3 className="font-extrabold text-base text-slate-900">100% Genuine Medicines</h3>
+          <h3 className="font-extrabold text-base text-slate-900">Our Medicine Catalog</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
             All our pharmaceutical tablets, syrups, capsules, and health formulations are sourced directly from WHO-GMP certified manufacturers.
           </p>

@@ -6,8 +6,8 @@ export default function FaqPage() {
 
   const faqs = [
     {
-      q: 'Are all medicines sold on MediGlaxo 100% authentic?',
-      a: 'Yes, absolutely. All pharmaceuticals, generic tablets, syrups, capsules, and wellness formulations on MediGlaxo are sourced directly from licensed, WHO-GMP certified pharmaceutical manufacturers with verifiable batch certificate numbers, expiry dates, and tamper-proof seals.',
+      q: 'Where can I find medicine details?',
+      a: 'Check the product page for available medicine details. For questions about a specific product, batch or expiry date, contact MediGlaxo support before ordering.',
     },
     {
       q: 'What is MEDIGLAXO PHARMA\'s legal entity and registration status?',

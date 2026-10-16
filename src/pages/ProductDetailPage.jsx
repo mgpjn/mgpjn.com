@@ -242,10 +242,6 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
 
           <div className="space-y-2">
             <div className="flex items-center space-x-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-              <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-              <span>100% Genuine Medicine with Batch Certificate &amp; Expiry verified.</span>
-            </div>
-            <div className="flex items-center space-x-3 text-xs text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
               <Award className="w-5 h-5 text-amber-500 flex-shrink-0" />
               <span>WHO-GMP Certified &amp; CDSCO Compliant Formulation.</span>
             </div>

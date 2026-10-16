@@ -322,7 +322,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
 
             <div className="bg-black/30 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/15">
               <div className="text-2xl mb-1.5">🪔</div>
-              <h4 className="text-xs sm:text-sm font-black text-amber-200">100% Genuine &amp; Pure</h4>
+              <h4 className="text-xs sm:text-sm font-black text-amber-200">Explore Our Catalog</h4>
               <p className="text-[11px] sm:text-xs text-white/80 mt-1 leading-snug">
                 WHO-GMP certified batches with verified cold-chain and expiration guarantee.
               </p>
@@ -504,7 +504,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
               MediGlaxo Quality &amp; Trust Assurance
             </span>
             <h2 className="text-lg sm:text-2xl md:text-4xl font-black tracking-tight leading-tight">
-              100% Genuine Medicines with Certified Cold-Chain Logistics
+              Medicines and Wellness Products
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Every medication in our catalog is sourced directly from licensed pharmaceutical manufacturers, inspected by registered pharmacists, and delivered in temperature-controlled packaging to preserve efficacy.
@@ -579,10 +579,6 @@ export default function HomePage({ onOpenPrescriptionModal }) {
 
                 {/* Trust Badges */}
                 <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-4 text-[11px] sm:text-xs text-slate-300">
-                  <span className="flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>100% Genuine</span>
-                  </span>
                   <span className="flex items-center space-x-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Free Delivery &gt; ₹500</span>
