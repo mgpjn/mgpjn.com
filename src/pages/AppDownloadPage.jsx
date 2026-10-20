@@ -1,23 +1,19 @@
+import PlayStoreLink from '../components/PlayStoreLink';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
-  Download,
   ShieldCheck,
   Smartphone,
   Wifi,
 } from 'lucide-react';
 
-const apkUrl = 'https://api.mgpjn.com/api/v1/app/download';
-const directApkUrl = 'https://api.mgpjn.com/downloads/MediGlaxo-latest.apk';
-
 export default function AppDownloadPage() {
   const installSteps = [
-    'Tap Download APK and wait for the file to finish downloading.',
-    'Open the APK from browser downloads or file manager.',
-    'If Android asks, allow install from this browser once.',
-    'Install MediGlaxo, then open the app and login with your registered mobile number.',
+    'Tap Download on Play Store to open the MediGlaxo listing.',
+    'Tap Install, or Update if MediGlaxo is already installed.',
+    'Open the app and sign in with your registered mobile number.',
   ];
 
   return (
@@ -35,23 +31,19 @@ export default function AppDownloadPage() {
                 Download MediGlaxo Pharma Junction App
               </h1>
               <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-2xl">
-                Use the direct APK download while the store update is pending. The website download is hosted from MediGlaxo's official server for the latest app build.
+                MediGlaxo is available on Google Play. Install the app or update your existing version directly from the Play Store.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href={apkUrl}
+              <PlayStoreLink
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-orange-500 px-5 py-3 text-sm font-black text-white shadow-xl shadow-orange-500/20 transition hover:bg-brand-orange-600"
-              >
-                <Download className="h-5 w-5" />
-                Download APK
-              </a>
+              >Download on Play Store</PlayStoreLink>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-3 pt-2">
               {[
-                ['Official Source', 'Hosted by MediGlaxo'],
+                ['Available On', 'Google Play'],
                 ['Package', 'com.mgpjn.app'],
                 ['Works On', 'Android phones'],
               ].map(([label, value]) => (
@@ -95,7 +87,7 @@ export default function AppDownloadPage() {
                   <div className="flex items-start gap-2">
                     <Wifi className="mt-0.5 h-4 w-4 text-brand-blue-800" />
                     <p>
-                      If your phone blocks APK install, choose settings from the prompt and allow this browser only for this installation.
+                      Open this page on your Android phone and use Google Play to install or update MediGlaxo.
                     </p>
                   </div>
                 </div>
@@ -107,9 +99,9 @@ export default function AppDownloadPage() {
 
       <section className="max-w-7xl mx-auto px-4 py-10 sm:py-14 grid lg:grid-cols-3 gap-5">
         {[
-          ['Latest Website Build', 'Direct APK download is available immediately from the official MediGlaxo server.'],
-          ['Direct APK Download', 'Use the website APK while the Play Store update is pending.'],
-          ['Safe Installation', 'The app package remains com.mgpjn.app, so it installs as the MediGlaxo Android app.'],
+          ['Available on Google Play', 'Install MediGlaxo directly from its official Google Play listing.'],
+          ['Easy Updates', 'Use the Update button in Google Play whenever a new version is available.'],
+          ['Your MediGlaxo Account', 'Sign in with your registered mobile number after installation.'],
         ].map(([title, body]) => (
           <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
@@ -133,12 +125,9 @@ export default function AppDownloadPage() {
               Browse Medicines
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <a
-              href={directApkUrl}
+            <PlayStoreLink
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-800 hover:bg-slate-50"
-            >
-              Direct APK Link
-            </a>
+            >Download on Play Store</PlayStoreLink>
           </div>
         </div>
       </section>

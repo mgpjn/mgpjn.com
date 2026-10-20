@@ -1,6 +1,7 @@
+import PlayStoreLink from './PlayStoreLink';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Mail, MapPin, ShieldCheck, Truck, Headphones, Lock, Download } from 'lucide-react';
+import { Phone, Mail, MapPin, ShieldCheck, Truck, Headphones, Lock } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -64,13 +65,9 @@ export default function Footer() {
               <p><strong>GSTIN:</strong> 24ABVFM0075D1ZA</p>
             </div>
             <div className="flex flex-col gap-2 pt-2">
-              <Link
-                to="/app"
+              <PlayStoreLink
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange-500 px-4 py-2.5 text-xs font-black text-white hover:bg-brand-orange-600"
-              >
-                <Download className="h-4 w-4" />
-                Download Android App
-              </Link>
+              >Download on Play Store</PlayStoreLink>
             </div>
           </div>
 
@@ -83,7 +80,7 @@ export default function Footer() {
               <li><Link to="/shop?category=ayurvedic" className="hover:text-brand-orange-400 transition-colors">Ayurvedic Healthcare</Link></li>
               <li><Link to="/shop?category=fitness-health" className="hover:text-brand-orange-400 transition-colors">Fitness Supplements</Link></li>
               <li><Link to="/track-order" className="hover:text-brand-orange-400 transition-colors">Track Your Order</Link></li>
-              <li><Link to="/app" className="hover:text-brand-orange-400 transition-colors font-bold">Download Android App</Link></li>
+              <li><PlayStoreLink className="inline-flex items-center gap-2 hover:text-brand-orange-400 transition-colors font-bold">Download on Play Store</PlayStoreLink></li>
             </ul>
           </div>
 

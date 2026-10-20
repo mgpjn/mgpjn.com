@@ -1,10 +1,11 @@
+import PlayStoreLink from '../components/PlayStoreLink';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Pill, Activity, Sparkles, ShieldCheck, Truck, Clock,
   ChevronRight, ChevronLeft, Percent, Award, HeartHandshake, PhoneCall,
   Search, Upload, CheckCircle2, Flame, Star, Tag, Layers, ArrowRight,
-  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Download, Smartphone, Users
+  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Smartphone, Users
 } from 'lucide-react';
 import { getCategories, getHomepageData, getFeaturedProducts, getBanners } from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -228,23 +229,19 @@ export default function HomePage({ onOpenPrescriptionModal }) {
             </div>
             <div>
               <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-orange-500/15 border border-brand-orange-400/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-orange-100">
-                Latest Android APK
+                Available on Google Play
               </div>
               <h2 className="mt-2 text-lg sm:text-2xl font-black tracking-tight">Install MediGlaxo app for faster orders</h2>
               <p className="mt-1 text-xs sm:text-sm text-slate-300 max-w-2xl">
-                Direct website download is available while the latest store update is pending.
+                Get the latest MediGlaxo app from Google Play for Android.
               </p>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:flex-shrink-0">
-            <Link
-              to="/app"
+            <PlayStoreLink
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange-500 px-4 py-2.5 text-xs sm:text-sm font-black text-white hover:bg-brand-orange-600 shadow-lg shadow-orange-500/20"
-            >
-              <Download className="h-4 w-4" />
-              Download App
-            </Link>
+            >Download on Play Store</PlayStoreLink>
           </div>
         </div>
       </section>
