@@ -1,105 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Search, Award, Copy, Check, ArrowLeft, Percent } from 'lucide-react';
-import { getDirectReferrals } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { getDirectReferrals, getTeamMembers } from '../../services/api';
+import { formatMemberDate } from '../../utils/memberDate';
 
 export default function ReferralsPage() {
-  const { user } = useAuth();
-  const [referrals, setReferrals] = useState([]);
+  const [members, setMembers] = useState({ data: [], total: 0, last_page: 1 });
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-
+  const [error, setError] = useState('');
+  const [scope, setScope] = useState('direct');
+  const [filters, setFilters] = useState({ search: '', joined_from: '', joined_to: '', sort: 'newest', page: 1 });
+  const [reload, setReload] = useState(0);
   useEffect(() => {
-    getDirectReferrals()
-      .then((res) => {
-        if (res.data.success) {
-          setReferrals(res.data.referrals.data || []);
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filtered = referrals.filter(
-    (r) =>
-      r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.referral_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.phone?.includes(searchTerm)
-  );
-
+    let active = true;
+    setLoading(true); setError('');
+    const timeout = setTimeout(() => {
+      const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''));
+      (scope === 'direct' ? getDirectReferrals : getTeamMembers)(params)
+        .then(({ data }) => {
+          if (!data.success) throw new Error('Unable to load members.');
+          if (active) setMembers(data.referrals || data.members);
+        })
+        .catch(() => { if (active) setError('Unable to load members. Please try again.'); })
+        .finally(() => { if (active) setLoading(false); });
+    }, 250);
+    return () => { active = false; clearTimeout(timeout); };
+  }, [filters, scope, reload]);
+  const update = (key, value) => setFilters((old) => ({ ...old, [key]: value, page: 1 }));
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <Link to="/mlm" className="text-xs font-bold text-brand-blue-800 hover:underline flex items-center space-x-1 mb-1">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Referral Income Dashboard</span>
-          </Link>
-          <div className="flex items-center space-x-2">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Direct Referrals (Stage 1)</h1>
-            <span className="bg-orange-50 text-[#ff5722] text-xs font-black px-2.5 py-0.5 rounded-full">
-              10% Direct • 15% Total
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Directly sponsored partners registered with your referral code {user?.referral_code}.
-          </p>
-        </div>
-
-        <div className="relative">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search downline name, code..."
-            className="px-3.5 py-2 pl-9 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-brand-blue-700 font-medium"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        </div>
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      <Link to="/mlm" className="text-xs font-bold text-brand-blue-800">← Referral Income Dashboard</Link>
+      <div><h1 className="text-2xl font-black text-slate-900">Member joining activity</h1><p className="text-sm text-slate-500 mt-1">Registration dates and times are shown in Asia/Kolkata (IST). Sponsor is the direct parent in your referral network.</p></div>
+      <div className="flex flex-wrap gap-3 items-end text-xs">
+        <label className="space-y-1">Members<select aria-label="Member scope" value={scope} onChange={(e) => { setScope(e.target.value); update('page', 1); }} className="block border rounded-xl p-2"><option value="direct">Direct referrals</option><option value="team">All downline members</option></select></label>
+        <label className="space-y-1">Search<input aria-label="Search members" value={filters.search} onChange={(e) => update('search', e.target.value)} placeholder="Name or member ID" className="block border rounded-xl p-2" /></label>
+        <label className="space-y-1">From (IST)<input aria-label="Joined from" type="date" value={filters.joined_from} onChange={(e) => update('joined_from', e.target.value)} className="block border rounded-xl p-2" /></label>
+        <label className="space-y-1">To (IST)<input aria-label="Joined to" type="date" value={filters.joined_to} min={filters.joined_from} onChange={(e) => update('joined_to', e.target.value)} className="block border rounded-xl p-2" /></label>
+        <label className="space-y-1">Order<select aria-label="Member sort" value={filters.sort} onChange={(e) => update('sort', e.target.value)} className="block border rounded-xl p-2"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+        <button onClick={() => setReload((n) => n + 1)} className="border rounded-xl p-2">Refresh</button>
       </div>
-
-      <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm overflow-x-auto">
-        <table className="w-full text-xs text-left">
-          <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold">
-            <tr>
-              <th className="p-3">Partner / Customer</th>
-              <th className="p-3">Referral Code</th>
-              <th className="p-3">Role / Level</th>
-              <th className="p-3">Joined Date</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
+      <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm overflow-x-auto" aria-busy={loading}>
+        {error ? <p role="alert" className="p-6 text-rose-700">{error} <button className="underline" onClick={() => setReload((n) => n + 1)}>Retry</button></p> : <table className="w-full text-xs text-left min-w-[700px]">
+          <thead className="bg-slate-50 text-slate-500 uppercase text-[10px]"><tr>{['Member', 'Member ID', 'Role', 'Registered (IST)', 'Direct sponsor / parent', 'Joining status'].map((heading) => <th className="p-3" key={heading}>{heading}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-100">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="p-6 text-center text-slate-400">
-                  {loading ? 'Loading referrals...' : 'No direct referrals found.'}
-                </td>
-              </tr>
-            ) : (
-              filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/60">
-                  <td className="p-3 font-bold text-slate-900">
-                    {r.name}
-                    <span className="text-[11px] text-slate-400 font-normal block">{r.phone}</span>
-                  </td>
-                  <td className="p-3 font-mono font-bold text-[#ff5722]">{r.referral_code}</td>
-                  <td className="p-3 font-semibold text-slate-700 capitalize">
-                    {r.role ? r.role.replace('_', ' ') : 'Customer'}
-                  </td>
-                  <td className="p-3 text-slate-500">{new Date(r.created_at).toLocaleDateString()}</td>
-                  <td className="p-3">
-                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                      {r.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
+            {loading ? <tr><td colSpan="6" className="p-6 text-center">Loading members...</td></tr> : !members.data.length ? <tr><td colSpan="6" className="p-6 text-center text-slate-500">No members found for these filters.</td></tr> : members.data.map((member) => <tr key={member.id}>
+              <td className="p-3 font-bold">{member.name}</td><td className="p-3 font-mono">{member.referral_code || `#${member.id}`}<span className="block text-slate-400">#{member.id}</span></td>
+              <td className="p-3 capitalize">{member.role?.replaceAll('_', ' ')}</td><td className="p-3 whitespace-nowrap">{formatMemberDate(member.created_at)}</td>
+              <td className="p-3">{member.sponsor?.name || 'Not assigned'}<span className="block text-slate-500 font-mono">{member.sponsor?.referral_code || member.sponsor_id || '—'}</span></td>
+              <td className="p-3 capitalize">{member.status || 'Not recorded'}</td>
+            </tr>)}
           </tbody>
-        </table>
+        </table>}
       </div>
+      <div className="flex items-center justify-between gap-3 text-xs"><span>{members.total} members · Page {filters.page} of {members.last_page}</span><div className="flex gap-3">
+        <button disabled={loading || filters.page <= 1} className="border rounded-xl p-2 disabled:opacity-40" onClick={() => setFilters((old) => ({ ...old, page: old.page - 1 }))}>Previous</button>
+        <button disabled={loading || filters.page >= members.last_page} className="border rounded-xl p-2 disabled:opacity-40" onClick={() => setFilters((old) => ({ ...old, page: old.page + 1 }))}>Next</button>
+      </div></div>
     </div>
   );
 }

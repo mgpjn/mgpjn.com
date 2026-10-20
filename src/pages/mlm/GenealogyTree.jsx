@@ -1,3 +1,4 @@
+import { formatMemberDate } from '../../utils/memberDate';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Network, Users, ChevronRight, Award, ShieldCheck, ChevronDown, ArrowLeft, Layers } from 'lucide-react';
@@ -41,6 +42,8 @@ function TreeNode({ node, level = 1 }) {
         <p className="text-[10px] opacity-80 font-mono mt-0.5">ID: {node.referral_code}</p>
         <p className="text-[10px] opacity-75 font-semibold capitalize">{node.role ? node.role.replace('_', ' ') : 'Customer'}</p>
 
+        <p className="text-[10px] mt-2">Joined {formatMemberDate(node.created_at || node.joined_at)}</p>
+        <p className="text-[10px]">Sponsor: {node.sponsor?.referral_code || node.sponsor_id || 'Not assigned'} · {node.status || 'Not recorded'}</p>
         <div className="mt-2 pt-2 border-t border-black/10 flex justify-between text-[10px] font-bold">
           <span>Directs: {node.stage1_referrals_count || 0}</span>
           <span className="text-emerald-500 font-black">₹{(node.total_earned || 0).toFixed(0)}</span>
@@ -71,6 +74,7 @@ function TreeNode({ node, level = 1 }) {
 export default function GenealogyTree() {
   const [tree, setTree] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     getGenealogyTree()
@@ -79,7 +83,7 @@ export default function GenealogyTree() {
           setTree(res.data.tree);
         }
       })
-      .catch((err) => console.error(err))
+      .catch(() => setError('Unable to load your network. Please refresh to try again.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -97,7 +101,7 @@ export default function GenealogyTree() {
       </div>
 
       <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm overflow-x-auto min-h-[500px] flex items-start justify-center">
-        {loading ? (
+        {error ? <p role="alert" className="text-sm text-rose-700 py-16">{error}</p> : loading ? (
           <p className="text-xs text-slate-400 py-16">Loading referral network tree...</p>
         ) : tree ? (
           <div className="py-4">

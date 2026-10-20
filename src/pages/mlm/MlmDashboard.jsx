@@ -1,3 +1,4 @@
+import { formatMemberDate } from '../../utils/memberDate';
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
@@ -155,6 +156,19 @@ export default function MlmDashboard() {
         <p>Commission enters your wallet after payment is confirmed. COD cash must be recorded as received.</p>
         <button type="button" onClick={loadDashboard} className="flex items-center gap-1 font-bold text-brand-blue-800"><RefreshCw className="w-4 h-4" />Refresh balance</button>
       </div>
+      <section className="bg-white border border-slate-100 rounded-3xl p-5 space-y-3">
+        <div className="flex flex-wrap justify-between gap-2">
+          <h2 className="font-black text-slate-900">Recent team joins</h2>
+          <Link to="/mlm/referrals" className="text-xs font-bold text-brand-blue-800">View members →</Link>
+        </div>
+        {(data?.recentJoins || []).length ? data.recentJoins.map((member) => (
+          <div key={member.id} className="border-t border-slate-100 pt-3 text-xs flex flex-wrap justify-between gap-2">
+            <div><strong>{member.name}</strong> · {member.referral_code}<p className="text-slate-500 mt-1">Via {member.sponsor?.name || 'Unassigned'} ({member.sponsor?.referral_code || member.sponsor_id || '—'}) · {member.status}</p></div>
+            <time className="text-slate-500">{formatMemberDate(member.created_at)}</time>
+          </div>
+        )) : <p className="text-xs text-slate-500">No team joins yet.</p>}
+      </section>
+
       {/* Top Header & Shareable Referral Banner */}
       <div className="bg-gradient-to-r from-brand-blue-950 via-brand-blue-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl border border-white/10">
         <div className="space-y-2">

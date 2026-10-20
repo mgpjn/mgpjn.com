@@ -1,3 +1,4 @@
+import { formatMemberDate } from '../../utils/memberDate';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -2914,7 +2915,7 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex items-center space-x-1 text-slate-400 text-[10px]">
                               <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                              <span>Joined {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                              <span>Joined {formatMemberDate(u.created_at)}</span>
                             </div>
                           </div>
                         </div>
@@ -3746,6 +3747,7 @@ export default function AdminDashboard() {
                               <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
                                 <td className="p-3.5 font-bold text-[#ff5722] font-mono">
                                   {u.referral_code || `CUST${u.id}`}
+                                  <span className="block mt-1 text-[10px] font-normal font-sans text-slate-500">Joined {formatMemberDate(u.created_at)}</span>
                                 </td>
                                 <td className="p-3.5">
                                   <div className="flex items-center space-x-2.5">
@@ -3937,6 +3939,7 @@ export default function AdminDashboard() {
                               <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
                                 <td className="p-3.5 font-bold text-[#ff5722] font-mono">
                                   {u.referral_code || `SRT${u.id}`}
+                                  <span className="block mt-1 text-[10px] font-normal font-sans text-slate-500">Joined {formatMemberDate(u.created_at)}</span>
                                 </td>
                                 <td className="p-3.5">
                                   <div className="flex items-center space-x-2.5">
@@ -4087,6 +4090,7 @@ export default function AdminDashboard() {
                             <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
                               <td className="p-3.5 font-bold text-[#ff5722]">
                                 {u.referral_code || `MG${u.id}`}
+                                  <span className="block mt-1 text-[10px] font-normal font-sans text-slate-500">Joined {formatMemberDate(u.created_at)}</span>
                               </td>
                               <td className="p-3.5">
                                 <div className="flex items-center space-x-2.5">
@@ -6559,7 +6563,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div>
                                       <span className="font-bold text-slate-900 block text-sm">{u.name}</span>
-                                      <span className="text-[11px] text-slate-400 block">{u.email || 'No email registered'}</span>
+                                      <span className="text-[11px] text-slate-400 block">{u.email || 'No email registered'}</span><span className="block text-[10px] text-slate-500">Joined {formatMemberDate(u.created_at)}</span>
                                       {u.business_name && (
                                         <span className="text-[10px] text-slate-500 font-medium">{u.business_name}</span>
                                       )}
@@ -9551,7 +9555,7 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {selectedKycUser.business_name || selectedKycUser.shop_name || 'No Business Name'} • Member since {new Date(selectedKycUser.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {selectedKycUser.business_name || selectedKycUser.shop_name || 'No Business Name'} • Member since {formatMemberDate(selectedKycUser.created_at)}
                   </p>
                 </div>
               </div>
@@ -11196,7 +11200,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs text-slate-600">
                   <span>Location: <strong>{assignTargetCustomer.city || 'N/A'}, {assignTargetCustomer.state || 'India'}</strong></span>
-                  <span>Joined: <strong>{new Date(assignTargetCustomer.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></span>
+                  <span>Joined: <strong>{formatMemberDate(assignTargetCustomer.created_at)}</strong></span>
                 </div>
               </div>
 

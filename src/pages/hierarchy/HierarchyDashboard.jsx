@@ -1,3 +1,4 @@
+import { formatMemberDate } from '../../utils/memberDate';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -26,6 +27,8 @@ export default function HierarchyDashboard() {
   const [ordersData, setOrdersData] = useState({ data: [], total: 0 });
   const [purchaseOrdersData, setPurchaseOrdersData] = useState({ data: [] });
   const [loading, setLoading] = useState(true);
+  const [memberError, setMemberError] = useState('');
+  const [memberPage, setMemberPage] = useState(1);
 
   // PO States
   const [isPoModalOpen, setIsPoModalOpen] = useState(false);
@@ -68,11 +71,12 @@ export default function HierarchyDashboard() {
 
   const loadData = async () => {
     setLoading(true);
+    setMemberError('');
     try {
       const [statsRes, rolesRes, usersRes] = await Promise.all([
         getHierarchyStats(),
         getAllowedRoles(),
-        getHierarchyUsers({ search, role: selectedRole, status: selectedStatus, per_page: 20 }),
+        getHierarchyUsers({ search, role: selectedRole, status: selectedStatus, per_page: 20, page: memberPage }),
       ]);
 
       if (statsRes.data.success) setStats(statsRes.data);
@@ -84,7 +88,7 @@ export default function HierarchyDashboard() {
       }
       if (usersRes.data.success) setUsersData(usersRes.data.users || { data: [], total: 0 });
     } catch (err) {
-      console.error(err);
+      setMemberError('Unable to load members. Please refresh to try again.');
     } finally {
       setLoading(false);
     }
@@ -153,7 +157,7 @@ export default function HierarchyDashboard() {
 
   useEffect(() => {
     loadData();
-  }, [search, selectedRole, selectedStatus]);
+  }, [search, selectedRole, selectedStatus, memberPage]);
 
   useEffect(() => {
     if (activeTab === 'orders') loadOrders();
@@ -385,7 +389,7 @@ export default function HierarchyDashboard() {
                 type="text"
                 placeholder="Search name, phone, code..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setMemberPage(1); }}
                 className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-brand-blue-600"
               />
             </div>
@@ -393,7 +397,7 @@ export default function HierarchyDashboard() {
             <div className="flex items-center space-x-3 w-full md:w-auto">
               <select
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
+                onChange={(e) => { setSelectedRole(e.target.value); setMemberPage(1); }}
                 className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
               >
                 <option value="all">All Roles</option>
@@ -404,7 +408,7 @@ export default function HierarchyDashboard() {
 
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
+                onChange={(e) => { setSelectedStatus(e.target.value); setMemberPage(1); }}
                 className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700"
               >
                 <option value="all">All Status</option>
@@ -433,6 +437,7 @@ export default function HierarchyDashboard() {
             </div>
           </div>
 
+          {memberError && <p role="alert" className="text-sm text-rose-700">{memberError}</p>}
           {/* Members Table */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -443,7 +448,7 @@ export default function HierarchyDashboard() {
                     <th className="py-3.5 px-4">Role Tier</th>
                     <th className="py-3.5 px-4">Referral ID</th>
                     <th className="py-3.5 px-4">Upline / Sponsor</th>
-                    <th className="py-3.5 px-4">Location</th>
+                    <th className="py-3.5 px-4">Registered (IST)</th><th className="py-3.5 px-4">Location</th>
                     <th className="py-3.5 px-4">Wallet Balance</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
@@ -452,11 +457,11 @@ export default function HierarchyDashboard() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-10 text-slate-400">Loading downline hierarchy...</td>
+                      <td colSpan="9" className="text-center py-10 text-slate-400">Loading downline hierarchy...</td>
                     </tr>
                   ) : usersData.data.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-10 text-slate-400">
+                      <td colSpan="9" className="text-center py-10 text-slate-400">
                         No team members found. Click "+ Add Team Member" to register members.
                       </td>
                     </tr>
@@ -490,6 +495,7 @@ export default function HierarchyDashboard() {
                             <span className="text-slate-400">Direct / Head Office</span>
                           )}
                         </td>
+                        <td className="py-3 px-4 text-slate-500 whitespace-nowrap">{formatMemberDate(u.created_at)}</td>
                         <td className="py-3 px-4 text-slate-600">
                           {u.city ? `${u.city}, ${u.state || ''}` : 'India'}
                         </td>
@@ -530,6 +536,13 @@ export default function HierarchyDashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="flex justify-between items-center p-4 text-xs border-t border-slate-100">
+              <span>Newest members first · Page {memberPage} of {usersData.last_page || 1}</span>
+              <div className="flex gap-3">
+                <button className="border rounded-lg px-3 py-2 disabled:opacity-40" disabled={loading || memberPage <= 1} onClick={() => setMemberPage((page) => page - 1)}>Previous</button>
+                <button className="border rounded-lg px-3 py-2 disabled:opacity-40" disabled={loading || memberPage >= (usersData.last_page || 1)} onClick={() => setMemberPage((page) => page + 1)}>Next</button>
+              </div>
             </div>
           </div>
         </div>

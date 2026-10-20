@@ -4,7 +4,7 @@ import {
   Pill, Activity, Sparkles, ShieldCheck, Truck, Clock,
   ChevronRight, ChevronLeft, Percent, Award, HeartHandshake, PhoneCall,
   Search, Upload, CheckCircle2, Flame, Star, Tag, Layers, ArrowRight,
-  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Download, Smartphone
+  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Download, Smartphone, Users
 } from 'lucide-react';
 import { getCategories, getHomepageData, getFeaturedProducts, getBanners } from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -123,7 +123,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
 
   return (
     <div className="space-y-8 sm:space-y-12 pb-16 pt-2">
-      {/* 1. HERO PROMOTIONAL BANNER SECTION (DYNAMIC FROM ADMIN & FESTIVE FALLBACK) */}
+      {/* 1. HERO PROMOTIONAL BANNER SECTION (DYNAMIC FROM ADMIN & HEALTHCARE FALLBACK) */}
       {(featuredData.hero_slider_enabled !== false && featuredData.hero_slider_enabled !== '0' && banners.length > 0) && (
         <section className="w-full max-w-7xl px-2.5 sm:px-4 mx-auto overflow-hidden">
           <div className="relative w-full max-w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-amber-500/20 bg-slate-950 group h-52 xs:h-60 sm:h-72 md:h-80 lg:h-[380px] xl:h-[420px]">
@@ -137,20 +137,25 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                 <img
                   src={banner.image}
                   alt={banner.title}
+                  width="1600" height="700"
+                  srcSet={banner.image?.includes('/images/healthcare/') ? `${banner.image.replace('-1600.', '-640.')} 640w, ${banner.image} 1600w` : undefined}
+                  sizes="(max-width: 640px) 100vw, 1280px"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
                   className="w-full h-full object-cover object-center"
                 />
-                {/* Festive Ambient Gradient Overlay */}
+                {/* Accessible text overlay */}
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-transparent flex items-center py-4 px-8 xs:px-10 sm:px-14 md:px-16 sm:py-8 md:py-12 lg:py-16">
                   <div className="max-w-xl space-y-2 sm:space-y-3.5 text-white">
                     <div className="flex flex-wrap items-center gap-2">
                       {banner.subtitle && (
-                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-600 text-white text-[9px] sm:text-xs font-black uppercase tracking-wider rounded-full shadow-md">
+                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-brand-blue-800 text-white text-[9px] sm:text-xs font-black uppercase tracking-wider rounded-full shadow-md">
                           {banner.subtitle}
                         </span>
                       )}
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] sm:text-xs font-bold rounded-full">
-                        <span>🪔</span>
-                        <span>Festive Special</span>
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>Healthcare essentials</span>
                       </span>
                     </div>
 
@@ -158,14 +163,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                       {banner.title}
                     </h2>
 
-                    {/* Festive Promo Coupon Pill */}
-                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 text-xs sm:text-sm">
-                      <span className="text-amber-300 font-bold">Festive Coupon:</span>
-                      <code className="bg-amber-400 text-slate-900 font-black px-2 py-0.5 rounded text-xs sm:text-sm shadow-xs">
-                        {banner.code || 'NAVRATRI9'}
-                      </code>
-                      <span className="text-white/90 text-[11px] sm:text-xs hidden xs:inline">• Extra 10% Instant Off</span>
-                    </div>
+                    <p className="text-xs sm:text-base text-slate-200 max-w-md">{banner.tagline || 'Explore medicines, pharmacy supplies and everyday wellness essentials with MediGlaxo.'}</p>
 
                     {banner.link && (
                       <div className="pt-1 sm:pt-2">
@@ -173,7 +171,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                           to={banner.link.startsWith('/') ? banner.link : `/shop`}
                           className="inline-flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-lg shadow-orange-500/20 transition-all hover:scale-105"
                         >
-                          <span>Explore Navratri Offers</span>
+                          <span>Shop healthcare</span>
                           <ChevronRight className="w-4 h-4 text-slate-950" />
                         </Link>
                       </div>
@@ -189,7 +187,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                 <button
                   type="button"
                   onClick={() => setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length)}
-                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition-colors"
+                  className="absolute left-2 sm:left-4 bottom-2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition-colors"
                   aria-label="Previous Banner"
                 >
                   <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -197,7 +195,7 @@ export default function HomePage({ onOpenPrescriptionModal }) {
                 <button
                   type="button"
                   onClick={() => setCurrentBannerIndex((prev) => (prev + 1) % banners.length)}
-                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition-colors"
+                  className="absolute right-2 sm:right-4 bottom-2 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md border border-white/10 transition-colors"
                   aria-label="Next Banner"
                 >
                   <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -251,96 +249,24 @@ export default function HomePage({ onOpenPrescriptionModal }) {
         </div>
       </section>
 
-      {/* 1.5 🌸 SHUBH NAVRATRI MAHOTSAV - FESTIVE OFFERS & VRAT ESSENTIALS SHOWCASE */}
       <section className="w-full max-w-7xl px-2.5 sm:px-4 mx-auto">
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-rose-900 via-amber-800 to-orange-800 p-4 sm:p-6 md:p-8 shadow-xl text-white border border-amber-500/30">
-          {/* Subtle Decorative Ambient Glows */}
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-44 h-44 bg-amber-400/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 -mb-10 w-52 h-52 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Section Header with Festive Greetings */}
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/20 pb-4 mb-5">
-            <div className="flex items-center space-x-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 p-0.5 shadow-lg flex-shrink-0">
-                <div className="w-full h-full bg-slate-950/40 rounded-[14px] flex items-center justify-center text-2xl">
-                  🪔
-                </div>
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full shadow-xs">
-                    🌸 Navratri Mahotsav 2026
-                  </span>
-                  <span className="text-xs font-semibold text-amber-200">
-                    Jai Mata Di • 9 Days of Health Blessings
-                  </span>
-                </div>
-                <h3 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight mt-1 text-white">
-                  Shubh Navratri Festive Health Offers &amp; Fasting Care
-                </h3>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2.5 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-400/30 self-start md:self-auto">
-              <span className="text-xs text-amber-200 font-bold">Use Coupon:</span>
-              <code className="text-xs sm:text-sm font-black bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-lg shadow-sm">
-                NAVRATRI9
-              </code>
-              <span className="text-[11px] text-white/90 font-medium">Flat 10% Extra Off</span>
-            </div>
-          </div>
-
-          {/* 4 Festive Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 relative z-10">
-            <Link
-              to="/shop"
-              className="bg-black/30 hover:bg-black/45 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/15 transition-all hover:-translate-y-1 hover:border-amber-400/50 group block"
-            >
-              <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🌸</div>
-              <h4 className="text-xs sm:text-sm font-black text-amber-200">9 Sacred Flash Deals</h4>
-              <p className="text-[11px] sm:text-xs text-white/80 mt-1 leading-snug">
-                Up to 40% OFF across top therapeutic medicines &amp; daily family care.
-              </p>
-              <span className="inline-flex items-center text-[10px] font-bold text-amber-300 mt-2">
-                Explore Deals →
-              </span>
-            </Link>
-
-            <Link
-              to="/shop?category=ayurvedic-herbal"
-              className="bg-black/30 hover:bg-black/45 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/15 transition-all hover:-translate-y-1 hover:border-amber-400/50 group block"
-            >
-              <div className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">🌿</div>
-              <h4 className="text-xs sm:text-sm font-black text-amber-200">Vrat &amp; Fasting Vitality</h4>
-              <p className="text-[11px] sm:text-xs text-white/80 mt-1 leading-snug">
-                Ayurvedic liver tonics, electrolytes, vitamin shots &amp; nutrition tonics.
-              </p>
-              <span className="inline-flex items-center text-[10px] font-bold text-amber-300 mt-2">
-                View Herbal Range →
-              </span>
-            </Link>
-
-            <div className="bg-black/30 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/15">
-              <div className="text-2xl mb-1.5">🪔</div>
-              <h4 className="text-xs sm:text-sm font-black text-amber-200">Explore Our Catalog</h4>
-              <p className="text-[11px] sm:text-xs text-white/80 mt-1 leading-snug">
-                WHO-GMP certified batches with verified cold-chain and expiration guarantee.
-              </p>
-              <span className="inline-flex items-center text-[10px] font-bold text-emerald-300 mt-2">
-                ✓ Quality Guaranteed
-              </span>
-            </div>
-
-            <div className="bg-black/30 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/15">
-              <div className="text-2xl mb-1.5">🚚</div>
-              <h4 className="text-xs sm:text-sm font-black text-amber-200">Shubh Priority Dispatch</h4>
-              <p className="text-[11px] sm:text-xs text-white/80 mt-1 leading-snug">
-                Express same-day dispatch and zero handling charges on all festive orders.
-              </p>
-              <span className="inline-flex items-center text-[10px] font-bold text-amber-300 mt-2">
-                ⚡ Express Delivery
-              </span>
-            </div>
+        <div className="rounded-3xl bg-blue-50 border border-blue-100 p-5 sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-blue-800">Everyday healthcare</p>
+          <h2 className="mt-2 text-xl sm:text-3xl font-black text-slate-900">Care for every part of your day</h2>
+          <p className="mt-2 text-sm text-slate-600">Browse medicines, personal care and wellness essentials in one place.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+            {[
+              { title: 'Medicines & pharmacy', text: 'Explore the medicine catalogue and product details.', to: '/shop', Icon: Pill },
+              { title: 'Wellness essentials', text: 'Discover nutrition and everyday personal care.', to: '/shop?category=personal-care', Icon: Heart },
+              { title: 'Pharmacy partners', text: 'Manage your team and orders through your partner account.', to: '/login', Icon: Users },
+            ].map(({ title, text, to, Icon }) => (
+              <Link key={title} to={to} className="rounded-2xl bg-white p-5 border border-blue-100 hover:border-brand-blue-700 transition-colors">
+                <Icon className="w-6 h-6 text-brand-blue-800" />
+                <h3 className="font-bold text-slate-900 mt-3">{title}</h3>
+                <p className="text-sm text-slate-500 mt-1">{text}</p>
+                <span className="inline-block text-xs font-bold text-brand-blue-800 mt-3">Explore →</span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

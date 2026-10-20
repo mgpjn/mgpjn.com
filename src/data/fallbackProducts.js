@@ -297,35 +297,18 @@ export const FALLBACK_TOP_DISCOUNTS = FALLBACK_PRODUCTS.filter(p => (p.discount_
 export const FALLBACK_BANNERS = [
   {
     id: 1,
-    title: "🌸 Navratri Mahotsav Mega Health Sale 🪔",
-    subtitle: "SPECIAL 9-DAY FESTIVE SAVINGS • UP TO 40% OFF",
-    highlight: "FLAT 10% EXTRA CASHBACK",
-    code: "NAVRATRI9",
-    tagline: "Celebrate pure wellness & auspicious health blessings for your entire family",
-    image: "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=1600&auto=format&fit=crop&q=80",
+    title: "Medicines for everyday care",
+    subtitle: "MEDICINES & PHARMACY",
+    tagline: "Browse our pharmaceutical catalogue and find the essentials for your family's care.",
+    image: "/images/healthcare/medicines-1600.webp",
     link: "/shop",
-    badge: "Navratri Maha Bachat"
   },
   {
     id: 2,
-    title: "🌿 Shubh Navratri: Ayurvedic & Fasting Vitality Care",
-    subtitle: "FLAT 25% OFF ON AYURVEDIC TONICS & ENERGY ESSENTIALS",
-    highlight: "100% PURE HERBAL",
-    code: "VRAT25",
-    tagline: "Sustain your divine fasting energy with natural tonics, multivitamins & electrolytes",
-    image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1600&auto=format&fit=crop&q=80",
-    link: "/shop?category=ayurvedic-herbal",
-    badge: "Vrat & Herbal Essentials"
-  },
-  {
-    id: 3,
-    title: "✨ Jai Mata Di: Wholesale & Retail Festive Bonanza",
-    subtitle: "HIGHEST PARTNER MARGINS & FREE PRIORITY DISPATCH",
-    highlight: "FESTIVE BULK DEALS",
-    code: "MAHABACHAT",
-    tagline: "Empower your pharmacy with genuine WHO-GMP batch certified medicines & swift express delivery",
-    image: "https://images.unsplash.com/photo-1586015555751-63c27b0b9248?w=1600&auto=format&fit=crop&q=80",
+    title: "Your pharmacy partner, online",
+    subtitle: "HEALTHCARE & WELLNESS",
+    tagline: "Explore pharmacy supplies, personal care and wellness products in one place.",
+    image: "/images/healthcare/pharmacy-1600.webp",
     link: "/shop",
-    badge: "Festive Wholesale Bachat"
-  }
+  },
 ];
