@@ -5,7 +5,7 @@ import {
   Pill, Activity, Sparkles, ShieldCheck, Truck, Clock,
   ChevronRight, ChevronLeft, Percent, Award, HeartHandshake, PhoneCall,
   Search, Upload, CheckCircle2, Flame, Star, Tag, Layers, ArrowRight,
-  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Smartphone, Users
+  Droplets, Syringe, Sparkle, Heart, RefreshCw, Zap, Smartphone
 } from 'lucide-react';
 import { getCategories, getHomepageData, getFeaturedProducts, getBanners } from '../services/api';
 import ProductCard from '../components/ProductCard';
@@ -242,28 +242,6 @@ export default function HomePage({ onOpenPrescriptionModal }) {
             <PlayStoreLink
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange-500 px-4 py-2.5 text-xs sm:text-sm font-black text-white hover:bg-brand-orange-600 shadow-lg shadow-orange-500/20"
             >Download on Play Store</PlayStoreLink>
-          </div>
-        </div>
-      </section>
-
-      <section className="w-full max-w-7xl px-2.5 sm:px-4 mx-auto">
-        <div className="rounded-3xl bg-blue-50 border border-blue-100 p-5 sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-blue-800">Everyday healthcare</p>
-          <h2 className="mt-2 text-xl sm:text-3xl font-black text-slate-900">Care for every part of your day</h2>
-          <p className="mt-2 text-sm text-slate-600">Browse medicines, personal care and wellness essentials in one place.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-            {[
-              { title: 'Medicines & pharmacy', text: 'Explore the medicine catalogue and product details.', to: '/shop', Icon: Pill },
-              { title: 'Wellness essentials', text: 'Discover nutrition and everyday personal care.', to: '/shop?category=personal-care', Icon: Heart },
-              { title: 'Pharmacy partners', text: 'Manage your team and orders through your partner account.', to: '/login', Icon: Users },
-            ].map(({ title, text, to, Icon }) => (
-              <Link key={title} to={to} className="rounded-2xl bg-white p-5 border border-blue-100 hover:border-brand-blue-700 transition-colors">
-                <Icon className="w-6 h-6 text-brand-blue-800" />
-                <h3 className="font-bold text-slate-900 mt-3">{title}</h3>
-                <p className="text-sm text-slate-500 mt-1">{text}</p>
-                <span className="inline-block text-xs font-bold text-brand-blue-800 mt-3">Explore →</span>
-              </Link>
-            ))}
           </div>
         </div>
       </section>

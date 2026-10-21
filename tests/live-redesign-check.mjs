@@ -8,7 +8,8 @@ try {
  for (const width of [390, 768, 1440]) {
    await page.setViewport({ width, height: 1000 });
    await page.goto(base, { waitUntil: 'networkidle0' });
-   await page.waitForFunction(() => document.body.innerText.includes('Care for every part of your day'), { timeout: 30000 });
+   await page.waitForFunction(() => document.body.innerText.includes('Top Fast-Moving Medicines'), { timeout: 30000 });
+   assert.doesNotMatch(await page.evaluate(() => document.body.innerText), /Care for every part of your day|Everyday healthcare/i);
    assert.doesNotMatch(await page.evaluate(() => document.body.innerText), /navratri|navaratri|festive|vrat|jai mata/i);
    await page.waitForFunction(() => [...document.querySelectorAll('img[src*="/images/healthcare/"]')].length >= 2 && [...document.querySelectorAll('img[src*="/images/healthcare/"]')].every((img) => img.complete && img.naturalWidth > 0));
    assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Page overflow at ${width}`);
