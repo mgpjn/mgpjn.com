@@ -26,6 +26,9 @@ try {
   await page.setUserAgent(width === 390 ? 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36');
   await page.goto(base + '/invite?ref=MGREFTEST', { waitUntil: 'networkidle0' });
   assert.equal(await page.$eval('[data-testid="referral-code"]', e => e.textContent), 'MGREFTEST');
+  const allPlayLinks = await page.$$eval('a[href^="https://play.google.com/"]', nodes => nodes.map(e => e.href));
+  assert(allPlayLinks.length > 0);
+  for (const href of allPlayLinks) assert.equal(new URLSearchParams(new URL(href).searchParams.get('referrer')).get('ref'), 'MGREFTEST', 'Every invite-page download link must retain the code');
   const playUrl = await page.$eval('[data-testid="referral-play-store"]', e => e.href);
   assert.equal(new URLSearchParams(new URL(playUrl).searchParams.get('referrer')).get('ref'), 'MGREFTEST');
   const target = await page.$eval('[data-testid="open-referral-app"]', e => e.getAttribute('href'));
