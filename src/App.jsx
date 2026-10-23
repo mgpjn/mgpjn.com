@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import PrescriptionModal from './components/PrescriptionModal';
 import { Toaster } from 'react-hot-toast';
+import { normalizeReferralCode } from './utils/referralLinks';
 
 // Auto Scroll To Top & Global Referral Code Capture on every route & parameter change
 function ScrollAndReferralTracker() {
@@ -28,6 +29,7 @@ function ScrollAndReferralTracker() {
 
       if (sponsorCode && sponsorCode.trim()) {
         const clean = sponsorCode.trim();
+        if (pathname === '/invite' && !normalizeReferralCode(clean)) return;
         try {
           localStorage.setItem('mediglaxo_sponsor_code', clean);
           sessionStorage.setItem('mediglaxo_sponsor_code', clean);
@@ -36,7 +38,7 @@ function ScrollAndReferralTracker() {
         } catch {}
       }
     }
-  }, [search]);
+  }, [pathname, search]);
 
   return null;
 }
@@ -51,6 +53,7 @@ import OrderSuccessPage from './pages/OrderSuccessPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import InvoiceView from './pages/InvoiceView';
 import AppDownloadPage from './pages/AppDownloadPage';
+import ReferralInvitePage from './pages/ReferralInvitePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
@@ -224,6 +227,7 @@ export default function App() {
           <Route path="/track-order" element={<OrderTrackingPage />} />
           <Route path="/app" element={<AppDownloadPage />} />
           <Route path="/download-app" element={<AppDownloadPage />} />
+          <Route path="/invite" element={<ReferralInvitePage />} />
           <Route path="/invoice/:id" element={<ProtectedRoute><InvoiceView /></ProtectedRoute>} />
           <Route
             path="/login"
