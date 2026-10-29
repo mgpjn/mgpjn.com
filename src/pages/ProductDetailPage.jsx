@@ -586,7 +586,7 @@ export default function ProductDetailPage({ onOpenPrescriptionModal }) {
           </div>
         ) : (
           <div className="p-4 bg-slate-50 rounded-2xl text-xs text-slate-600">
-            <strong>Formula:</strong> {product.composition || 'Standard Certified Pharmaceutical Salt Matrix'}
+            <strong>Formula:</strong> {product.composition || product.subtitle || 'Composition not provided'}
           </div>
         )}
 

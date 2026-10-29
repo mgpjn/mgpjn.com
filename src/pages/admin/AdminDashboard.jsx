@@ -2266,6 +2266,7 @@ export default function AdminDashboard() {
 
       const payload = {
         ...productForm,
+        composition: productForm.subtitle,
         sort_order: parseInt(productForm.sort_order, 10) || 0,
         show_on_homepage: Boolean(productForm.show_on_homepage !== false),
         images: imagesArr,
@@ -2282,7 +2283,8 @@ export default function AdminDashboard() {
       fetchData();
       toast.success('Product saved successfully!');
     } catch (err) {
-      toast.error('Failed to save product. Check required fields.');
+      const fieldErrors = Object.values(err.response?.data?.errors || {}).flat();
+      toast.error(fieldErrors[0] || err.response?.data?.message || 'Failed to save product. Please try again.');
     }
   };
 
@@ -7739,8 +7741,9 @@ export default function AdminDashboard() {
 
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Subtitle / Composition</label>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={4}
+                    maxLength={10000}
                     placeholder="e.g., Domperidone (30mg)+ Pantoprazole (40mg)"
                     value={productForm.subtitle}
                     onChange={(e) => setProductForm({ ...productForm, subtitle: e.target.value })}

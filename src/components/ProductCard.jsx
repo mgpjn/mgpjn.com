@@ -98,7 +98,13 @@ export default function ProductCard({ product }) {
           </h3>
         </Link>
 
-        {/* Pack Size / Subtitle */}
+        {(product.subtitle || product.composition) && (
+          <p className="text-[9px] sm:text-[11px] text-slate-600 line-clamp-2 mt-1 break-words" title={product.subtitle || product.composition}>
+            {product.subtitle || product.composition}
+          </p>
+        )}
+
+        {/* Pack Size */}
         <p className="text-[9px] sm:text-[11px] text-slate-400 truncate mt-0.5 mb-1 font-medium">
           {getPackSubtitle(product)}
         </p>
