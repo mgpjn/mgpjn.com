@@ -118,6 +118,7 @@ export const getAdminMargins = () => api.get('/admin/margins');
 export const updateAdminMargins = (data) => api.post('/admin/margins', data);
 
 export const getAdminTransfers = (params) => api.get('/admin/transfers', { params });
+export const searchAdminTransferUsers = (params, config = {}) => api.get('/admin/transfers/users', { ...config, params });
 export const createAdminTransfer = (data) => api.post('/admin/transfers', data);
 
 export const getAdminProductMargins = (params) => api.get('/admin/product-margins', { params });

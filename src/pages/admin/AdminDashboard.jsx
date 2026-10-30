@@ -35,7 +35,7 @@ import {
   getAdminUserDownlineSummary, deleteAdminHierarchyUser,
   uploadKycDocument,
   getAdminMargins, updateAdminMargins,
-  getAdminTransfers, createAdminTransfer,
+  getAdminTransfers,
   getAdminProductMargins,
   getAdminCategories, storeAdminCategory, updateAdminCategory, deleteAdminCategory,
   getAdminProducts, storeAdminProduct, updateAdminProduct, deleteAdminProduct, toggleAdminProductSection,
@@ -57,6 +57,7 @@ import {
   getAdminCoupons, storeAdminCoupon, updateAdminCoupon, deleteAdminCoupon,
   getHierarchyParents
 } from '../../services/api';
+import AdminTransferModal from '../../components/admin/AdminTransferModal';
 import WithdrawalDesk from '../../components/admin/WithdrawalDesk';
 import GstInvoiceModal from '../../components/invoice/GstInvoiceModal';
 import DispatchModal from '../../components/orders/DispatchModal';
@@ -173,17 +174,6 @@ export default function AdminDashboard() {
   // Transfers
   const [transfersList, setTransfersList] = useState({ data: [] });
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [transferMode, setTransferMode] = useState('tree_migration'); // 'tree_migration' or 'wallet_transfer'
-  const [transferForm, setTransferForm] = useState({
-    current_level: 'Super Distributor',
-    user_id: '',
-    new_parent_id: '',
-    receiver_code: '',
-    amount: '',
-    transfer_type: 'admin_credit',
-    reason: '',
-    notes: '',
-  });
 
   // Product Margins
   const [productMarginsList, setProductMarginsList] = useState({ data: [] });
@@ -676,9 +666,8 @@ export default function AdminDashboard() {
         const res = await getAdminMargins();
         if (res.data.success) setMargins(res.data.margins);
       } else if (currentSection === 'transfers') {
-        const [trfRes, usersRes] = await Promise.all([getAdminTransfers(), getAdminUsersByRole({ role: 'all' })]);
+        const trfRes = await getAdminTransfers();
         if (trfRes.data.success) setTransfersList(trfRes.data.transfers);
-        if (usersRes.data.success) setRoleUsers(usersRes.data.users);
       } else if (currentSection === 'product-margins') {
         const res = await getAdminProductMargins();
         if (res.data.success) setProductMarginsList(res.data.products);
@@ -2472,29 +2461,6 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Coupon delete failed.');
-    }
-  };
-
-  // Transfer Submit
-  const handleSaveTransfer = async (e) => {
-    e.preventDefault();
-    try {
-      await createAdminTransfer(transferForm);
-      setShowTransferModal(false);
-      setTransferForm({
-        current_level: 'Super Distributor',
-        user_id: '',
-        new_parent_id: '',
-        receiver_code: '',
-        amount: '',
-        transfer_type: 'admin_credit',
-        reason: '',
-        notes: '',
-      });
-      fetchData();
-      toast.success('Transfer processed successfully.');
-    } catch (err) {
-      toast.error('Transfer failed. Check inputs.');
     }
   };
 
@@ -4910,7 +4876,7 @@ export default function AdminDashboard() {
                           <td className="p-3.5 font-bold text-brand-blue-800">{t.transfer_number}</td>
                           <td className="p-3.5 font-medium">{t.sender_name || 'Super Admin'}</td>
                           <td className="p-3.5 font-bold text-slate-900">{t.receiver_name} ({t.receiver_code})</td>
-                          <td className="p-3.5 font-black text-emerald-600">₹{t.amount}</td>
+                          <td className="p-3.5 font-black text-emerald-600">{t.transfer_type === 'tree_migration' ? <span className="text-slate-600 font-medium">{t.notes || 'Hierarchy migration'}</span> : `₹${t.amount}`}</td>
                           <td className="p-3.5 uppercase text-[10px] font-bold text-slate-600">{t.transfer_type}</td>
                           <td className="p-3.5"><span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{t.status}</span></td>
                           <td className="p-3.5 text-slate-400">{new Date(t.created_at).toLocaleDateString()}</td>
@@ -10221,141 +10187,7 @@ export default function AdminDashboard() {
       {/* ======================================================== */}
       {/* MODAL 3: CREATE TRANSFER / DOWNLINE TREE MIGRATION       */}
       {/* ======================================================== */}
-      {showTransferModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b">
-              <h3 className="text-base font-black text-slate-900">Create Transfer / Migration</h3>
-              <button onClick={() => setShowTransferModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Mode Switcher */}
-            <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
-              <button
-                type="button"
-                onClick={() => setTransferMode('tree_migration')}
-                className={`flex-1 py-1.5 rounded-lg transition-all ${transferMode === 'tree_migration' ? 'bg-white text-[#ff5722] shadow-xs' : 'text-slate-600'}`}
-              >
-                Hierarchy Migration
-              </button>
-              <button
-                type="button"
-                onClick={() => setTransferMode('wallet_transfer')}
-                className={`flex-1 py-1.5 rounded-lg transition-all ${transferMode === 'wallet_transfer' ? 'bg-white text-[#ff5722] shadow-xs' : 'text-slate-600'}`}
-              >
-                Wallet Fund Transfer
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveTransfer} className="space-y-3.5 text-xs">
-              {transferMode === 'tree_migration' ? (
-                <>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Current Level *</label>
-                    <select
-                      value={transferForm.current_level}
-                      onChange={(e) => setTransferForm({ ...transferForm, current_level: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
-                    >
-                      <option value="Super Distributor">Super Distributor</option>
-                      <option value="Distributor">Distributor</option>
-                      <option value="Retailer">Retailer</option>
-                      <option value="Customer">Customer</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Select User To Migrate *</label>
-                    <select
-                      required
-                      value={transferForm.user_id}
-                      onChange={(e) => setTransferForm({ ...transferForm, user_id: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
-                    >
-                      <option value="">Select User</option>
-                      {roleUsers?.data?.map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.referral_code})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">New Parent Sponsor *</label>
-                    <select
-                      required
-                      value={transferForm.new_parent_id}
-                      onChange={(e) => setTransferForm({ ...transferForm, new_parent_id: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
-                    >
-                      <option value="">Select New Parent</option>
-                      {roleUsers?.data?.map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.referral_code})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Transfer Reason</label>
-                    <input
-                      type="text"
-                      placeholder="Reason for downline migration"
-                      value={transferForm.reason}
-                      onChange={(e) => setTransferForm({ ...transferForm, reason: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Receiver Referral Code *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. SD87106694"
-                      value={transferForm.receiver_code}
-                      onChange={(e) => setTransferForm({ ...transferForm, receiver_code: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-mono font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Amount (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={transferForm.amount}
-                      onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Transfer Type</label>
-                    <select
-                      value={transferForm.transfer_type}
-                      onChange={(e) => setTransferForm({ ...transferForm, transfer_type: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-bold"
-                    >
-                      <option value="admin_credit">Admin Credit (Add to Wallet)</option>
-                      <option value="admin_debit">Admin Debit (Deduct from Wallet)</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
-              <div className="pt-2 flex justify-end space-x-2">
-                <button type="button" onClick={() => setShowTransferModal(false)} className="px-4 py-2 bg-slate-100 rounded-xl font-bold">
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2 bg-[#ff5722] hover:bg-[#f4511e] text-white rounded-xl font-bold shadow-md">
-                  Execute Transfer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {showTransferModal && <AdminTransferModal onClose={() => setShowTransferModal(false)} onSaved={fetchData} />}
 
       {/* ======================================================== */}
       {/* MODAL 4: EMPLOYEE WITH ROLE-BASED PERMISSIONS MATRIX     */}
