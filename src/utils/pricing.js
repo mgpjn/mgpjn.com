@@ -41,6 +41,9 @@ export const getWholesalePriceForUser = (product = {}, user = null) => {
   if (!user) return 0;
 
   const role = String(user.role || '').toLowerCase().trim();
+  // A product assignment does not grant customer accounts partner pricing.
+  if (!ADMIN_ROLES.has(role) && !Object.prototype.hasOwnProperty.call(ROLE_PRICE_FIELDS, role)) return 0;
+
   const roleField = ROLE_PRICE_FIELDS[role];
   const rolePrice = roleField ? positiveNumber(product[roleField]) : 0;
   if (rolePrice) return rolePrice;
