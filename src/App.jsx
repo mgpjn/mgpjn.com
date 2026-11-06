@@ -68,6 +68,7 @@ import HierarchyDashboard from './pages/hierarchy/HierarchyDashboard';
 
 // Refer & Earn Member Portal Pages
 import MlmDashboard from './pages/mlm/MlmDashboard';
+import EmergencyFundPage from './pages/mlm/EmergencyFundPage';
 import GenealogyTree from './pages/mlm/GenealogyTree';
 import WalletPayouts from './pages/mlm/WalletPayouts';
 import ReferralsPage from './pages/mlm/ReferralsPage';
@@ -305,6 +306,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/emergency-fund" element={<ProtectedRoute><EmergencyFundPage /></ProtectedRoute>} />
+          <Route path="/admin/emergency-funds" element={<ProtectedRoute role="super_admin"><EmergencyFundPage admin /></ProtectedRoute>} />
 
           {/* Refer & Earn Protected Routes (Exclusively for Sub-Retailer, Customer 1, Customer 2) */}
           <Route

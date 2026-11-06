@@ -429,6 +429,7 @@ export default function Navbar({ onOpenPrescriptionModal }) {
                     </div>
 
                     <div className="py-1">
+                      <Link to={user?.role === 'super_admin' ? '/admin/emergency-funds' : '/emergency-fund'} onClick={() => setIsUserMenuOpen(false)} className="block px-4 py-3 text-sm text-[#004E89] font-bold">Emergency Fund Eligibility</Link>
                       <Link
                         to="/profile"
                         onClick={() => setIsUserMenuOpen(false)}

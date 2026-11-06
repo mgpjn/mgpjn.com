@@ -152,6 +152,7 @@ export default function MlmDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <Link to="/emergency-fund" className="block rounded-2xl bg-blue-50 border border-blue-100 p-5 font-bold text-[#004E89]">Emergency Fund Eligibility · ₹5,000 support · View progress →</Link>
       <div className="flex items-center justify-between gap-3 text-sm text-slate-600">
         <p>Commission enters your wallet after payment is confirmed. COD cash must be recorded as received.</p>
         <button type="button" onClick={loadDashboard} className="flex items-center gap-1 font-bold text-brand-blue-800"><RefreshCw className="w-4 h-4" />Refresh balance</button>

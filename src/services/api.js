@@ -191,3 +191,16 @@ export const uploadAdminProductImage = (formData) => api.post('/admin/upload-ima
 });
 
 export default api;
+
+export const getEmergencyFunds = (params = {}, config = {}) => api.get('/emergency-fund', { ...config, params });
+export const requestEmergencyFund = (data) => api.post('/emergency-fund', data);
+export const repayEmergencyFund = (id, data) => api.post(`/emergency-fund/${id}/repay`, data);
+export const cancelFundBankPayment = (id, paymentId) => api.post(`/emergency-fund/${id}/payments/${paymentId}/cancel`);
+export const createFundOnlinePayment = (id, data) => api.post(`/emergency-fund/${id}/online`, data);
+export const verifyFundOnlinePayment = (id, data) => api.post(`/emergency-fund/${id}/verify-online`, data);
+export const checkFundOnlinePayment = (id, paymentId) => api.post(`/emergency-fund/${id}/payments/${paymentId}/check`);
+export const getAdminEmergencyFunds = (params = {}, config = {}) => api.get('/admin/emergency-funds', { ...config, params });
+export const transitionEmergencyFund = (id, data) => api.post(`/admin/emergency-funds/${id}/transition`, data);
+export const verifyFundBankPayment = (id, paymentId, data) => api.post(`/admin/emergency-funds/${id}/payments/${paymentId}`, data);
+export const saveFundRepaymentSettings = (data) => api.post('/admin/emergency-funds/settings', data);
+export const refundFundExcess = (id, paymentId, data) => api.post(`/admin/emergency-funds/${id}/payments/${paymentId}/refund-excess`, data);

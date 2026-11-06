@@ -580,6 +580,7 @@ export default function AdminDashboard() {
     { key: 'purchase-orders', label: 'Medicine PO Approvals', path: '/admin/purchase-orders', icon: FileCheck },
     { key: 'margins', label: 'Margin Management', path: '/admin/margins', icon: Calculator },
     { key: 'transfers', label: 'Transfer Management', path: '/admin/transfers', icon: ArrowLeftRight },
+    ...(user?.role === 'super_admin' ? [{ key: 'emergency-funds', label: 'Emergency Fund', path: '/admin/emergency-funds', icon: HeartHandshake }] : []),
     { key: 'product-margins', label: 'Product Margin List', path: '/admin/product-margins', icon: FileSpreadsheet },
     { key: 'products', label: 'Products', path: '/admin/products', icon: Package },
     { key: 'categories', label: 'Categories', path: '/admin/categories', icon: FolderTree },
