@@ -11,35 +11,35 @@ export default function FaqPage() {
     },
     {
       q: 'What is MEDIGLAXO PHARMA\'s legal entity and registration status?',
-      a: 'MEDIGLAXO PHARMA is a government-registered pharmaceutical partnership enterprise with GSTIN 24ABVFM0075D1ZA (Ghatak 63, Surat, Gujarat). Our registered principal hub is located in Sachin GIDC, Surat, Gujarat - 394230.',
+      a: 'MEDIGLAXO PHARMA lists GSTIN 24ABVFM0075D1ZA and its business location as Sachin GIDC, Surat, Gujarat 394230, India. Contact support for current business and licensing details. A GST registration is not itself a drug licence.',
     },
     {
       q: 'How does the Doctor Prescription (Rx) verification work?',
-      a: 'When you order prescription drugs (Schedule H / H1), our registered in-house pharmacists inspect the uploaded doctor\'s prescription for correct dosage, patient details, and validity before the order is approved and dispatched.',
+      a: 'Where required, provide a clear, valid prescription from a registered medical practitioner. Supply is subject to prescription review, stock and applicable licensing requirements. Uploading a prescription does not itself confirm an order.',
     },
     {
       q: 'What is the difference between Retail and Wholesale Partner pricing?',
-      a: 'We offer dual pricing: Individual consumers enjoy competitive retail rates with flat 20-30% discounts. Verified B2B partners (Super Distributors, Distributors, Sub-Distributors, Retailers, Sub-Retailers) or bulk orders meeting minimum wholesale quantity criteria receive special bulk wholesale rates.',
+      a: 'Customer accounts show the applicable retail selling price and product packing. Authorised business accounts may have separate trade pricing. Review the final checkout quote; no blanket discount applies to every item.',
     },
     {
-      q: 'How does the MediGlaxo 8-Tier Community Network work?',
-      a: 'Registered partners and promoters receive a unique referral link/code. When customers purchase medicines through your network, commissions are automatically distributed across the 8-tier hierarchy chain (Super Admin → Admin → Super Distributor → Distributor → Sub-Distributor → Retailer → Sub-Retailer → Customer).',
+      q: 'How does the three-level referral program work?',
+      a: 'The referral program has three reward levels: 10%, 3% and 2% of the recorded eligible product line totals. Payment must be verified as paid and the order must not be cancelled. Genuine-sale eligibility and adjustments apply; registration alone does not earn commission.',
     },
     {
       q: 'How do I withdraw my distributor wallet earnings?',
-      a: 'Once your withdrawable wallet balance reaches ₹500, go to your Refer & Earn Portal -> "Wallet & Payouts" and request an instant transfer directly to your Bank Account (NEFT/IMPS) or UPI ID.',
+      a: 'Use Wallet & Payouts to request a bank withdrawal with accurate account details. A request reserves the gross amount and passes through pending, approved, processing and success. It is not an instant transfer. The current 5% deduction and net amount are shown in the payout record; see the Referral, Wallet & Withdrawal Policy for tax-treatment details.',
     },
     {
       q: 'What are the delivery charges and timelines?',
-      a: 'Delivery is 100% FREE on all medicine and healthcare orders of ₹500 and above across India. For orders below ₹500, a nominal delivery charge of ₹50 applies. Standard delivery takes 24-48 hours in metro cities and 2-4 business days for other regions.',
+      a: 'Standard delivery is ₹50 below a ₹500 item subtotal and ₹0 at ₹500 or above; takeaway has no delivery charge. Coupons and separately displayed platform/COD charges may affect the final quote. Coverage and delivery estimates depend on the address, item and order checks.',
     },
     {
       q: 'What payment methods are supported?',
-      a: 'We accept instant UPI QR Code (Google Pay, PhonePe, Paytm, BHIM), Debit & Credit Cards, Net Banking, and Cash on Delivery (COD).',
+      a: 'Available payment methods are shown at checkout and may include online payments, wallet and COD. Use the final order/payment confirmation; never share a payment or account OTP with support.',
     },
     {
       q: 'What is the Return & Replacement Policy?',
-      a: 'We offer a 7-day hassle-free replacement or refund for damaged packs, near-expiry batches, or incorrect items delivered. Temperature-sensitive cold chain items and opened strips are non-returnable in compliance with drug safety laws.',
+      a: 'For a product received damaged, contact support within 7 calendar days and email the order details with clear photos and/or video to support@mgpjn.com. Support reviews the evidence and confirms replacement/refund instructions. General change-of-mind returns are not promised; mandatory rights for wrong, expired or defective goods remain available.',
     },
   ];
 

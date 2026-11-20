@@ -195,6 +195,7 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-xs leading-5 text-slate-600">By creating an account you agree to our <Link to="/terms-and-conditions" target="_blank" rel="noreferrer" className="underline text-brand-blue-800">Terms &amp; Conditions</Link>. Please read our <Link to="/privacy-policy" target="_blank" rel="noreferrer" className="underline text-brand-blue-800">Privacy Policy</Link> to understand how your data is used.</p>
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Full Name *</label>
             <input

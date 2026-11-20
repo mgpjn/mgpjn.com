@@ -82,6 +82,7 @@ import ImpersonateSessionPage from './pages/admin/ImpersonateSessionPage';
 import AboutUsPage from './pages/info/AboutUsPage';
 import ContactUsPage from './pages/info/ContactUsPage';
 import FaqPage from './pages/info/FaqPage';
+import LegalPolicyPage from './pages/info/LegalPolicyPage';
 import PrivacyPolicyPage from './pages/info/PrivacyPolicyPage';
 import TermsConditionsPage from './pages/info/TermsConditionsPage';
 import ReturnRefundPage from './pages/info/ReturnRefundPage';
@@ -386,6 +387,17 @@ export default function App() {
           <Route path="/terms-and-conditions" element={<TermsConditionsPage />} />
           <Route path="/return-and-refund-policy" element={<ReturnRefundPage />} />
           <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+
+          <Route path="/policies" element={<LegalPolicyPage />} />
+          <Route path="/referral-wallet-policy" element={<LegalPolicyPage policyId="referral-wallet-policy" />} />
+          <Route path="/emergency-fund-policy" element={<LegalPolicyPage policyId="emergency-fund-policy" />} />
+          <Route path="/medical-disclaimer" element={<LegalPolicyPage policyId="medical-disclaimer" />} />
+          <Route path="/account-deletion" element={<LegalPolicyPage policyId="account-deletion" />} />
+          <Route path="/grievance-policy" element={<LegalPolicyPage policyId="grievance-policy" />} />
+          <Route path="/terms" element={<Navigate to="/terms-and-conditions" replace />} />
+          <Route path="/terms-conditions" element={<Navigate to="/terms-and-conditions" replace />} />
+          <Route path="/returns" element={<Navigate to="/return-and-refund-policy" replace />} />
+          <Route path="/shipping" element={<Navigate to="/shipping-policy" replace />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

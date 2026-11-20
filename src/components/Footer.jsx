@@ -14,8 +14,8 @@ export default function Footer() {
               <Truck className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-white font-bold text-sm">Free Express Delivery</h4>
-              <p className="text-xs text-slate-400 mt-0.5">On all medicine orders above ₹500 across India.</p>
+              <h4 className="text-white font-bold text-sm">Delivery Charges</h4>
+              <p className="text-xs text-slate-400 mt-0.5">Standard delivery ₹0 at ₹500+; final charges shown at checkout.</p>
             </div>
           </div>
 
@@ -25,7 +25,7 @@ export default function Footer() {
             </div>
             <div>
               <h4 className="text-white font-bold text-sm">Medicine Catalog</h4>
-              <p className="text-xs text-slate-400 mt-0.5">Sourced directly from verified licensed manufacturers.</p>
+              <p className="text-xs text-slate-400 mt-0.5">Check the selected product, packing, batch and expiry details.</p>
             </div>
           </div>
 
@@ -44,8 +44,8 @@ export default function Footer() {
               <Headphones className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-white font-bold text-sm">Pharmacist Support</h4>
-              <p className="text-xs text-slate-400 mt-0.5">24/7 dedicated support & prescription verification.</p>
+              <h4 className="text-white font-bold text-sm">Customer Support</h4>
+              <p className="text-xs text-slate-400 mt-0.5">Order help and prescription enquiries through our support team.</p>
             </div>
           </div>
         </div>
@@ -58,7 +58,7 @@ export default function Footer() {
               <img src="/logo.png" alt="MediGlaxo Pharma Junction" className="h-12 w-auto" />
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              India's trusted online pharmacy and digital healthcare platform (Pharma Junction). Delivering affordable, high-quality generic and branded prescription medicines with temperature-controlled cold chain logistics.
+              MediGlaxo Pharma Junction: medicine and healthcare ordering, product information and member services. Read our policies for prescription, delivery and support details.
             </p>
             <div className="pt-2 text-xs text-slate-400 space-y-1">
               <p><strong>Legal Name:</strong> MEDIGLAXO PHARMA</p>
@@ -89,9 +89,12 @@ export default function Footer() {
             <h4 className="text-white font-bold text-sm mb-4">Customer Care</h4>
             <ul className="space-y-2.5 text-xs">
               <li><Link to="/privacy-policy" className="hover:text-brand-orange-400 transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-brand-orange-400 transition-colors">Terms & Conditions</Link></li>
-              <li><Link to="/returns" className="hover:text-brand-orange-400 transition-colors">Return & Refund Policy</Link></li>
-              <li><Link to="/shipping" className="hover:text-brand-orange-400 transition-colors">Shipping Information</Link></li>
+              <li><Link to="/terms-and-conditions" className="hover:text-brand-orange-400 transition-colors">Terms & Conditions</Link></li>
+              <li><Link to="/return-and-refund-policy" className="hover:text-brand-orange-400 transition-colors">Return & Refund Policy</Link></li>
+              <li><Link to="/shipping-policy" className="hover:text-brand-orange-400 transition-colors">Shipping Information</Link></li>
+              <li><Link to="/policies" className="hover:text-brand-orange-400 transition-colors">All Policies &amp; Help</Link></li>
+              <li><Link to="/account-deletion" className="hover:text-brand-orange-400 transition-colors">Account &amp; Data Deletion</Link></li>
+              <li><Link to="/grievance-policy" className="hover:text-brand-orange-400 transition-colors">Complaints &amp; Support</Link></li>
               <li><Link to="/faq" className="hover:text-brand-orange-400 transition-colors">Frequently Asked Questions</Link></li>
             </ul>
           </div>
@@ -121,7 +124,7 @@ export default function Footer() {
           <p>© 2026 MediGlaxo Pharma Junction (mgpjn.com). All rights reserved.</p>
           <div className="flex items-center space-x-4">
             <span className="text-[11px] bg-slate-800 px-3 py-1 rounded-full text-slate-400 font-medium">
-              WHO-GMP Certified Products • ISO 9001:2015 Licensed Pharma Portal
+              Read our medicine, delivery and member-service policies.
             </span>
           </div>
         </div>

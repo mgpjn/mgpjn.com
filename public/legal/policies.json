@@ -1,0 +1,399 @@
+{
+  "version": "MG-POLICIES-2026-11-20-v1",
+  "updated": "20 November 2026",
+  "website": "https://mgpjn.com",
+  "operator": {
+    "name": "MEDIGLAXO PHARMA",
+    "appName": "Mediglaxo Pharma (Mgpjn)",
+    "gstin": "24ABVFM0075D1ZA",
+    "address": "Sachin GIDC, Surat, Gujarat 394230, India",
+    "email": "support@mgpjn.com",
+    "phone": "+91 9650582703"
+  },
+  "policies": [
+    {
+      "id": "terms-and-conditions",
+      "title": "Terms & Conditions",
+      "summary": "Rules for using the MediGlaxo website, mobile app, orders and member services.",
+      "sections": [
+        {
+          "heading": "Who we are and scope",
+          "paragraphs": [
+            "These terms apply to mgpjn.com and the Mediglaxo Pharma (Mgpjn) mobile app (Android package com.mgpjn.app), operated under the name MEDIGLAXO PHARMA, GSTIN 24ABVFM0075D1ZA, Sachin GIDC, Surat, Gujarat 394230, India. Customer support: support@mgpjn.com; +91 9650582703.",
+            "Read these terms together with the Privacy, Returns, Shipping, Medical Information and Referral & Wallet policies. A separate, accepted order or fund record governs the specific transaction. Mandatory consumer rights prevail over any conflicting term."
+          ]
+        },
+        {
+          "heading": "Accounts and eligibility",
+          "paragraphs": [
+            "You must be 18 or older to open and operate an account. A parent or guardian may order for a dependent and must be authorised to share that person’s information. Provide accurate contact and delivery details and keep your password, OTP and optional device PIN confidential.",
+            "A referral code is optional for customer registration. Do not create fake accounts, use another person’s identity, manipulate orders or share credentials. Contact support promptly if your account is used without permission."
+          ]
+        },
+        {
+          "heading": "Medicines and prescriptions",
+          "paragraphs": [
+            "Product descriptions are information, not a diagnosis or prescription. Consult a qualified healthcare professional about treatment, dosage, interactions and suitability.",
+            "Where a prescription is required, supply a valid prescription from a registered medical practitioner. Supply is subject to prescription review, applicable licensing requirements and availability. Uploading a prescription does not guarantee acceptance or dispatch. We may ask for clarification or decline an order that cannot lawfully or safely be fulfilled. Do not order restricted products through a channel that does not support their lawful supply."
+          ]
+        },
+        {
+          "heading": "Prices, offers and payment",
+          "paragraphs": [
+            "Customer accounts are shown the applicable retail selling price. Verified business accounts may have separate authorised trade pricing. Product packing, quantity and unit shown for the selected item determine what is ordered; MRP and selling price are different amounts.",
+            "Prices are in INR. The checkout quote shows item prices, applicable tax treatment, delivery, platform or COD charges, coupon discounts, wallet use and the payable total. Review the final quote before placing the order. A coupon applies only when its server validation succeeds and its discount appears in that quote.",
+            "Payment options depend on the order and current availability. A payment confirmation is subject to verification by the payment provider. COD remains unpaid until receipt of cash is recorded. Do not share card PINs, OTPs or banking passwords with support."
+          ]
+        },
+        {
+          "heading": "Orders, cancellations and remedies",
+          "paragraphs": [
+            "An order acknowledgement confirms receipt of the request. Fulfilment depends on stock, payment, prescription checks and serviceability. If an accepted item cannot be supplied, support will explain the cancellation or alternative; any substitution requires your agreement where applicable.",
+            "Request cancellation through support before dispatch. Cancellation after dispatch may not be possible. Returns, replacements, refunds and delivery issues follow the linked policies; statutory remedies remain available."
+          ]
+        },
+        {
+          "heading": "Member services",
+          "paragraphs": [
+            "Referral earnings, wallet withdrawals and repayable Emergency Fund support have separate published rules. They are not guaranteed income, employment, a deposit account or an investment return. Member counts alone do not guarantee funding.",
+            "We may investigate suspected misuse and restrict affected services where reasonably necessary. Any correction or reversal must relate to an identifiable transaction and remain subject to applicable law, records and a complaint process; these terms do not authorise blanket forfeiture of legitimate balances."
+          ]
+        },
+        {
+          "heading": "Changes, responsibility and disputes",
+          "paragraphs": [
+            "We may update these policies with a new date and version. Material changes apply prospectively unless law requires otherwise; existing accepted transaction obligations are not silently rewritten.",
+            "Reasonable security measures cannot eliminate every network or third-party outage. Nothing excludes responsibility or remedies that cannot lawfully be excluded, including rights relating to defective, unsafe or misdescribed goods.",
+            "Indian law applies. You may contact support, raise a consumer grievance or use an authority or court having jurisdiction under applicable law. These terms do not remove your right to approach the appropriate consumer commission."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "privacy-policy",
+      "title": "Privacy Policy",
+      "summary": "How MediGlaxo handles account, prescription, order, payment and member information.",
+      "sections": [
+        {
+          "heading": "Scope and privacy contact",
+          "paragraphs": [
+            "This policy covers mgpjn.com and Mediglaxo Pharma (Mgpjn), com.mgpjn.app, operated under the name MEDIGLAXO PHARMA. Contact support@mgpjn.com or +91 9650582703 for privacy requests. Business location: Sachin GIDC, Surat, Gujarat 394230, India; GSTIN 24ABVFM0075D1ZA.",
+            "Data handled depends on the features you use. You may browse public information without creating an account. Optional health, bank and business documents should be provided only for the service that needs them."
+          ]
+        },
+        {
+          "heading": "Information you provide",
+          "paragraphs": [
+            "Account and contact details: name, mobile number, email, login credentials, delivery addresses and profile information. We also retain authentication/session records needed to operate and protect the account.",
+            "Prescription services: selected photos/files, patient name, mobile number and any doctor or medicine notes you submit. This can include health information. Obtain the patient’s permission before submitting another person’s prescription.",
+            "Orders and payments: items, quantity, price, addresses, invoice and order history, payment method, provider references, payment/fulfilment status and support correspondence. Card, UPI and banking authentication is handled through the relevant payment provider; never send a card PIN, CVV, banking password or OTP to support.",
+            "Member and business services: sponsor/referral relationships, relevant team information, commission and wallet credit/debit records, payout requests, bank holder/account/IFSC details, business/GST/drug-licence documents where requested, and Emergency Fund applications, reasons, disbursements and repayment references."
+          ]
+        },
+        {
+          "heading": "Device information and local storage",
+          "paragraphs": [
+            "The website uses browser local/session storage for login sessions, cart, referral attribution and optional quick-login settings. Clearing this data may sign you out or remove a saved cart/referral code.",
+            "The app stores account/session and feature preferences on the device, including optional quick-login, referral attribution and update/rating-prompt state. Android Play Install Referrer can supply a referral code associated with an install.",
+            "Where you enable biometric login, the operating system handles biometric matching. MediGlaxo does not receive your fingerprint image or face template. Camera/gallery access is used when you choose to capture or select an upload; permission can be denied or withdrawn in device settings.",
+            "Our service and providers may process technical data such as IP address, device/browser information, timestamps and error/security records to operate, diagnose and protect the platform."
+          ]
+        },
+        {
+          "heading": "Why information is used",
+          "paragraphs": [
+            "To register and authenticate users; validate prescriptions where required; respond to enquiries; calculate prices and offers; fulfil orders; arrange delivery; provide invoices and transaction updates; and handle cancellations, refunds and complaints.",
+            "To attribute referrals, show relevant authorised team information, calculate genuine-sale commissions, maintain wallet ledgers, process withdrawals, and assess/manage requested Emergency Fund support and repayments.",
+            "To prevent fraud, investigate disputes, maintain accounting/tax/medicine-sale records and comply with applicable legal obligations. Consent for optional services can be withdrawn by contacting support; processing already required for a transaction or legal record may continue for that purpose."
+          ]
+        },
+        {
+          "heading": "Who receives information",
+          "paragraphs": [
+            "Authorised operations, pharmacy, customer-support, finance and administrative personnel receive information relevant to their work. Authorised referral/business-hierarchy views can include member names, contact details, sponsor relationships, team activity and wallet/earnings totals as provided by the service. Do not assume all profile/contact information is hidden from your authorised hierarchy.",
+            "Payment providers, including Razorpay when used, process payment and related verification information under their own privacy terms. Firebase Authentication/reCAPTCHA is used where the website’s phone sign-in requires it. Hosting, delivery and communication providers receive the information needed for the service they perform.",
+            "Information may be disclosed to competent authorities when required by law, or to investigate fraud and protect lawful rights. We do not offer prescription or health records for sale to advertisers. External sites, email providers and app stores apply their own policies when you open them."
+          ]
+        },
+        {
+          "heading": "Security, retention and deletion",
+          "paragraphs": [
+            "Use HTTPS service connections, protect your device and do not disclose login credentials. Access is managed according to operational roles; no internet service can promise absolute security. Report suspected unauthorised disclosure to support.",
+            "We keep personal data while needed for the requested service, account administration and legitimate legal, accounting, security or dispute purposes. Upon a verified deletion request, account access and data no longer needed are removed or de-identified; merely disabling login is not the whole deletion process.",
+            "Necessary invoice, tax, payment, medicine-sale, dispute and fraud-prevention records may be retained for the period required for their specific legal purpose, with access limited to that purpose. A pending order, refund, wallet balance or fund repayment must be reconciled; that does not justify indefinite retention of unrelated profile or health data.",
+            "Use the Account & Data Deletion page to initiate a request inside or outside the app. You can also request access, correction, consent withdrawal or information about retained records through support. We may verify control of the registered contact without asking for your password or OTP."
+          ]
+        },
+        {
+          "heading": "Children and changes",
+          "paragraphs": [
+            "The service is intended for account holders aged 18 or older. A parent/guardian submitting a child’s information must have authority to do so and should provide only the information needed for the requested service. Contact support to remove information submitted without authority.",
+            "The policy date/version identifies this notice. Material privacy changes will be reflected in this policy and relevant service notices."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "return-and-refund-policy",
+      "title": "Returns, Refunds & Cancellation",
+      "summary": "Report delivery damage to support within seven days, with order details and clear evidence.",
+      "sections": [
+        {
+          "heading": "Damage complaints: seven-day window",
+          "paragraphs": [
+            "For a product received damaged, contact support within 7 calendar days of delivery. Email support@mgpjn.com with the order number, registered contact, product/quantity affected, delivery date and clear photos and/or a video showing the damage, product/batch/expiry label and packaging. You may call +91 9650582703 for help.",
+            "Keep the item, invoice and packaging safely while support reviews the claim. Do not consume a damaged or suspect medicine. Do not return or courier medicine without support instructions. An unboxing video is helpful when available, but absence of a video does not by itself remove statutory rights."
+          ]
+        },
+        {
+          "heading": "What this process covers",
+          "paragraphs": [
+            "The standard discretionary return/replacement process is for products received damaged, after support verification. There is no general change-of-mind, unused-stock or unsold-business-inventory return promise under this policy.",
+            "Opened, used, temperature-sensitive or hygiene-sensitive goods cannot ordinarily be accepted back for resale. This safety restriction does not eliminate a valid complaint about damage, defect, an expired/spurious item, a wrong/misdescribed product, non-delivery or another remedy required by law. Report these concerns promptly to the same support contact.",
+            "The seven-day damage-reporting process does not override a longer or otherwise mandatory right available under applicable consumer law. Support may request reasonable further evidence and will explain the proposed resolution."
+          ]
+        },
+        {
+          "heading": "Review and resolution",
+          "paragraphs": [
+            "Support will check the order and submitted evidence and provide instructions for inspection, collection, replacement or refund, as appropriate. A return request is not automatically approved when an email is drafted or an attachment is selected.",
+            "For a verified fulfilment error or damaged delivery attributable to us, necessary return/replacement handling will be arranged without imposing an undisclosed charge. Do not send an item back until the return address and method are confirmed."
+          ]
+        },
+        {
+          "heading": "Cancellation",
+          "paragraphs": [
+            "Contact support immediately to request cancellation before dispatch. A cancellation request after dispatch may not be possible; support will explain the available resolution.",
+            "If we cancel an item that cannot be fulfilled, the amount actually paid for that unfulfilled item is eligible for the applicable refund. Refund and cancellation records should be matched to the original order/payment."
+          ]
+        },
+        {
+          "heading": "Refund method and timing",
+          "paragraphs": [
+            "For an approved refund, support will confirm the amount, method and expected timeline. We normally aim to initiate approved refunds within 3–5 business days after required verification/receipt; the payment provider or bank may take additional time to settle it. This is a processing target, not a promise of instant bank credit.",
+            "Prepaid amounts are ordinarily refunded to the original payment source. A COD refund needs a verified bank/UPI destination agreed with support. Wallet-funded portions are reconciled against the wallet ledger; an external payment is not forced into wallet credit without your agreement unless legally required.",
+            "Any related coupon/commission adjustment must match the cancelled/refunded transaction. A legitimate complaint cannot be rejected solely because a promotion was used. Ask support for the refund reference if the expected settlement date passes."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shipping-policy",
+      "title": "Shipping & Delivery",
+      "summary": "Delivery charges, serviceability, dispatch checks and help with delayed orders.",
+      "sections": [
+        {
+          "heading": "Coverage and serviceability",
+          "paragraphs": [
+            "Orders are supplied to supported delivery addresses in India. Product availability, courier coverage and applicable medicine-handling requirements determine whether an order can be accepted. An app or website listing is not a guarantee of delivery to every PIN code.",
+            "Temperature-sensitive or restricted products require suitable permitted handling. We do not promise universal express delivery or a verified cold-chain service for every item. Confirm suitability with support before ordering a product that needs special storage."
+          ]
+        },
+        {
+          "heading": "Charges shown before payment",
+          "paragraphs": [
+            "The current standard delivery calculation is ₹50 for an item subtotal below ₹500 and ₹0 at ₹500 or above; supported takeaway/pickup orders have no delivery charge. Coupon eligibility may affect the displayed delivery charge.",
+            "Applicable platform/COD charges, if any, are shown separately in the final checkout quote. Verify the quoted charge for your order. Bulk/business shipments may need separately agreed arrangements; no unquoted freight charge should be treated as already accepted."
+          ]
+        },
+        {
+          "heading": "Dispatch and estimates",
+          "paragraphs": [
+            "Dispatch depends on stock, payment verification, any required prescription review and a valid address. Support/order tracking will provide available dispatch and delivery information.",
+            "Delivery dates are estimates unless a specific commitment is expressly confirmed. Courier disruption, holidays, incorrect addresses, weather and required verification can cause delay. We do not make a blanket 24–48-hour delivery promise. If an agreed delivery schedule is missed, contact support for the remedies available under applicable law."
+          ]
+        },
+        {
+          "heading": "Receiving an order",
+          "paragraphs": [
+            "Provide an accurate address and reachable phone number, and inspect visible packaging damage on arrival where possible. Never share an account-login or payment OTP as a delivery confirmation.",
+            "Report damage within seven calendar days with order details and clear photos/video under the Returns Policy. Contact support promptly about a missing, wrong or undelivered parcel. Do not consume suspicious products while a safety issue is being checked."
+          ]
+        },
+        {
+          "heading": "Tracking, failed delivery and support",
+          "paragraphs": [
+            "Use order tracking/history or contact support@mgpjn.com / +91 9650582703 with your order number. Tracking events may update after the courier scans a parcel.",
+            "If delivery fails, support will explain available reattempt, return-to-origin, cancellation or refund options and any lawful, previously disclosed charge. A tracking status alone does not remove your right to raise a non-delivery complaint."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "referral-wallet-policy",
+      "title": "Referral, Wallet & Withdrawal Policy",
+      "summary": "Three referral levels, genuine-sale credits and transparent withdrawal records.",
+      "sections": [
+        {
+          "heading": "Referral participation",
+          "paragraphs": [
+            "A customer can use an optional referral code at registration. The saved sponsor relationship determines the referral chain used by the service. Do not promise a code can always be changed after registration; contact support about an incorrect relationship.",
+            "Referral income arises from eligible genuine product transactions, not from registration alone. No fixed income, salary, investment yield or guaranteed earning is promised. Do not use fake accounts, circular orders, misleading income claims, spam or unverified medical claims."
+          ]
+        },
+        {
+          "heading": "Current three-level calculation",
+          "paragraphs": [
+            "The fixed referral rates are Level 1: 10%, Level 2: 3%, Level 3: 2%. These are referral levels, not an eight-tier income promise. Business distribution roles and trade margins are separate.",
+            "The current service calculates each level on the order’s recorded item line total (or the recorded item subtotal for legacy orders without item rows), rounded to two decimal places. It is not calculated on the full total including separate delivery/platform/COD fees. Only eligible active uplines receive an allocation; you are not entitled to every level’s percentage yourself.",
+            "Payment must be verified as paid and the order must not be cancelled. COD commission cannot be credited just because delivery is marked complete when cash is still recorded pending. A qualifying payment can be processed before delivery; cancellation/refund corrections remain possible. The base uses recorded product line totals; separately applied order-level coupon discounts do not currently reduce those line totals.",
+            "Commission history should identify the order, level, rate and credited amount. For example, a ₹1,000 recorded commission base gives ₹100 / ₹30 / ₹20 across the three eligible levels, before later transaction-specific corrections."
+          ]
+        },
+        {
+          "heading": "Wallet use and ledger",
+          "paragraphs": [
+            "A wallet balance is a platform ledger for credited earnings, adjustments, payments and withdrawals. It is not a bank deposit and does not earn interest. Review available balance and credit/debit history; contact support with an order or transaction reference if an entry is missing.",
+            "Available wallet funds can be used for an eligible product purchase up to the accepted checkout amount. No withdrawal-related TDS deduction is applied by the current system merely for buying medicines with wallet funds. This describes platform treatment, not a personal tax exemption.",
+            "Cancellation/refund reversals and repayments must have corresponding records. A balance or referral relationship does not confer access to another buyer’s private invoice or prescription."
+          ]
+        },
+        {
+          "heading": "Bank withdrawal requests",
+          "paragraphs": [
+            "Submit a request with correct account-holder name, bank account and IFSC using Wallet & Payouts. A submitted gross amount is reserved once and the available balance reduces accordingly. Do not submit duplicate requests because approval is taking time.",
+            "Requests progress through pending, approved, processing and success, or rejected/failed with a recorded reason. Approval alone is not a bank transfer. Success should have an actual bank/UTR reference. Rejected/failed reservations are released once; a completed transfer is not automatically reversible.",
+            "The current platform withdrawal calculation shows a 5% deduction labelled TDS and the net payout. For ₹1,000 gross, it shows ₹50 withheld and ₹950 net. This is the current platform setting, not a statement that 5% is the statutory rate for every person or transaction. Applicable tax law, category, thresholds and PAN/residency status govern the correct withholding/reporting. Contact support for the deduction basis, tax documentation or correction if required.",
+            "Do not share your bank-login password, card PIN or OTP. Bank-processing times vary; review the request status and contact support for a delayed or disputed payout."
+          ]
+        },
+        {
+          "heading": "Corrections and complaints",
+          "paragraphs": [
+            "Keep the order number, commission row or withdrawal request ID when reporting a problem. Support must investigate identifiable records rather than make an unsupported blanket balance adjustment.",
+            "We do not guarantee commission on cancelled, fraudulent or otherwise ineligible transactions. Any recovery must be explained and recorded, subject to applicable law and your right to complain."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emergency-fund-policy",
+      "title": "Emergency Fund Terms",
+      "summary": "Eligibility, approval and repayment terms for the current repayable support feature.",
+      "sections": [
+        {
+          "heading": "Nature and amount",
+          "paragraphs": [
+            "The MediGlaxo Family Emergency Fund feature currently offers a request for ₹5,000 repayable support at 0% interest, with no fund fee or late penalty in the current service rules. It is not a gift, insurance benefit, guaranteed entitlement, deposit or investment return.",
+            "The label “Emergency Fund” does not determine its legal or regulatory classification. Any applicable financial-service, consumer or app-store requirement continues to apply. Do not treat this page as evidence of an RBI licence or regulatory exemption."
+          ]
+        },
+        {
+          "heading": "Eligibility and approval",
+          "paragraphs": [
+            "The current count requirement is at least 99 unique active eligible members across your first three referral levels, including at least 27 direct members at Level 1. The 27 direct members are part of the total 99, not an additional 27. Levels 2 and 3 may supply the remaining count.",
+            "Administrative/owner/employee and inactive accounts are excluded under the service rules. The eligibility page shows achieved and pending counts. Counts do not guarantee approval: account eligibility, an existing request, repayment cooldown, fund availability and administrative review also apply.",
+            "One active requested/approved/processing/disbursed fund is allowed at a time. A new request becomes possible only after full repayment plus a 30-day cooldown and a fresh eligibility check."
+          ]
+        },
+        {
+          "heading": "Request, disbursement and due date",
+          "paragraphs": [
+            "Provide a truthful reason and accurate bank details and review the terms shown before confirming a request. The accepted terms version and request record are retained. Do not upload unrelated medical documents or credentials.",
+            "A request or approval does not mean money has reached your bank. Disbursement must be confirmed with the recorded payment reference. Full repayment is due one calendar month after confirmed disbursement under the current accepted service terms; see your recorded due date.",
+            "For a ₹5,000 disbursement under these rules, the total scheduled repayment is ₹5,000 with ₹0 interest and ₹0 fund/late fee. No new referral or product purchase should be represented as a substitute for a recorded repayment."
+          ]
+        },
+        {
+          "heading": "Repayment and records",
+          "paragraphs": [
+            "Use the repayment methods shown for your fund. Wallet repayment requires your explicit confirmation and a matching debit/repayment record. Do not assume the service can silently take money from your wallet or bank.",
+            "Manual bank repayment is available only when official receiving instructions are configured and displayed. Use those instructions, retain a real bank reference, and submit it for verification; a payment screenshot alone does not prove money was received. Payment-gateway repayment is credited after provider verification.",
+            "Part payments reduce the recorded outstanding amount; the request closes only when full repayment is confirmed. Contact support before the due date if you need help or dispute a record. No harassment or access to your private contacts is authorised by these terms."
+          ]
+        },
+        {
+          "heading": "Questions and protection",
+          "paragraphs": [
+            "Contact support@mgpjn.com or +91 9650582703 with the fund request ID. Do not pay an agent an advance approval fee or share an OTP. A count/progress bar, referral message or approval screen does not override the accepted terms or applicable law."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medical-disclaimer",
+      "title": "Medical & Prescription Information",
+      "summary": "Safe use of product information and prescription uploads.",
+      "sections": [
+        {
+          "heading": "Information is not treatment advice",
+          "paragraphs": [
+            "MediGlaxo provides a medicine/healthcare catalogue and ordering services. Product names, composition, packing, strengths and descriptions are information to help identify a product; they are not a diagnosis, personalised treatment plan or proof that a product is suitable for you.",
+            "Consult a registered medical practitioner or qualified pharmacist about dosage, interactions, allergies, pregnancy, children and existing conditions. Do not start, stop or replace prescribed treatment solely because of a listing, discount or referral message."
+          ]
+        },
+        {
+          "heading": "Prescriptions and selection",
+          "paragraphs": [
+            "Where a prescription is required, supply a clear, valid prescription and accurate patient details. Photograph/select only the intended document. Confirm that you have authority to share another patient’s information.",
+            "A prescription upload is a request for review and contact; it does not itself place a confirmed medicine order, guarantee stock, or establish a medical consultation. Any proposed change in medicine, strength or quantity needs appropriate confirmation."
+          ]
+        },
+        {
+          "heading": "Packaging, expiry and concerns",
+          "paragraphs": [
+            "Check the actual product, seal, batch, expiry, strength and storage instructions on receipt. Do not use a damaged, expired or suspicious item. Contact support with the order and evidence; retain the packaging for investigation.",
+            "Do not rely on unverified cure, prevention or income-linked health claims made by a member. Report misleading claims or a medicine-quality concern to support. For urgent or severe symptoms, seek immediate professional/emergency medical care rather than waiting for a support reply."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "account-deletion",
+      "title": "Account & Data Deletion",
+      "summary": "Request deletion of your MediGlaxo account and associated personal data.",
+      "sections": [
+        {
+          "heading": "How to request",
+          "paragraphs": [
+            "Email support@mgpjn.com with subject “Account Deletion Request”. Include your registered mobile number or email and your full name so the account can be located. You can initiate the same request from the app’s Profile/Policies area. You do not need to install the app to request deletion.",
+            "The email action on this page opens your email app; you must send the email yourself. If no email app is configured, use webmail with the address and subject above, or call +91 9650582703 for help. Never send your password, PIN, OTP or full payment-card details."
+          ]
+        },
+        {
+          "heading": "Verification and response",
+          "paragraphs": [
+            "Support may ask you to confirm control of the registered contact using a proportionate verification process. Account access is not required to read this page or initiate a request.",
+            "We acknowledge consumer/privacy complaints within 48 hours and aim to resolve them within 30 days, subject to any applicable legal period and necessary verification. Support will explain any specific delay or retained-record obligation rather than promise unverified immediate deletion."
+          ]
+        },
+        {
+          "heading": "What is removed and what may be retained",
+          "paragraphs": [
+            "Following verification, personal profile/login data, saved addresses and other account-linked data that are no longer needed are deleted or de-identified. A deleted account may lose access to order history, referral participation and saved settings; ask for any records you need first. Deactivation alone is not the completion of deletion.",
+            "Necessary order/invoice, tax, medicine-sale, payment, wallet/payout, Emergency Fund, dispute and fraud-prevention records may be retained for their specific legal/accounting purpose. Support can explain the categories and applicable retention requirement. Retention is limited to that purpose and does not justify keeping unrelated data indefinitely.",
+            "Pending orders/refunds, legitimate wallet funds and any repayable support need reconciliation. Request assistance to settle these records; deleting an account does not cancel a lawful repayment obligation or remove your right to a valid refund."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "grievance-policy",
+      "title": "Complaints & Customer Support",
+      "summary": "Reach the MediGlaxo support team for orders, privacy, payments and member complaints.",
+      "sections": [
+        {
+          "heading": "Contact and business details",
+          "paragraphs": [
+            "MEDIGLAXO PHARMA; GSTIN 24ABVFM0075D1ZA; Sachin GIDC, Surat, Gujarat 394230, India. Email: support@mgpjn.com. Phone: +91 9650582703.",
+            "Use email for a written complaint and keep a copy. Include your name, registered contact, relevant order/withdrawal/fund ID, a concise description and requested resolution. Send only information necessary to investigate; do not email passwords, OTPs, card PINs or unrelated health records."
+          ]
+        },
+        {
+          "heading": "Damage evidence and attachments",
+          "paragraphs": [
+            "For delivery damage, email within seven calendar days and attach clear photos and/or video of the affected item and packaging, with product/batch/expiry details. If your video is too large, contact support about a suitable secure method; do not publish private prescriptions or bank details in a public link.",
+            "The website contact action opens an email draft. It does not send the complaint or upload an attachment automatically. Add the evidence in your email app and send it to complete the request."
+          ]
+        },
+        {
+          "heading": "Response and escalation",
+          "paragraphs": [
+            "Complaints are to be acknowledged within 48 hours and addressed within 30 days of receipt. Keep your complaint reference/correspondence and reply on the same thread if escalation is needed.",
+            "If unresolved, you may seek assistance from the National Consumer Helpline at consumerhelpline.gov.in or approach the appropriate consumer authority/commission under applicable law. These contact steps do not take away a legal remedy. Privacy requests and account deletion can also be initiated through the Account & Data Deletion page."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -21,7 +21,7 @@ export default function AboutUsPage() {
           </div>
           <h3 className="font-extrabold text-base text-slate-900">Our Medicine Catalog</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            All our pharmaceutical tablets, syrups, capsules, and health formulations are sourced directly from WHO-GMP certified manufacturers.
+            Browse product-specific medicine and healthcare information, including available composition, packing, batch and expiry details. Contact support about a particular item before ordering.
           </p>
         </div>
 
@@ -31,7 +31,7 @@ export default function AboutUsPage() {
           </div>
           <h3 className="font-extrabold text-base text-slate-900">Affordable Healthcare</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            We cut out unnecessary middlemen to pass on massive savings of up to 30-70% on essential generic and ethical medicines.
+            Review the retail selling price, MRP where shown, available offers and final checkout quote for your selected product and quantity.
           </p>
         </div>
 
@@ -41,15 +41,15 @@ export default function AboutUsPage() {
           </div>
           <h3 className="font-extrabold text-base text-slate-900">Community Empowerment</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Our multi-level referral network enables thousands of health promoters to build sustainable lifetime incomes while helping families access good health.
+            Our three-level referral program offers eligible genuine-sale commissions at 10%, 3% and 2%, subject to the published Referral & Wallet Policy. Earnings are not guaranteed.
           </p>
         </div>
       </div>
 
       <div className="bg-gradient-to-r from-brand-blue-900 to-slate-900 rounded-3xl p-8 md:p-12 text-white space-y-4">
-        <h2 className="text-2xl font-black">Certified Business Operations</h2>
+        <h2 className="text-2xl font-black">Business Information</h2>
         <p className="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
-          Registered with the Government of India under Form GST REG-06, our central temperature-controlled fulfilment operations in Surat, Gujarat comply with strict pharmacopeial cold chain and batch tracking standards.
+          MEDIGLAXO PHARMA lists its GST registration and business contact information below. Medicine supply remains subject to applicable licensing requirements, prescription review and suitable handling for the selected product.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 text-xs font-mono">
           <div className="bg-white/10 p-3 rounded-xl border border-white/10">
